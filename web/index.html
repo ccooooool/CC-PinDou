@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=2" />
 </head>
 
 <body>
@@ -166,7 +166,7 @@
                 id="pixelCropBtn"
                 style="display: none"
               >
-                <i class="bi bi-grid-3x3"></i> 手工裁剪模式
+                <i class="bi bi-grid-3x3"></i> 对齐预览
               </button>
 
               <!-- 实时预览 -->
@@ -174,17 +174,16 @@
                 <span class="pixel-preview-placeholder">上传后显示对齐预览</span>
               </div>
 
-              <!-- 画板大小 -->
               <div class="param-row">
                 <label class="param-label">
                   画板大小
-                  <span class="tooltip-icon" data-tip="拼豆画板的格数，拆分后图案将居中放置"></span>
+                  <span class="tooltip-icon" data-tip="拼豆画板的网格尺寸，默认50x50"></span>
                 </label>
                 <div class="param-control">
-                  <input type="number" id="boardWidth" value="50" min="1" max="500" style="width: 55px" />
-                  <span style="font-size:12px;color:var(--text-secondary)">×</span>
-                  <input type="number" id="boardHeight" value="50" min="1" max="500" style="width: 55px" />
-                  <span style="font-size:11px;color:var(--text-secondary)">格</span>
+                  <div class="slider-wrap">
+                    <input type="range" class="form-range" id="pixelBoardSizeRange" min="10" max="200" value="50" />
+                    <input type="number" id="pixelBoardSize" value="50" min="1" max="500" style="width: 50px" />
+                  </div>
                 </div>
               </div>
               <div class="param-row" style="margin-top:-6px">
@@ -210,19 +209,19 @@
                 </div>
               </div>
 
-              <!-- 长宽不一致 -->
+              <!-- 锁定长宽 -->
               <div class="param-row">
                 <label class="param-label">
-                  长宽不一致
-                  <span class="tooltip-icon" data-tip="分别设置宽/高方向的像素块大小"></span>
+                  锁定长宽
+                  <span class="tooltip-icon" data-tip="开启时宽/高使用相同像素大小，关闭可分别设置"></span>
                 </label>
                 <div class="param-control">
                   <div class="form-check form-switch m-0">
-                    <input class="form-check-input" type="checkbox" id="pixelSizeUneven" />
+                    <input class="form-check-input" type="checkbox" id="pixelSizeLock" checked />
                   </div>
                 </div>
               </div>
-              <div class="param-row" id="unevenSizeRow" style="display:none">
+              <div class="param-row" id="unlockSizeRow" style="display:none">
                 <label class="param-label"></label>
                 <div class="param-control" style="gap:8px">
                   <div style="display:flex;align-items:center;gap:4px">
@@ -242,17 +241,17 @@
                   <span class="tooltip-icon" data-tip="水平对齐偏移，-1=自动检测并调整"></span>
                 </label>
                 <div class="param-control">
-                  <input type="number" id="pixelOffsetX" value="0" min="-1" max="500" style="width: 60px" />
+                  <input type="number" class="form-control" id="pixelOffsetX" value="0" style="width: 60px" />
                 </div>
               </div>
 
               <div class="param-row">
                 <label class="param-label">
                   Y 偏移
-                  <span class="tooltip-icon" data-tip="垂直对齐偏移，-1=自动检测并调整"></span>
+                  <span class="tooltip-icon" data-tip="垂直对齐偏移，支持负数"></span>
                 </label>
                 <div class="param-control">
-                  <input type="number" id="pixelOffsetY" value="0" min="-1" max="500" style="width: 60px" />
+                  <input type="number" class="form-control" id="pixelOffsetY" value="0" style="width: 60px" />
                 </div>
               </div>
 
@@ -341,26 +340,13 @@
 
       <!-- 画布区域 -->
       <div class="canvas-area">
-        <!-- 手工裁剪覆盖层 -->
+        <!-- 手动对齐覆盖层 -->
         <div class="manual-crop-overlay" id="manualCropOverlay">
           <div class="manual-crop-toolbar">
-            <span class="toolbar-label"><i class="bi bi-grid-3x3"></i> 手工裁剪</span>
-            <span style="font-size:11px;color:var(--text-secondary)">方向键移动网格 · 滚轮缩放</span>
-            <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
-            <span class="toolbar-label">像素:</span>
-            <input type="number" id="mcPixelSize" value="16" min="1" max="200" style="width:50px;font-size:12px" />
-            <div id="mcUnevenControls" style="display:none;gap:8px;align-items:center">
-              <span class="toolbar-label">宽:</span>
-              <input type="number" id="mcPixelSizeW" value="16" min="1" max="200" style="width:50px;font-size:12px" />
-              <span class="toolbar-label">高:</span>
-              <input type="number" id="mcPixelSizeH" value="16" min="1" max="200" style="width:50px;font-size:12px" />
-            </div>
-            <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
-            <span class="toolbar-label">偏移:</span>
-            <span id="mcOffsetDisplay" style="font-size:12px;color:var(--text-secondary)">0,0</span>
+            <span class="toolbar-label"><i class="bi bi-grid-3x3"></i> 对齐预览</span>
+            <span style="font-size:11px;color:var(--text-secondary)">方向键移动参考线 · 滚轮缩放 · 请在左侧菜单调整参数</span>
             <div style="flex:1"></div>
-            <button type="button" class="btn-primary" id="mcConfirm"><i class="bi bi-check-lg"></i> 确认裁剪</button>
-            <button type="button" id="mcCancel"><i class="bi bi-x-lg"></i> 取消</button>
+            <button type="button" id="mcExitAlign"><i class="bi bi-x-lg"></i> 退出预览</button>
           </div>
           <div class="manual-crop-canvas-wrap">
             <canvas id="manualCropCanvas"></canvas>
@@ -503,6 +489,9 @@
           </div>
         </div>
         <div class="modal-footer">
+          <button type="button" class="btn btn-outline-primary" id="cropSkipBtn">
+            <i class="bi bi-image"></i> 不裁剪，直接上传
+          </button>
           <button type="button" class="btn btn-primary" id="cropConfirmBtn">
             <i class="bi bi-check-lg"></i> 确认裁剪
           </button>
@@ -609,6 +598,61 @@
     </div>
   </div>
 
+  <!-- 导出确认 Modal -->
+  <div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-download"></i> 导出设置</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="font-size: 14px">
+          <div class="mb-3">
+            <label class="form-label">图片名称</label>
+            <input type="text" class="form-control" id="exportFileName" value="拼豆图纸" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">图片格式</label>
+            <div class="btn-group" role="group">
+              <input type="radio" class="btn-check" name="exportFormat" id="exportFormatPng" value="png" checked />
+              <label class="btn btn-outline-primary" for="exportFormatPng">PNG</label>
+              <input type="radio" class="btn-check" name="exportFormat" id="exportFormatJpg" value="jpg" />
+              <label class="btn btn-outline-primary" for="exportFormatJpg">JPG</label>
+            </div>
+          </div>
+          <div class="mb-3 d-flex align-items-center justify-content-between">
+            <label class="form-label m-0">显示色号</label>
+            <div class="form-check form-switch m-0">
+              <input class="form-check-input" type="checkbox" id="exportShowCode" checked />
+            </div>
+          </div>
+          <div class="mb-3 d-flex align-items-center justify-content-between">
+            <label class="form-label m-0">显示图例</label>
+            <div class="form-check form-switch m-0">
+              <input class="form-check-input" type="checkbox" id="exportShowLegend" checked />
+            </div>
+          </div>
+          <div class="mb-3 d-flex align-items-center justify-content-between">
+            <label class="form-label m-0">显示标识线</label>
+            <div class="form-check form-switch m-0">
+              <input class="form-check-input" type="checkbox" id="exportShowMarkLines" />
+            </div>
+          </div>
+          <div class="mb-3" id="exportMarkIntervalWrap" style="display: none">
+            <label class="form-label">标识线间隔</label>
+            <input type="number" class="form-control" id="exportMarkInterval" value="5" min="2" max="50" style="width: 100px" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" id="exportModalConfirmBtn">
+            <i class="bi bi-download"></i> 确认导出
+          </button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
   <script>
@@ -616,6 +660,6 @@
     var gridData = null;
     var colorList = null;
   </script>
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=2"></script>
 </body>
 </html>

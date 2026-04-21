@@ -11,24 +11,15 @@ from utils import logger, clamp_param
 def detect_pixel_size_and_alignment(img, max_size=200):
     """
     自动检测像素图的像素块大小和对齐偏移。
-    使用颜色梯度 + 块内一致性双重评分。
+    使用边缘间隔直方图 + 梯度归一化 + 块内一致性三重评分，
+    避免大 ps 的 harmonic false positive（如将 32 误判为 63/156）。
     返回 (pixel_size, offset_x, offset_y)
     """
+    from collections import Counter
     img_w, img_h = img.size
     scale = min(max_size / img_w, max_size / img_h, 1.0)
-    if scale < 1.0:
-        small = img.resize((int(img_w * scale), int(img_h * scale)), Image.LANCZOS)
-    else:
-        small = img.copy()
-    arr = np.array(small.convert('RGB')).astype(np.float32)
-    h, w = arr.shape[:2]
 
-    dx = np.zeros((h, w), dtype=np.float32)
-    dx[:, 1:] = np.sum(np.abs(arr[:, 1:] - arr[:, :-1]), axis=2)
-    dy = np.zeros((h, w), dtype=np.float32)
-    dy[1:, :] = np.sum(np.abs(arr[1:, :] - arr[:-1, :]), axis=2)
-
-    def _compute_uniformity(arr_u, ps, ox, oy, threshold=30):
+    def _compute_uniformity(arr_u, ps, ox, oy, threshold=50):
         h_u, w_u = arr_u.shape[:2]
         crop_h = ((h_u - oy) // ps) * ps
         crop_w = ((w_u - ox) // ps) * ps
@@ -40,24 +31,108 @@ def detect_pixel_size_and_alignment(img, max_size=200):
         uniform = np.all(rgb_range < threshold, axis=2)
         return float(uniform.mean())
 
-    best_score = -1
-    best_ps = 16
-    best_ox = 0
-    best_oy = 0
+    # ---------- Phase 1: downscaled coarse search ----------
+    if scale < 1.0:
+        small = img.resize((int(img_w * scale), int(img_h * scale)), Image.LANCZOS)
+    else:
+        small = img.copy()
+    arr_s = np.array(small.convert('RGB')).astype(np.float32)
+    h_s, w_s = arr_s.shape[:2]
 
-    for ps in range(4, min(65, max(w, h) // 2 + 1)):
-        max_offset = min(ps, 8)
+    dx_s = np.zeros((h_s, w_s), dtype=np.float32)
+    dx_s[:, 1:] = np.sum(np.abs(arr_s[:, 1:] - arr_s[:, :-1]), axis=2)
+    dy_s = np.zeros((h_s, w_s), dtype=np.float32)
+    dy_s[1:, :] = np.sum(np.abs(arr_s[1:, :] - arr_s[:-1, :]), axis=2)
+
+    # Edge interval histograms (fast indicator of true pixel size)
+    edge_thresh_s = 50
+    strong_x_s = dx_s > edge_thresh_s
+    strong_y_s = dy_s > edge_thresh_s
+    interval_counts = Counter()
+    for y in range(h_s):
+        xs = np.where(strong_x_s[y, :])[0]
+        for i in range(1, len(xs)):
+            d = xs[i] - xs[i-1]
+            if 2 <= d <= 128:
+                interval_counts[d] += 1
+    for x in range(w_s):
+        ys = np.where(strong_y_s[:, x])[0]
+        for i in range(1, len(ys)):
+            d = ys[i] - ys[i-1]
+            if 2 <= d <= 128:
+                interval_counts[d] += 1
+
+    # Score each candidate ps on downscaled image
+    candidates = []
+    for ps in range(4, min(65, max(w_s, h_s) // 2 + 1)):
+        # Use mod-distribution peak as offset (covers large offsets efficiently)
+        x_mod = Counter()
+        y_mod = Counter()
+        for y in range(h_s):
+            for x in np.where(strong_x_s[y, :])[0]:
+                x_mod[x % ps] += 1
+        for x in range(w_s):
+            for y in np.where(strong_y_s[:, x])[0]:
+                y_mod[y % ps] += 1
+
+        best_ox = max(x_mod, key=x_mod.get) if x_mod else 0
+        best_oy = max(y_mod, key=y_mod.get) if y_mod else 0
+
+        x_lines = list(range(best_ox, w_s, ps))
+        y_lines = list(range(best_oy, h_s, ps))
+        grad = 0
+        if len(x_lines) >= 2:
+            grad += np.sum(dx_s[:, x_lines])
+        if len(y_lines) >= 2:
+            grad += np.sum(dy_s[y_lines, :])
+        tp = len(x_lines) * h_s + len(y_lines) * w_s
+        avg_grad = grad / tp if tp > 0 else 0
+        uni = _compute_uniformity(arr_s, ps, best_ox, best_oy)
+        edge_support = interval_counts.get(ps, 0) + interval_counts.get(ps - 1, 0) + interval_counts.get(ps + 1, 0)
+        num_lines = len(x_lines) + len(y_lines)
+        line_penalty = min(1.0, num_lines / 10.0)
+        # Edge support is primary; avg_grad + uniformity secondary
+        score = edge_support * 0.1 + avg_grad * (0.5 + uni * 2.0) * line_penalty
+        candidates.append((ps, score))
+
+    candidates.sort(key=lambda x: x[1], reverse=True)
+
+    # ---------- Phase 2: verify on original image ----------
+    arr = np.array(img.convert('RGB')).astype(np.float32)
+    h, w = arr.shape[:2]
+
+    dx = np.zeros((h, w), dtype=np.float32)
+    dx[:, 1:] = np.sum(np.abs(arr[:, 1:] - arr[:, :-1]), axis=2)
+    dy = np.zeros((h, w), dtype=np.float32)
+    dy[1:, :] = np.sum(np.abs(arr[1:, :] - arr[:-1, :]), axis=2)
+
+    edge_thresh = 100
+    strong_x = dx > edge_thresh
+    strong_y = dy > edge_thresh
+
+    def _evaluate_on_original(ps):
+        x_mod = Counter()
+        y_mod = Counter()
+        for y in range(h):
+            for x in np.where(strong_x[y, :])[0]:
+                x_mod[x % ps] += 1
+        for x in range(w):
+            for y in np.where(strong_y[:, x])[0]:
+                y_mod[y % ps] += 1
+
+        best_ox = max(x_mod, key=x_mod.get) if x_mod else 0
+        best_oy = max(y_mod, key=y_mod.get) if y_mod else 0
+
+        # Fine-tune offset ±2 around mod peak
         best_grad = -1
-        best_ox_ps = 0
-        best_oy_ps = 0
-        best_num_lines = 1
-
-        for ox in range(max_offset):
+        best_ox_f = best_ox
+        best_oy_f = best_oy
+        for ox in range(max(0, best_ox - 2), min(best_ox + 3, ps)):
             x_lines = list(range(ox, w, ps))
             if len(x_lines) < 2:
                 continue
             score_x = np.sum(dx[:, x_lines])
-            for oy in range(max_offset):
+            for oy in range(max(0, best_oy - 2), min(best_oy + 3, ps)):
                 y_lines = list(range(oy, h, ps))
                 if len(y_lines) < 2:
                     continue
@@ -65,53 +140,63 @@ def detect_pixel_size_and_alignment(img, max_size=200):
                 score = score_x + score_y
                 if score > best_grad:
                     best_grad = score
-                    best_ox_ps = ox
-                    best_oy_ps = oy
-                    best_num_lines = len(x_lines) + len(y_lines)
-
-        uniformity = _compute_uniformity(arr, ps, best_ox_ps, best_oy_ps)
-        combined = (best_grad / best_num_lines) * (1.0 + uniformity)
-
-        if combined >= best_score:
-            best_score = combined
-            best_ps = ps
-            best_ox = best_ox_ps
-            best_oy = best_oy_ps
-
-    if scale < 1.0:
-        best_ox = int(best_ox / scale)
-        best_oy = int(best_oy / scale)
-        best_ps = int(best_ps / scale)
-        best_ps = max(4, best_ps)
-
-        fine_range = min(best_ps, 3)
-        arr_full = np.array(img.convert('RGB')).astype(np.float32)
-        h_f, w_f = arr_full.shape[:2]
-        dx_f = np.zeros((h_f, w_f), dtype=np.float32)
-        dx_f[:, 1:] = np.sum(np.abs(arr_full[:, 1:] - arr_full[:, :-1]), axis=2)
-        dy_f = np.zeros((h_f, w_f), dtype=np.float32)
-        dy_f[1:, :] = np.sum(np.abs(arr_full[1:, :] - arr_full[:-1, :]), axis=2)
-
-        best_score_f = -1
-        best_ox_f = best_ox
-        best_oy_f = best_oy
-        for ox in range(max(0, best_ox - fine_range), min(best_ox + fine_range + 1, best_ps)):
-            x_lines = list(range(ox, w_f, best_ps))
-            if len(x_lines) < 2:
-                continue
-            score_x = np.sum(dx_f[:, x_lines])
-            for oy in range(max(0, best_oy - fine_range), min(best_oy + fine_range + 1, best_ps)):
-                y_lines = list(range(oy, h_f, best_ps))
-                if len(y_lines) < 2:
-                    continue
-                score_y = np.sum(dy_f[y_lines, :])
-                score = score_x + score_y
-                if score > best_score_f:
-                    best_score_f = score
                     best_ox_f = ox
                     best_oy_f = oy
-        best_ox = best_ox_f
-        best_oy = best_oy_f
+
+        x_lines = list(range(best_ox_f, w, ps))
+        y_lines = list(range(best_oy_f, h, ps))
+        tp = len(x_lines) * h + len(y_lines) * w
+        avg_grad = best_grad / tp if tp > 0 else 0
+        uni = _compute_uniformity(arr, ps, best_ox_f, best_oy_f)
+
+        # Edge support on original (count intervals close to ps or 2*ps)
+        interval_orig = Counter()
+        for y in range(h):
+            xs = np.where(strong_x[y, :])[0]
+            for i in range(1, len(xs)):
+                d = xs[i] - xs[i-1]
+                if abs(d - ps) <= 1 or abs(d - 2 * ps) <= 1:
+                    interval_orig[d] += 1
+        for x in range(w):
+            ys = np.where(strong_y[:, x])[0]
+            for i in range(1, len(ys)):
+                d = ys[i] - ys[i-1]
+                if abs(d - ps) <= 1 or abs(d - 2 * ps) <= 1:
+                    interval_orig[d] += 1
+        edge_support = sum(interval_orig.values())
+
+        num_lines = len(x_lines) + len(y_lines)
+        line_penalty = min(1.0, num_lines / 10.0)
+        score = edge_support * 0.05 + avg_grad * (0.5 + uni * 2.0) * line_penalty
+        # Slight preference for common pixel-art sizes to break ties
+        if ps in (16, 24, 32, 48, 64):
+            score *= 1.05
+        return score, best_ox_f, best_oy_f
+
+    checked = set()
+    results = []
+    for ps_s, _ in candidates[:5]:
+        ps_base = int(ps_s / scale) if scale < 1.0 else ps_s
+        for delta in range(-3, 4):
+            ps = ps_base + delta
+            if ps < 4 or ps > min(img_w, img_h) // 2:
+                continue
+            if ps in checked:
+                continue
+            checked.add(ps)
+            score, ox, oy = _evaluate_on_original(ps)
+            results.append((score, ps, ox, oy))
+
+    results.sort(key=lambda x: x[0], reverse=True)
+    best_score, best_ps, best_ox, best_oy = results[0]
+
+    # Prefer common pixel-art sizes (16,24,32,48,64) when scores are close (< 5% gap)
+    common_sizes = {16, 24, 32, 48, 64}
+    if best_ps not in common_sizes:
+        for score, ps, ox, oy in results[1:]:
+            if ps in common_sizes and score > best_score * 0.95:
+                best_ps, best_ox, best_oy = ps, ox, oy
+                break
 
     return best_ps, best_ox, best_oy
 
@@ -192,14 +277,16 @@ def generate_pixel_data(input_path, pixel_size, pixel_size_w=None, pixel_size_h=
             offset_y = detected_oy
 
     pixel_size = max(1, int(pixel_size))
-    offset_x = max(0, int(offset_x))
-    offset_y = max(0, int(offset_y))
 
     # 支持长宽不一致的像素块
     ps_w = pixel_size_w if pixel_size_w is not None else pixel_size
     ps_h = pixel_size_h if pixel_size_h is not None else pixel_size
     ps_w = max(1, int(ps_w))
     ps_h = max(1, int(ps_h))
+
+    # 偏移量取模，避免超过 pixel_size 导致丢弃整列/整行
+    offset_x = max(0, int(offset_x)) % ps_w
+    offset_y = max(0, int(offset_y)) % ps_h
 
     # 边缘补全：向上取整，不截断边缘
     cols = max(1, math.ceil((img_w - offset_x) / ps_w))

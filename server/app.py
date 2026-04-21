@@ -301,20 +301,34 @@ def export_image():
 
     show_code = data.get('show_code', False)
 
+    show_legend = data.get('show_legend', True)
+
+    show_mark_lines = data.get('show_mark_lines', False)
+
+    mark_interval = data.get('mark_interval', 5)
+
+    fmt = data.get('format', 'png')
+
     if not grid_data:
         return jsonify({"error": "No grid data"}), 400
 
     try:
 
-        buf = generate_export_image(grid_data, color_list, brand=brand, show_code=show_code)
+        buf = generate_export_image(
+            grid_data, color_list, brand=brand, show_code=show_code,
+            show_legend=show_legend, show_mark_lines=show_mark_lines,
+            mark_interval=mark_interval, fmt=fmt
+        )
+
+        mime = 'image/jpeg' if fmt.lower() in ('jpg', 'jpeg') else 'image/png'
 
         if 'download_name' in inspect.signature(send_file).parameters:
 
             response = send_file(
 
-                buf, mimetype='image/png', as_attachment=True,
+                buf, mimetype=mime, as_attachment=True,
 
-                download_name='拼豆图案.png'
+                download_name='拼豆图案.' + fmt.lower()
 
             )
 
@@ -322,15 +336,15 @@ def export_image():
 
             response = send_file(
 
-                buf, mimetype='image/png', as_attachment=True,
+                buf, mimetype=mime, as_attachment=True,
 
-                attachment_filename='perler_bead.png'
+                attachment_filename='perler_bead.' + fmt.lower()
 
             )
 
             response.headers['Content-Disposition'] = (
 
-                "attachment; filename*=UTF-8''%E6%8B%BC%E8%B1%86%E5%9B%BE%E6%A1%88.png"
+                "attachment; filename*=UTF-8''%E6%8B%BC%E8%B1%86%E5%9B%BE%E6%A1%88." + fmt.lower()
 
             )
 

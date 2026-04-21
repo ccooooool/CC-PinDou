@@ -1,4 +1,4 @@
-"""拼豆图案 PNG 导出生成。"""
+"""拼豆图案 PNG/JPG 导出生成。"""
 from io import BytesIO
 
 from PIL import Image, ImageDraw, ImageFont, ImageColor
@@ -6,16 +6,18 @@ from PIL import Image, ImageDraw, ImageFont, ImageColor
 from utils import get_text_size, draw_checkerboard, logger
 
 
-def generate_export_image(grid_data, color_list, brand='MARD', show_code=False):
+def generate_export_image(grid_data, color_list, brand='MARD', show_code=False,
+                          show_legend=True, show_mark_lines=False, mark_interval=5,
+                          fmt='png'):
     """
-    根据网格数据和颜色列表生成拼豆图案 PNG。
+    根据网格数据和颜色列表生成拼豆图案。
     返回 BytesIO 对象。
     """
     if not grid_data:
         raise ValueError("grid_data is empty")
 
-    bead_size = 20
-    margin = 35
+    bead_size = 28
+    margin = 45
     rows = len(grid_data)
     cols = len(grid_data[0]) if rows > 0 else 0
 
@@ -27,7 +29,7 @@ def generate_export_image(grid_data, color_list, brand='MARD', show_code=False):
 
     try:
         font = ImageFont.truetype("arial.ttf", 14)
-        code_font = ImageFont.truetype("arial.ttf", 10)
+        code_font = ImageFont.truetype("arial.ttf", 12)
         legend_font = ImageFont.truetype("arial.ttf", 14)
     except Exception:
         font = ImageFont.load_default()
@@ -73,21 +75,33 @@ def generate_export_image(grid_data, color_list, brand='MARD', show_code=False):
 
     # 绘制网格线
     for i in range(rows + 1):
-        draw.line(
-            [(margin, margin + i * bead_size), (margin + cols * bead_size, margin + i * bead_size)],
-            fill='#999', width=1
-        )
+        if show_mark_lines and i > 0 and i % mark_interval == 0:
+            draw.line(
+                [(margin, margin + i * bead_size), (margin + cols * bead_size, margin + i * bead_size)],
+                fill='#333', width=2
+            )
+        else:
+            draw.line(
+                [(margin, margin + i * bead_size), (margin + cols * bead_size, margin + i * bead_size)],
+                fill='#999', width=1
+            )
     for i in range(cols + 1):
-        draw.line(
-            [(margin + i * bead_size, margin), (margin + i * bead_size, margin + rows * bead_size)],
-            fill='#999', width=1
-        )
+        if show_mark_lines and i > 0 and i % mark_interval == 0:
+            draw.line(
+                [(margin + i * bead_size, margin), (margin + i * bead_size, margin + rows * bead_size)],
+                fill='#333', width=2
+            )
+        else:
+            draw.line(
+                [(margin + i * bead_size, margin), (margin + i * bead_size, margin + rows * bead_size)],
+                fill='#999', width=1
+            )
 
     # 绘制图例
-    if color_list:
+    if show_legend and color_list:
         items_per_row = max(1, (canvas_width - 20) // 100)
-        rows = (len(color_list) + items_per_row - 1) // items_per_row
-        legend_height = max(60, rows * 30 + 20)
+        legend_rows = (len(color_list) + items_per_row - 1) // items_per_row
+        legend_height = max(60, legend_rows * 30 + 20)
 
         legend_img = Image.new('RGB', (canvas_width, legend_height), 'white')
         legend_draw = ImageDraw.Draw(legend_img)
@@ -117,6 +131,10 @@ def generate_export_image(grid_data, color_list, brand='MARD', show_code=False):
         img = combined
 
     buf = BytesIO()
-    img.save(buf, format='PNG')
+    if fmt.lower() == 'jpg' or fmt.lower() == 'jpeg':
+        img = img.convert('RGB')
+        img.save(buf, format='JPEG', quality=95)
+    else:
+        img.save(buf, format='PNG')
     buf.seek(0)
     return buf

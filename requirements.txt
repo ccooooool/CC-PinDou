@@ -1,7 +1,15 @@
+# CC-PinDou 拼豆图案生成器 — Python 依赖
+# 安装方式: pip install -r requirements.txt
+
+# Web 框架
 Flask==3.0.0
 flask-cors==4.0.0
+
+# 图像处理
 Pillow==10.1.0
 numpy==1.26.4
-rembg==2.0.75
 scipy==1.15.0
+
+# AI 背景移除 (rembg 依赖 onnxruntime)
+rembg==2.0.75
 onnxruntime==1.20.1
