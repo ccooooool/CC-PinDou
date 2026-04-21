@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>拼豆图案生成器</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+  <div class="app-container">
+    <div class="main-content">
+      <!-- 左侧栏-->
+      <div class="left-panel" id="leftPanel">
+        <div class="panel-header">
+          <h1 class="page-title"><i class="bi bi-grid-3x3-gap-fill"></i> 拼豆图案生成器</h1>
+        </div>
+
+        <!-- 模式切换 Tab -->
+        <div class="mode-tabs">
+          <button class="mode-tab active" id="tabNormal" data-mode="normal">
+            <i class="bi bi-image"></i> 普通图片
+          </button>
+          <button class="mode-tab" id="tabPixel" data-mode="pixel"><i class="bi bi-grid-3x3"></i> 像素图</button>
+        </div>
+
+        <!-- 普通图片模式-->
+        <div class="mode-content active" id="modeNormal">
+          <div class="custom-card">
+            <div class="card-header"><i class="bi bi-image"></i> 上传图片</div>
+            <div class="card-body">
+              <div class="upload-zone" id="uploadZone">
+                <i class="bi bi-cloud-arrow-up upload-icon"></i>
+                <div class="upload-text">点击或拖拽上传</div>
+                <div class="upload-hint">支持 JPG、PNG 格式</div>
+              </div>
+              <input type="file" id="imageInput" accept="image/*" style="display: none" />
+              <div id="fileName"></div>
+              <div id="thumbnailContainer" style="display: none; text-align: center">
+                <div class="thumbnail-wrap">
+                  <img id="thumbnail" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="custom-card">
+            <div class="card-header"><i class="bi bi-sliders"></i> 参数设置</div>
+            <div class="card-body">
+              <div class="param-row">
+                <label class="param-label">
+                  网格大小
+                  <span class="tooltip-icon" data-tip="设置拼豆图案的网格尺寸，范围30-100px"></span>
+                </label>
+                <div class="param-control">
+                  <div class="slider-wrap">
+                    <input type="range" class="form-range" id="gridSizeRange" min="30" max="100" value="52" />
+                    <input type="number" id="gridSize" value="52" min="30" max="100" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="param-row">
+                <label class="param-label">
+                  移除背景
+                  <span class="tooltip-icon" data-tip="自动检测并移除图片背景"></span>
+                </label>
+                <div class="param-control">
+                  <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" id="removeBg" checked />
+                  </div>
+                </div>
+              </div>
+
+              <div class="param-row" id="bgModelRow">
+                <label class="param-label">
+                  分割模型
+                  <span class="tooltip-icon" data-tip="不同模型适合不同风格图片"></span>
+                </label>
+                <div class="param-control">
+                  <select class="form-select form-select-sm" id="bgModelSelect" style="font-size: 13px">
+                    <option value="u2net">U2-Net 通用</option>
+                  </select>
+                </div>
+              </div>
+              <div
+                id="bgModelDesc"
+                style="
+                  font-size: 11px;
+                  color: var(--text-secondary);
+                  padding: 4px 8px;
+                  margin-top: -4px;
+                  line-height: 1.4;
+                "
+              ></div>
+
+              <div class="param-row">
+                <label class="param-label">
+                  颜色简化 <span class="tooltip-icon" data-tip="0保留原图所有颜色，100用最少颜色表示图片"></span>
+                </label>
+                <div class="param-control">
+                  <div class="slider-wrap">
+                    <input type="range" class="form-range" id="colorSimplifyRange" min="0" max="100" value="0" />
+                    <input type="number" id="colorSimplify" value="0" min="0" max="100" style="width: 50px" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="param-row">
+                <label class="param-label">
+                  线条增强
+                  <span class="tooltip-icon" data-tip="增强黑色线条连续性，0-10"></span>
+                </label>
+                <div class="param-control">
+                  <div class="slider-wrap">
+                    <input type="range" class="form-range" id="linesEnhanceRange" min="0" max="10" value="0" />
+                    <input type="number" id="linesEnhance" value="0" min="0" max="10" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="param-row">
+                <label class="param-label">
+                  背景阈值 <span class="tooltip-icon" data-tip="边缘检测阈值，10-100，越小越敏感"></span>
+                </label>
+                <div class="param-control">
+                  <div class="slider-wrap">
+                    <input
+                      type="range"
+                      class="form-range"
+                      id="removeBgThresholdRange"
+                      min="10"
+                      max="100"
+                      value="30"
+                    />
+                    <input type="number" id="removeBgThreshold" value="30" min="10" max="100" />
+                  </div>
+                </div>
+              </div>
+
+              <button type="button" class="btn btn-primary btn-generate" id="generateBtn">
+                <i class="bi bi-stars"></i> 生成拼豆图案
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 像素图模式-->
+        <div class="mode-content" id="modePixel">
+          <div class="custom-card">
+            <div class="card-header"><i class="bi bi-grid-3x3"></i> 上传像素图</div>
+            <div class="card-body">
+              <div class="upload-zone" id="pixelUploadZone">
+                <i class="bi bi-magic upload-icon"></i>
+                <div class="upload-text">选择像素风格原图</div>
+                <div class="upload-hint">支持 JPG、PNG、GIF 格式</div>
+              </div>
+              <input type="file" id="pixelUploadInput" accept="image/*" style="display: none" />
+              <div id="pixelFileName"></div>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary w-100 mb-2"
+                id="pixelCropBtn"
+                style="display: none"
+              >
+                <i class="bi bi-grid-3x3"></i> 手工裁剪模式
+              </button>
+
+              <!-- 实时预览 -->
+              <div class="pixel-preview-wrap" id="pixelPreviewWrap">
+                <span class="pixel-preview-placeholder">上传后显示对齐预览</span>
+              </div>
+
+              <!-- 画板大小 -->
+              <div class="param-row">
+                <label class="param-label">
+                  画板大小
+                  <span class="tooltip-icon" data-tip="拼豆画板的格数，拆分后图案将居中放置"></span>
+                </label>
+                <div class="param-control">
+                  <input type="number" id="boardWidth" value="50" min="1" max="500" style="width: 55px" />
+                  <span style="font-size:12px;color:var(--text-secondary)">×</span>
+                  <input type="number" id="boardHeight" value="50" min="1" max="500" style="width: 55px" />
+                  <span style="font-size:11px;color:var(--text-secondary)">格</span>
+                </div>
+              </div>
+              <div class="param-row" style="margin-top:-6px">
+                <label class="param-label"></label>
+                <div class="param-control">
+                  <span id="pixelEstimate" style="font-size:12px;color:var(--text-secondary)">预估拆分: -- x -- 格</span>
+                </div>
+              </div>
+
+              <div class="param-row">
+                <label class="param-label">
+                  像素大小
+                  <span class="tooltip-icon" data-tip="每个像素块的尺寸(px)=自动检测并调整"></span>
+                </label>
+                <div class="param-control">
+                  <div class="slider-wrap">
+                    <input type="range" class="form-range" id="pixelSizeRange" min="1" max="64" value="16" />
+                    <input type="number" id="pixelSize" value="16" min="1" max="200" style="width: 50px" />
+                  </div>
+                  <button class="auto-detect-btn" id="autoDetectPixelSize" title="自动检测像素大小">
+                    <i class="bi bi-magic"></i> 自动
+                  </button>
+                </div>
+              </div>
+
+              <!-- 长宽不一致 -->
+              <div class="param-row">
+                <label class="param-label">
+                  长宽不一致
+                  <span class="tooltip-icon" data-tip="分别设置宽/高方向的像素块大小"></span>
+                </label>
+                <div class="param-control">
+                  <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" id="pixelSizeUneven" />
+                  </div>
+                </div>
+              </div>
+              <div class="param-row" id="unevenSizeRow" style="display:none">
+                <label class="param-label"></label>
+                <div class="param-control" style="gap:8px">
+                  <div style="display:flex;align-items:center;gap:4px">
+                    <span style="font-size:11px;color:var(--text-secondary)">宽</span>
+                    <input type="number" id="pixelSizeW" value="16" min="1" max="200" style="width: 50px" />
+                  </div>
+                  <div style="display:flex;align-items:center;gap:4px">
+                    <span style="font-size:11px;color:var(--text-secondary)">高</span>
+                    <input type="number" id="pixelSizeH" value="16" min="1" max="200" style="width: 50px" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="param-row">
+                <label class="param-label">
+                  X 偏移
+                  <span class="tooltip-icon" data-tip="水平对齐偏移，-1=自动检测并调整"></span>
+                </label>
+                <div class="param-control">
+                  <input type="number" id="pixelOffsetX" value="0" min="-1" max="500" style="width: 60px" />
+                </div>
+              </div>
+
+              <div class="param-row">
+                <label class="param-label">
+                  Y 偏移
+                  <span class="tooltip-icon" data-tip="垂直对齐偏移，-1=自动检测并调整"></span>
+                </label>
+                <div class="param-control">
+                  <input type="number" id="pixelOffsetY" value="0" min="-1" max="500" style="width: 60px" />
+                </div>
+              </div>
+
+              <div class="param-row">
+                <label class="param-label">
+                  采样方式
+                  <span class="tooltip-icon" data-tip="center=中心，mode=众数 mean=平均"></span>
+                </label>
+                <div class="param-control">
+                  <select
+                    class="form-select form-select-sm"
+                    id="pixelSamplingMode"
+                    style="font-size: 13px; width: 120px"
+                  >
+                    <option value="mode" selected>众数（推荐）</option>
+                    <option value="center">中心</option>
+                    <option value="mean">平均</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="param-row">
+                <label class="param-label">
+                  移除背景
+                  <span class="tooltip-icon" data-tip="自动检测并移除纯色背景"></span>
+                </label>
+                <div class="param-control">
+                  <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" id="pixelRemoveBg" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="param-row">
+                <label class="param-label">
+                  背景阈值 <span class="tooltip-icon" data-tip="边界颜色占比超过此值判定为背景"></span>
+                </label>
+                <div class="param-control">
+                  <div class="slider-wrap">
+                    <input
+                      type="range"
+                      class="form-range"
+                      id="pixelBgThresholdRange"
+                      min="0"
+                      max="100"
+                      value="80"
+                    />
+                    <input type="number" id="pixelBgThreshold" value="80" min="0" max="100" style="width: 50px" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="param-row">
+                <label class="param-label">
+                  颜色量化
+                  <span class="tooltip-icon" data-tip="0=原色，100=最大量化，减少抖动噪声"></span>
+                </label>
+                <div class="param-control">
+                  <div class="slider-wrap">
+                    <input
+                      type="range"
+                      class="form-range"
+                      id="pixelColorQuantizeRange"
+                      min="0"
+                      max="100"
+                      value="0"
+                    />
+                    <input type="number" id="pixelColorQuantize" value="0" min="0" max="100" style="width: 50px" />
+                  </div>
+                </div>
+              </div>
+
+              <button type="button" class="btn btn-primary btn-generate" id="generatePixelBtn">
+                <i class="bi bi-stars"></i> 生成拼豆图案
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 折叠按钮 -->
+        <button class="collapse-btn" id="collapseBtn">
+          <i class="bi bi-chevron-left" id="collapseIcon"></i>
+        </button>
+      </div>
+      <!-- /左侧栏 -->
+
+      <!-- 画布区域 -->
+      <div class="canvas-area">
+        <!-- 手工裁剪覆盖层 -->
+        <div class="manual-crop-overlay" id="manualCropOverlay">
+          <div class="manual-crop-toolbar">
+            <span class="toolbar-label"><i class="bi bi-grid-3x3"></i> 手工裁剪</span>
+            <span style="font-size:11px;color:var(--text-secondary)">方向键移动网格 · 滚轮缩放</span>
+            <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+            <span class="toolbar-label">像素:</span>
+            <input type="number" id="mcPixelSize" value="16" min="1" max="200" style="width:50px;font-size:12px" />
+            <div id="mcUnevenControls" style="display:none;gap:8px;align-items:center">
+              <span class="toolbar-label">宽:</span>
+              <input type="number" id="mcPixelSizeW" value="16" min="1" max="200" style="width:50px;font-size:12px" />
+              <span class="toolbar-label">高:</span>
+              <input type="number" id="mcPixelSizeH" value="16" min="1" max="200" style="width:50px;font-size:12px" />
+            </div>
+            <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+            <span class="toolbar-label">偏移:</span>
+            <span id="mcOffsetDisplay" style="font-size:12px;color:var(--text-secondary)">0,0</span>
+            <div style="flex:1"></div>
+            <button type="button" class="btn-primary" id="mcConfirm"><i class="bi bi-check-lg"></i> 确认裁剪</button>
+            <button type="button" id="mcCancel"><i class="bi bi-x-lg"></i> 取消</button>
+          </div>
+          <div class="manual-crop-canvas-wrap">
+            <canvas id="manualCropCanvas"></canvas>
+          </div>
+        </div>
+
+        <!-- 顶部工具栏-->
+        <div class="canvas-toolbar" id="canvasToolbar" style="display: none">
+          <div class="toolbar-group">
+            <span class="toolbar-label">品牌</span>
+            <select
+              id="brandSelect"
+              class="form-select form-select-sm"
+              style="width: 100px; font-size: 12px"
+            ></select>
+          </div>
+          <div class="toolbar-group">
+            <div class="form-check form-switch m-0" style="font-size: 12px">
+              <input class="form-check-input" type="checkbox" id="showCodeSwitch" />
+              <label class="form-check-label" for="showCodeSwitch" style="font-size: 12px; font-weight: 500"
+                >显示色号</label
+              >
+            </div>
+          </div>
+          <div class="toolbar-group">
+            <span class="toggle-pill" id="gridMarkPill"> <i class="bi bi-grid"></i> 标识线 </span>
+            <div class="slider-wrap" id="gridMarkSliderWrap" style="display: none; width: 120px">
+              <input type="range" class="form-range" id="gridMarkIntervalRange" min="2" max="20" value="5" />
+              <input type="number" id="gridMarkInterval" value="5" min="2" max="20" style="width: 40px" />
+            </div>
+          </div>
+          <div class="toolbar-group" style="margin-left: auto">
+            <button type="button" class="btn btn-sm btn-outline-primary" id="editModeBtn">
+              <i class="bi bi-pencil"></i> 编辑
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" id="exportBtn">
+              <i class="bi bi-download"></i> 导出
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" style="display: none">
+          <div class="spinner-ring"></div>
+          <p style="margin-top: 16px; color: var(--text-secondary); font-size: 14px; font-weight: 500">
+            处理中，请稍候..
+          </p>
+        </div>
+
+        <!-- 悬浮缩放控件 -->
+        <div class="floating-controls" id="floatingControls" style="display: none">
+          <button type="button" id="zoomInBtn" title="放大"><i class="bi bi-plus-lg"></i></button>
+          <div class="zoom-level-text" id="zoomLevel">100%</div>
+          <button type="button" id="zoomOutBtn" title="缩小"><i class="bi bi-dash-lg"></i></button>
+          <button type="button" id="zoomResetBtn" title="重置"><i class="bi bi-aspect-ratio"></i></button>
+        </div>
+
+        <!-- Canvas -->
+        <div class="canvas-container">
+          <canvas id="mainCanvas"></canvas>
+        </div>
+
+        <!-- 图例栏-->
+        <div class="legend-bar" id="legendBar" style="display: none">
+          <div class="legend-bar-header" id="legendBarHeader">
+            <span
+              ><i class="bi bi-palette"></i> 图例统计
+              <small id="legendCount" style="font-weight: 400; color: var(--text-secondary)"></small
+            ></span>
+            <i
+              class="bi bi-chevron-up"
+              id="legendBarIcon"
+              style="color: var(--text-secondary); transition: transform 0.3s"
+            ></i>
+          </div>
+          <div class="legend-bar-body" id="legendBarBody">
+            <div class="legend-panel" id="legendPanel"></div>
+          </div>
+        </div>
+      </div>
+      <!-- /画布区域 -->
+    </div>
+    <!-- /main-content -->
+
+    <!-- 右侧编辑面板 -->
+    <div class="right-edit-panel" id="rightEditPanel">
+      <div class="right-edit-header">
+        <h5><i class="bi bi-palette"></i> 编辑色板</h5>
+        <button class="right-edit-close" id="exitEditBtn"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="right-edit-body">
+        <div class="history-btns">
+          <button id="undoBtn" disabled><i class="bi bi-arrow-counterclockwise"></i> 撤销</button>
+          <button id="redoBtn" disabled><i class="bi bi-arrow-clockwise"></i> 重做</button>
+        </div>
+
+        <!-- 批量绘制开关-->
+        <div class="batch-toggle">
+          <span class="batch-toggle-label"><i class="bi bi-brush"></i> 批量绘制</span>
+          <div class="form-check form-switch m-0">
+            <input class="form-check-input" type="checkbox" id="batchModeSwitch" />
+          </div>
+        </div>
+
+        <!-- 历史记录面板 -->
+        <div class="history-panel" id="historyPanel">
+          <div class="history-panel-header" id="historyPanelHeader">
+            <span><i class="bi bi-clock-history"></i> 操作记录</span>
+            <i class="bi bi-chevron-up" id="historyPanelIcon"></i>
+          </div>
+          <div class="history-panel-body" id="historyPanelBody">
+            <div class="history-empty">暂无操作记录</div>
+          </div>
+        </div>
+
+        <select id="paletteBrandSelect" class="form-select form-select-sm mb-2"></select>
+        <div class="color-palette" id="colorPalette"></div>
+      </div>
+    </div>
+  </div>
+  <!-- /app-container -->
+
+  <!-- Toast 容器 -->
+  <div class="custom-toast-container" id="toastContainer"></div>
+
+  <!-- 裁剪图片 Modal -->
+  <div class="modal fade" id="cropModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-crop"></i> 裁剪图片</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div
+          class="modal-body"
+          style="background: #222; display: flex; flex-direction: column; align-items: center; padding: 0"
+        >
+          <div style="width: 100%; height: 65vh">
+            <img id="cropImage" src="" style="display: block; max-width: 100%; max-height: 100%" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" id="cropConfirmBtn">
+            <i class="bi bi-check-lg"></i> 确认裁剪
+          </button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" id="cropCancelBtn">
+            取消
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 像素网格对齐 Modal -->
+  <div class="modal fade" id="pixelAlignModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content" style="background: #1a1a1a; color: #fff">
+        <div class="modal-header" style="background: #252525; border-color: #333">
+          <h5 class="modal-title"><i class="bi bi-grid-3x3"></i> 像素网格对齐</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="display: flex; flex-direction: column; align-items: center; padding: 20px">
+          <div
+            style="
+              position: relative;
+              width: 100%;
+              height: 60vh;
+              overflow: auto;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: #000;
+              border-radius: 8px;
+            "
+          >
+            <canvas id="alignCanvas" style="display: block; max-width: 100%; max-height: 100%"></canvas>
+          </div>
+          <div
+            style="
+              margin-top: 16px;
+              display: flex;
+              gap: 20px;
+              align-items: center;
+              flex-wrap: wrap;
+              justify-content: center;
+            "
+          >
+            <div class="input-group input-group-sm" style="width: 140px">
+              <span class="input-group-text" style="font-size: 12px">像素大小</span>
+              <input type="number" id="pixelSize" value="20" min="1" max="200" class="form-control" />
+              <span class="input-group-text" style="font-size: 12px">px</span>
+            </div>
+            <div class="input-group input-group-sm" style="width: 120px">
+              <span class="input-group-text" style="font-size: 12px">X偏移</span>
+              <input type="number" id="offsetX" value="0" min="0" max="500" class="form-control" />
+            </div>
+            <div class="input-group input-group-sm" style="width: 120px">
+              <span class="input-group-text" style="font-size: 12px">Y偏移</span>
+              <input type="number" id="offsetY" value="0" min="0" max="500" class="form-control" />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="background: #252525; border-color: #333">
+          <button type="button" class="btn btn-primary" id="alignConfirmBtn">
+            <i class="bi bi-check-lg"></i> 确认对齐
+          </button>
+          <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal" id="alignCancelBtn">
+            取消
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 确认删除 Modal -->
+  <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> 确认删除</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="confirmModalBody" style="font-size: 14px; color: var(--text)"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger" id="confirmModalYes">
+            <i class="bi bi-trash"></i> 确定删除
+          </button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 原图预览 Modal -->
+  <div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-eye"></i> 原图预览</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center p-0" style="background: #222">
+          <img id="previewImage" src="" style="max-width: 100%; max-height: 70vh; display: block; margin: 0 auto" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.1/dist/cropper.min.js"></script>
+  <script>
+    var selectedFile = null;
+    var gridData = null;
+    var colorList = null;
+  </script>
+  <script src="js/app.js"></script>
+</body>
+</html>
