@@ -238,6 +238,14 @@ document.getElementById('gridMarkPill').addEventListener('click', function () {
 });
 
 // 图例栏折叠
+function updateRightPanelBottom() {
+  var legendBar = document.getElementById('legendBar');
+  var rightPanel = document.getElementById('rightEditPanel');
+  if (legendBar && rightPanel) {
+    rightPanel.style.bottom = legendBar.offsetHeight + 'px';
+  }
+}
+
 document.getElementById('legendBarHeader').addEventListener('click', function () {
   legendBarCollapsed = !legendBarCollapsed;
   var bar = document.getElementById('legendBar');
@@ -249,6 +257,7 @@ document.getElementById('legendBarHeader').addEventListener('click', function ()
     bar.classList.remove('collapsed');
     icon.style.transform = 'rotate(0deg)';
   }
+  updateRightPanelBottom();
 });
 
 // 拖拽上传
@@ -628,59 +637,14 @@ function embedGridToBoard(gridData, boardCols, boardRows) {
 }
 
 function bindPreviewInteractions() {
+  // 移除所有鼠标和键盘监听，只保留预览展示功能
   if (!pixelPreviewCanvas) return;
-  // 滚轮调pixel_size
-  pixelPreviewCanvas.addEventListener(
-    'wheel',
-    function (e) {
-      e.preventDefault();
-      var ps = parseInt(document.getElementById('pixelSize').value) || 16;
-      if (e.deltaY < 0) ps++;
-      else ps--;
-      ps = Math.max(1, Math.min(200, ps));
-      document.getElementById('pixelSize').value = ps;
-      document.getElementById('pixelSizeRange').value = Math.min(ps, 64);
-      drawPixelPreview();
-    },
-    { passive: false }
-  );
-  // 空格+拖拽调offset
-  pixelPreviewCanvas.addEventListener('mousedown', function (e) {
-    if (spacePressed && e.button === 0) {
-      isPreviewDragging = true;
-      previewDragStartX = e.clientX;
-      previewDragStartY = e.clientY;
-      previewOffsetStartX = parseInt(document.getElementById('pixelOffsetX').value) || 0;
-      previewOffsetStartY = parseInt(document.getElementById('pixelOffsetY').value) || 0;
-      pixelPreviewCanvas.style.cursor = 'grabbing';
-      e.preventDefault();
-    }
-  });
+  // 重置鼠标样式为默认
+  pixelPreviewCanvas.style.cursor = 'default';
 }
 
-document.addEventListener('mousemove', function (e) {
-  if (isPreviewDragging && pixelPreviewCanvas && pixelPreviewImg) {
-    var dx = e.clientX - previewDragStartX;
-    var dy = e.clientY - previewDragStartY;
-    var maxW = 280;
-    var scale = Math.min(maxW / pixelPreviewImg.width, 1);
-    var ps = parseInt(document.getElementById('pixelSize').value) || 16;
-    var newOx = (previewOffsetStartX + Math.round(dx / scale)) % ps;
-    var newOy = (previewOffsetStartY + Math.round(dy / scale)) % ps;
-    if (newOx < 0) newOx += ps;
-    if (newOy < 0) newOy += ps;
-    document.getElementById('pixelOffsetX').value = newOx;
-    document.getElementById('pixelOffsetY').value = newOy;
-    drawPixelPreview();
-  }
-});
+// 移除全局鼠标事件监听，只保留预览展示功能
 
-document.addEventListener('mouseup', function () {
-  if (isPreviewDragging) {
-    isPreviewDragging = false;
-    if (pixelPreviewCanvas) pixelPreviewCanvas.style.cursor = spacePressed ? 'grab' : 'crosshair';
-  }
-});
 
 // ========== 手工裁剪模式 ==========
 var manualCropState = {
@@ -738,6 +702,7 @@ function exitManualAlignMode() {
     document.getElementById('legendBar').style.display = 'block';
     document.getElementById('floatingControls').style.display = 'flex';
     drawGrid();
+    updateRightPanelBottom();
   }
 }
 
@@ -1001,6 +966,9 @@ function showCanvasUI() {
   document.getElementById('canvasToolbar').style.display = 'flex';
   document.getElementById('floatingControls').style.display = 'flex';
   document.getElementById('legendBar').style.display = 'block';
+  document.getElementById('welcomeScreen').classList.add('hidden');
+  document.getElementById('canvasContainer').style.display = 'flex';
+  updateRightPanelBottom();
 }
 
 // 生成拼豆图案
@@ -1324,6 +1292,7 @@ function updateLegend() {
     legend.appendChild(item);
   });
   document.getElementById('legendCount').textContent = colorList.length > 0 ? '（' + colorList.length + ' 种）' : '';
+  updateRightPanelBottom();
 }
 
 function pushHistory(action) {

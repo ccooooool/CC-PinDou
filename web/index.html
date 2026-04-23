@@ -330,13 +330,13 @@
             </div>
           </div>
         </div>
-
-        <!-- 折叠按钮 -->
-        <button class="collapse-btn" id="collapseBtn">
-          <i class="bi bi-chevron-left" id="collapseIcon"></i>
-        </button>
       </div>
       <!-- /左侧栏 -->
+
+      <!-- 折叠按钮 -->
+      <button class="collapse-btn" id="collapseBtn">
+        <i class="bi bi-chevron-left" id="collapseIcon"></i>
+      </button>
 
       <!-- 画布区域 -->
       <div class="canvas-area">
@@ -405,8 +405,40 @@
         </div>
 
         <!-- Canvas -->
-        <div class="canvas-container">
+        <div class="canvas-container" id="canvasContainer" style="display: none">
           <canvas id="mainCanvas"></canvas>
+        </div>
+
+        <!-- 欢迎页 -->
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-content">
+            <h2><i class="bi bi-grid-3x3-gap-fill"></i> 拼豆图案生成器</h2>
+            <div class="welcome-modes">
+              <div class="welcome-mode">
+                <div class="mode-icon"><i class="bi bi-image"></i></div>
+                <div class="mode-title">普通图片模式</div>
+                <div class="mode-desc">上传任意图片，自动转换为拼豆图案</div>
+                <div class="mode-steps">
+                  <span><i class="bi bi-upload"></i> 上传图片</span>
+                  <span><i class="bi bi-sliders"></i> 调整参数</span>
+                  <span><i class="bi bi-magic"></i> 生成图案</span>
+                </div>
+              </div>
+              <div class="welcome-mode">
+                <div class="mode-icon"><i class="bi bi-grid-3x3"></i></div>
+                <div class="mode-title">像素图模式</div>
+                <div class="mode-desc">专为像素风格设计的智能对齐模式</div>
+                <div class="mode-steps">
+                  <span><i class="bi bi-upload"></i> 上传像素原图</span>
+                  <span><i class="bi bi-grid-3x3"></i> 自动检测像素</span>
+                  <span><i class="bi bi-magic"></i> 生成图案</span>
+                </div>
+              </div>
+            </div>
+            <div class="welcome-hint">
+              <i class="bi bi-lightbulb"></i> 选择左侧模式开始使用
+            </div>
+          </div>
         </div>
 
         <!-- 图例栏-->
