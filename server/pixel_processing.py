@@ -48,35 +48,53 @@ def detect_pixel_size_and_alignment(img, max_size=200):
     edge_thresh_s = 50
     strong_x_s = dx_s > edge_thresh_s
     strong_y_s = dy_s > edge_thresh_s
+
+    # 向量化：收集所有边缘间隔（替代 Python 级双重循环）
     interval_counts = Counter()
+    diffs_x = []
     for y in range(h_s):
         xs = np.where(strong_x_s[y, :])[0]
-        for i in range(1, len(xs)):
-            d = xs[i] - xs[i-1]
-            if 2 <= d <= 128:
-                interval_counts[d] += 1
+        if len(xs) >= 2:
+            diffs_x.append(np.diff(xs))
+    if diffs_x:
+        all_diffs_x = np.concatenate(diffs_x)
+        valid_x = all_diffs_x[(all_diffs_x >= 2) & (all_diffs_x <= 128)]
+        for d in valid_x:
+            interval_counts[int(d)] += 1
+
+    diffs_y = []
     for x in range(w_s):
         ys = np.where(strong_y_s[:, x])[0]
-        for i in range(1, len(ys)):
-            d = ys[i] - ys[i-1]
-            if 2 <= d <= 128:
-                interval_counts[d] += 1
+        if len(ys) >= 2:
+            diffs_y.append(np.diff(ys))
+    if diffs_y:
+        all_diffs_y = np.concatenate(diffs_y)
+        valid_y = all_diffs_y[(all_diffs_y >= 2) & (all_diffs_y <= 128)]
+        for d in valid_y:
+            interval_counts[int(d)] += 1
+
+    # 预收集强边缘坐标，用于后续向量化 mod 计算
+    strong_x_coords = np.argwhere(strong_x_s)  # shape (N, 2), 每行 (y, x)
+    strong_y_coords = np.argwhere(strong_y_s)  # shape (N, 2), 每行 (y, x)
+    x_vals = strong_x_coords[:, 1] if strong_x_coords.size > 0 else np.array([], dtype=int)
+    y_vals = strong_y_coords[:, 0] if strong_y_coords.size > 0 else np.array([], dtype=int)
 
     # Score each candidate ps on downscaled image
     candidates = []
     for ps in range(4, min(65, max(w_s, h_s) // 2 + 1)):
         # Use mod-distribution peak as offset (covers large offsets efficiently)
-        x_mod = Counter()
-        y_mod = Counter()
-        for y in range(h_s):
-            for x in np.where(strong_x_s[y, :])[0]:
-                x_mod[x % ps] += 1
-        for x in range(w_s):
-            for y in np.where(strong_y_s[:, x])[0]:
-                y_mod[y % ps] += 1
+        # 向量化：np.bincount 替代 Python 级双重循环
+        if x_vals.size > 0:
+            x_mod_counts = np.bincount(x_vals % ps, minlength=ps)
+            best_ox = int(x_mod_counts.argmax())
+        else:
+            best_ox = 0
 
-        best_ox = max(x_mod, key=x_mod.get) if x_mod else 0
-        best_oy = max(y_mod, key=y_mod.get) if y_mod else 0
+        if y_vals.size > 0:
+            y_mod_counts = np.bincount(y_vals % ps, minlength=ps)
+            best_oy = int(y_mod_counts.argmax())
+        else:
+            best_oy = 0
 
         x_lines = list(range(best_ox, w_s, ps))
         y_lines = list(range(best_oy, h_s, ps))
@@ -110,18 +128,24 @@ def detect_pixel_size_and_alignment(img, max_size=200):
     strong_x = dx > edge_thresh
     strong_y = dy > edge_thresh
 
-    def _evaluate_on_original(ps):
-        x_mod = Counter()
-        y_mod = Counter()
-        for y in range(h):
-            for x in np.where(strong_x[y, :])[0]:
-                x_mod[x % ps] += 1
-        for x in range(w):
-            for y in np.where(strong_y[:, x])[0]:
-                y_mod[y % ps] += 1
+    # 预收集原图强边缘坐标
+    strong_x_coords_orig = np.argwhere(strong_x)
+    strong_y_coords_orig = np.argwhere(strong_y)
+    x_vals_orig = strong_x_coords_orig[:, 1] if strong_x_coords_orig.size > 0 else np.array([], dtype=int)
+    y_vals_orig = strong_y_coords_orig[:, 0] if strong_y_coords_orig.size > 0 else np.array([], dtype=int)
 
-        best_ox = max(x_mod, key=x_mod.get) if x_mod else 0
-        best_oy = max(y_mod, key=y_mod.get) if y_mod else 0
+    def _evaluate_on_original(ps):
+        if x_vals_orig.size > 0:
+            x_mod_counts = np.bincount(x_vals_orig % ps, minlength=ps)
+            best_ox = int(x_mod_counts.argmax())
+        else:
+            best_ox = 0
+
+        if y_vals_orig.size > 0:
+            y_mod_counts = np.bincount(y_vals_orig % ps, minlength=ps)
+            best_oy = int(y_mod_counts.argmax())
+        else:
+            best_oy = 0
 
         # Fine-tune offset ±2 around mod peak
         best_grad = -1
@@ -151,18 +175,28 @@ def detect_pixel_size_and_alignment(img, max_size=200):
 
         # Edge support on original (count intervals close to ps or 2*ps)
         interval_orig = Counter()
+        diffs_x_o = []
         for y in range(h):
             xs = np.where(strong_x[y, :])[0]
-            for i in range(1, len(xs)):
-                d = xs[i] - xs[i-1]
-                if abs(d - ps) <= 1 or abs(d - 2 * ps) <= 1:
-                    interval_orig[d] += 1
+            if len(xs) >= 2:
+                diffs_x_o.append(np.diff(xs))
+        if diffs_x_o:
+            all_dxo = np.concatenate(diffs_x_o)
+            valid_dxo = all_dxo[(np.abs(all_dxo - ps) <= 1) | (np.abs(all_dxo - 2 * ps) <= 1)]
+            for d in valid_dxo:
+                interval_orig[int(d)] += 1
+
+        diffs_y_o = []
         for x in range(w):
             ys = np.where(strong_y[:, x])[0]
-            for i in range(1, len(ys)):
-                d = ys[i] - ys[i-1]
-                if abs(d - ps) <= 1 or abs(d - 2 * ps) <= 1:
-                    interval_orig[d] += 1
+            if len(ys) >= 2:
+                diffs_y_o.append(np.diff(ys))
+        if diffs_y_o:
+            all_dyo = np.concatenate(diffs_y_o)
+            valid_dyo = all_dyo[(np.abs(all_dyo - ps) <= 1) | (np.abs(all_dyo - 2 * ps) <= 1)]
+            for d in valid_dyo:
+                interval_orig[int(d)] += 1
+
         edge_support = sum(interval_orig.values())
 
         num_lines = len(x_lines) + len(y_lines)
@@ -255,7 +289,7 @@ def sample_pixel_block(img_arr, x0, y0, block_w, block_h, sampling_mode='mode'):
 def generate_pixel_data(input_path, pixel_size, pixel_size_w=None, pixel_size_h=None,
                         offset_x=0, offset_y=0,
                         sampling_mode='mode', remove_bg=False, bg_threshold=80,
-                        color_quantize=0):
+                        color_quantize=0, color_mode='full'):
     """
     处理像素风格图片，支持多种采样方式和预处理。
     pixel_size: 0=自动检测（当 pixel_size_w/h 未指定时作为默认值）
@@ -287,6 +321,22 @@ def generate_pixel_data(input_path, pixel_size, pixel_size_w=None, pixel_size_h=
     # 偏移量取模，避免超过 pixel_size 导致丢弃整列/整行
     offset_x = max(0, int(offset_x)) % ps_w
     offset_y = max(0, int(offset_y)) % ps_h
+
+    # 偏移量优化：当 offset 接近 ps 时，尝试 offset=0，选择覆盖更多像素的方案
+    # 这修复了检测算法返回接近 ps 的偏移量导致最左侧/顶部像素被跳过的问题
+    def _optimize_offset(img_dim, offset, ps):
+        if offset <= ps / 2:
+            return offset
+        cols_orig = max(1, math.ceil((img_dim - offset) / ps))
+        covered_orig = sum(min(ps, img_dim - (offset + gx * ps)) for gx in range(cols_orig))
+        cols_zero = max(1, math.ceil(img_dim / ps))
+        covered_zero = sum(min(ps, img_dim - gx * ps) for gx in range(cols_zero))
+        if covered_zero >= covered_orig:
+            return 0
+        return offset
+
+    offset_x = _optimize_offset(img_w, offset_x, ps_w)
+    offset_y = _optimize_offset(img_h, offset_y, ps_h)
 
     # 边缘补全：向上取整，不截断边缘
     cols = max(1, math.ceil((img_w - offset_x) / ps_w))
@@ -343,7 +393,7 @@ def generate_pixel_data(input_path, pixel_size, pixel_size_w=None, pixel_size_h=
                     closest_hex = "transparent"
                     codes = {}
                 else:
-                    closest_hex = find_closest_color(rgb)
+                    closest_hex = find_closest_color(rgb, mode=color_mode)
                     codes = color_mapping.get(closest_hex, {})
                     if closest_hex not in color_usage:
                         color_usage[closest_hex] = {
@@ -364,10 +414,13 @@ def generate_pixel_data(input_path, pixel_size, pixel_size_w=None, pixel_size_h=
 
     # 颜色量化
     if color_quantize > 0 and raw_colors:
-        unique_colors = list(set(raw_colors))
+        from collections import Counter
+        # 按出现频率排序，保留最主要的颜色（修复原 set() 无序切片导致结果随机的问题）
+        color_counter = Counter(raw_colors)
+        unique_colors = [color for color, _ in color_counter.most_common()]
         total = len(unique_colors)
         keep_ratio = (100 - clamp_param(color_quantize, 0, 100)) / 100.0
-        keep_count = max(2, int(total * keep_ratio))
+        keep_count = max(1, int(total * keep_ratio))
         keep_count = min(keep_count, total, 256)
 
         if keep_count < total:

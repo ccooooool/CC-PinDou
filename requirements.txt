@@ -2,14 +2,16 @@
 # 安装方式: pip install -r requirements.txt
 
 # Web 框架
-Flask==3.0.0
-flask-cors==4.0.0
+Flask
+flask-cors
 
 # 图像处理
-Pillow==10.1.0
-numpy==1.26.4
-scipy==1.15.0
+Pillow
+numpy
+scipy
 
 # AI 背景移除 (rembg 依赖 onnxruntime)
-rembg==2.0.75
-onnxruntime==1.20.1
+rembg
+
+# 生产级 WSGI 服务器
+waitress

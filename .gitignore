@@ -1,0 +1,51 @@
+# IDE
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/node_modules/
+
+# Build outputs
+*.log
+npm-debug.log*
+
+# Large model files (use git-lfs or external storage)
+models/*.onnx
+
+# Backups & temp
+ProjectBackup/
+web_backup/
+NookUI/
+ParamPanel_git.tsx
+test_write.txt
+nookui.css
+nookui.js
+frontend/src_backup_*/
+frontend/src/styles/*.bak
+frontend/*.tsbuildinfo
+frontend/vite.config.d.ts
+frontend/vite.config.js
+frontend/ts_errors.txt
+frontend/screenshot-slider.js
+frontend/.plan-slider-track-fix.md
+
+# Env / secrets
+DEVELOP_ENV.txt
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db

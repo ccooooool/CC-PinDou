@@ -135,7 +135,7 @@ def simplify_colors(img, simplify_level=0):
     total_colors = len(color_freq)
 
     keep_ratio = (100 - simplify_level) / 100.0
-    keep_count = max(2, int(total_colors * keep_ratio))
+    keep_count = max(1, int(total_colors * keep_ratio))
     MAX_PALETTE_SIZE = 256
     keep_count = min(keep_count, MAX_PALETTE_SIZE, total_colors)
 

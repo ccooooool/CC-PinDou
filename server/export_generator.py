@@ -7,14 +7,20 @@ from utils import get_text_size, draw_checkerboard, logger
 
 
 def generate_export_image(grid_data, color_list, brand='MARD', show_code=False,
-                          show_legend=True, show_mark_lines=False, mark_interval=5,
-                          fmt='png'):
+                          show_legend=True, circle_mode=False, show_mark_lines=False,
+                          mark_interval=5, fmt='png'):
     """
     根据网格数据和颜色列表生成拼豆图案。
     返回 BytesIO 对象。
     """
     if not grid_data:
         raise ValueError("grid_data is empty")
+
+    # 防御性检查
+    if mark_interval is None or mark_interval <= 0:
+        mark_interval = 5
+    if not isinstance(mark_interval, int):
+        mark_interval = int(mark_interval)
 
     bead_size = 28
     margin = 45
@@ -57,10 +63,32 @@ def generate_export_image(grid_data, color_list, brand='MARD', show_code=False,
             py = margin + y * bead_size
             color = cell.get('color', '#FFFFFF')
 
-            if color == 'transparent':
-                draw_checkerboard(draw, px, py, bead_size)
+            if circle_mode:
+                # 圆形模式：先画白色背景方块，再画带浅描边的内接圆（半径小1px）
+                draw.rectangle([px, py, px + bead_size, py + bead_size], fill='white')
+                cx = px + bead_size / 2
+                cy = py + bead_size / 2
+                r = bead_size / 2 - 1
+                # 浅描边/阴影底（稍大一圈）
+                draw.ellipse([cx - r - 1, cy - r - 1, cx + r + 1, cy + r + 1], fill='#e0e0e0')
+                if color == 'transparent':
+                    # 透明圆形：用棋盘格图案填充小圆
+                    cell_img = Image.new('RGBA', (bead_size, bead_size), (255, 255, 255, 0))
+                    cell_draw = ImageDraw.Draw(cell_img)
+                    draw_checkerboard(cell_draw, 0, 0, bead_size)
+                    # 创建小圆 mask（在 bead_size x bead_size 的局部坐标系中）
+                    mask = Image.new('L', (bead_size, bead_size), 0)
+                    mask_draw = ImageDraw.Draw(mask)
+                    mask_c = bead_size / 2
+                    mask_draw.ellipse([mask_c - r, mask_c - r, mask_c + r, mask_c + r], fill=255)
+                    img.paste(cell_img, (int(px), int(py)), mask)
+                else:
+                    draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=color)
             else:
-                draw.rectangle([px, py, px + bead_size, py + bead_size], fill=color)
+                if color == 'transparent':
+                    draw_checkerboard(draw, px, py, bead_size)
+                else:
+                    draw.rectangle([px, py, px + bead_size, py + bead_size], fill=color)
 
             if show_code and cell.get('codes', {}).get(brand):
                 code = cell['codes'][brand]
@@ -116,7 +144,10 @@ def generate_export_image(grid_data, color_list, brand='MARD', show_code=False,
             if color == 'transparent':
                 draw_checkerboard(legend_draw, x_pos, y_pos - 8, 16, cell=4)
             else:
-                legend_draw.rectangle([x_pos, y_pos - 8, x_pos + 16, y_pos + 8], fill=color)
+                if circle_mode:
+                    legend_draw.ellipse([x_pos, y_pos - 8, x_pos + 16, y_pos + 8], fill=color)
+                else:
+                    legend_draw.rectangle([x_pos, y_pos - 8, x_pos + 16, y_pos + 8], fill=color)
 
             _, text_h = get_text_size(legend_draw, text, legend_font)
             legend_draw.text((x_pos + 25, y_pos - text_h / 2), text, fill='#333', font=legend_font)
