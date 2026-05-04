@@ -8,10 +8,6 @@ import { Select } from './ui/select';
 
 import { Slider } from './ui/slider';
 
-import { Settings, Grid3X3, Palette } from 'lucide-react';
-
-
-
 const BRANDS = ['MARD', 'COCO', '漫漫', '盼盼', '咪小窝'] as const;
 
 
@@ -117,11 +113,7 @@ export function ParamPanel({ backendAvailable = true }: ParamPanelProps) {
       <div className="px-4 py-3 border-b border-[rgba(255,107,157,0.08)] last:border-b-0">
 
         <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide flex items-center gap-1.5 mb-2">
-
-          <Settings className="w-3.5 h-3.5" />
-
           参数设置
-
         </div>
 
         <div className="flex flex-col gap-3.5">
@@ -131,11 +123,7 @@ export function ParamPanel({ backendAvailable = true }: ParamPanelProps) {
           <div className="flex items-center gap-2.5">
 
             <label className="text-xs font-bold text-[var(--text-muted)] w-20 shrink-0 flex items-center gap-1">
-
-              <Grid3X3 className="w-3.5 h-3.5" />
-
               豆板大小
-
             </label>
 
             <div className="flex-1 flex items-center gap-2.5">
@@ -208,11 +196,11 @@ export function ParamPanel({ backendAvailable = true }: ParamPanelProps) {
 
 
 
-          {/* 颜色简化?*/}
+          {/* 颜色简化 */}
 
           <div className="flex items-center gap-2.5">
 
-            <label className="text-xs font-bold text-[var(--text-muted)] w-20 shrink-0">颜色简化?</label>
+            <label className="text-xs font-bold text-[var(--text-muted)] w-20 shrink-0">颜色简化</label>
 
             <div className="flex-1 flex items-center gap-2.5">
 
@@ -272,11 +260,11 @@ export function ParamPanel({ backendAvailable = true }: ParamPanelProps) {
 
 
 
-          {/* 背景阈值?*/}
+          {/* 背景阈值 */}
 
           <div className="flex items-center gap-2.5">
 
-            <label className="text-xs font-bold text-[var(--text-muted)] w-20 shrink-0">背景阈值?</label>
+            <label className="text-xs font-bold text-[var(--text-muted)] w-20 shrink-0">背景阈值</label>
 
             <div className="flex-1 flex items-center gap-2.5">
 
@@ -309,11 +297,7 @@ export function ParamPanel({ backendAvailable = true }: ParamPanelProps) {
           <div className="flex items-center gap-2.5">
 
             <label className="text-xs font-bold text-[var(--text-muted)] w-20 shrink-0 flex items-center gap-1">
-
-              <Palette className="w-3.5 h-3.5" />
-
               品牌
-
             </label>
 
             <div className="flex-1">

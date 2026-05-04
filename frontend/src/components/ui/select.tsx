@@ -56,12 +56,14 @@ const Select = React.forwardRef<React.ElementRef<typeof SelectPrimitive.Root>, S
                 >
                   <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
                     <SelectPrimitive.ItemIndicator>
-                      <Check className="h-4 w-4" />
+                      <Check className="h-3.5 w-3.5" />
                     </SelectPrimitive.ItemIndicator>
                   </span>
-                  <SelectPrimitive.ItemText className="pl-5">
-                    {option.label}
-                  </SelectPrimitive.ItemText>
+                  <span className="pl-5">
+                    <SelectPrimitive.ItemText>
+                      {option.label}
+                    </SelectPrimitive.ItemText>
+                  </span>
                 </SelectPrimitive.Item>
               ))}
             </SelectPrimitive.Viewport>

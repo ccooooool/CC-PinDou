@@ -6,7 +6,7 @@ import type { ColorMapping } from '../types/perler';
 import { Card } from '@/components/ui';
 import { Select } from './ui/select';
 import { ImageCropModal } from './ImageCropModal';
-import { Upload, Wand2, Loader2, Grid3X3, Move, Maximize } from 'lucide-react';
+import { Upload, Wand2, Loader2 } from 'lucide-react';
 import { detectPixelSizeFrontend } from '../engine/frontendAlgorithms';
 
 const SAMPLE_OPTIONS = [
@@ -296,7 +296,6 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
       {pixelImageUrl && (
         <div className="px-4 py-3 border-b border-[rgba(255,107,157,0.08)] last:border-b-0">
           <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide flex items-center gap-1.5 mb-2">
-            <Grid3X3 className="w-3.5 h-3.5" />
             对齐预览
             {isDetecting && (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -318,7 +317,6 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
       {pixelImageUrl && (
         <div className="px-4 py-3 border-b border-[rgba(255,107,157,0.08)] last:border-b-0">
           <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide flex items-center gap-1.5 mb-3">
-            <Move className="w-3.5 h-3.5" />
             对齐参数
           </div>
 
@@ -326,7 +324,6 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
             {/* 像素大小 */}
             <div className="flex items-center gap-2.5">
               <label className="text-xs font-bold text-[var(--text-muted)] w-20 shrink-0 flex items-center gap-1">
-                <Maximize className="w-3.5 h-3.5" />
                 像素大小
               </label>
               <div className="flex-1 flex items-center gap-2.5">
