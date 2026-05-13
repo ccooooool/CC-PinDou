@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
-import { useEditorStore, useUIStore } from '../store/usePerlerStore';
+import { useEditorStore } from '../store/useEditorStore';
+import { useUIStore } from '../store/useUIStore';
 
 export interface PaintRecord {
   x: number;

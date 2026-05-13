@@ -1,36 +1,7 @@
-/*
- * PinDou Theme — 极简骨架版（已剥离全部样式美化）
- * 保留 CSS 变量映射防止内联 style 崩溃，值已改为中性色
+/**
+ * PinDou 全局基础样式
+ * NookUI 设计令牌定义在 nookui-theme.css 中
  */
-
-:root {
-  --ai-primary: #9ca3af;
-  --ai-primary-dark: #6b7280;
-  --ai-primary-light: rgba(0, 0, 0, 0.04);
-  --ai-bg: #ffffff;
-  --ai-panel-bg: #ffffff;
-  --ai-border: #e5e7eb;
-  --ai-text: #1f2937;
-  --ai-text-secondary: #6b7280;
-  --ai-text-muted: #9ca3af;
-  --ai-success: #9ca3af;
-  --ai-danger: #6b7280;
-  --ai-warning: #9ca3af;
-
-  --dopamine-pink: #9ca3af;
-  --dopamine-yellow: #e5e7eb;
-  --dopamine-mint: #9ca3af;
-  --dopamine-blue: #9ca3af;
-  --dopamine-lavender: #9ca3af;
-  --dopamine-coral: #9ca3af;
-  --dopamine-sky: #9ca3af;
-
-  --ai-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --ai-duration-fast: 0.15s;
-  --ai-duration-base: 0.2s;
-  --ai-duration-slow: 0.25s;
-  --ai-ease: cubic-bezier(0.4, 0, 0.2, 1);
-}
 
 *, *::before, *::after {
   box-sizing: border-box;

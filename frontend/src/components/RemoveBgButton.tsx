@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui';
 import { Scissors, Loader2, ImageOff, Eraser } from 'lucide-react';
 import { removeBgFrontend } from '../engine/frontendAlgorithms';
+import { useConfigStore } from '../store/useConfigStore';
 
 interface RemoveBgButtonProps {
   imageFile: File | null;
@@ -14,30 +15,27 @@ export function RemoveBgButton({ imageFile, onBgRemoved, backendAvailable }: Rem
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
+  const [removedPreview, setRemovedPreview] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
-  const lastBlobUrlRef = useRef<string | null>(null);
+  const transferredRef = useRef<Set<string>>(new Set());
+  const { removeBgThreshold, bgModel } = useConfigStore();
 
   // 组件卸载时清理 blob URL 和 EventSource
+  // 注意：已确认转移给父组件的 URL（在 transferredRef 中）不再释放
   useEffect(() => {
     return () => {
-      if (lastBlobUrlRef.current) {
-        URL.revokeObjectURL(lastBlobUrlRef.current);
-        lastBlobUrlRef.current = null;
+      if (removedPreview && !transferredRef.current.has(removedPreview)) {
+        URL.revokeObjectURL(removedPreview);
       }
       if (esRef.current) {
         esRef.current.close();
         esRef.current = null;
       }
     };
-  }, []);
+  }, [removedPreview]);
 
   const handleRemoveBg = useCallback(async () => {
     if (!imageFile) return;
-
-    if (lastBlobUrlRef.current) {
-      URL.revokeObjectURL(lastBlobUrlRef.current);
-      lastBlobUrlRef.current = null;
-    }
 
     setIsRemoving(true);
     setError(null);
@@ -69,7 +67,10 @@ export function RemoveBgButton({ imageFile, onBgRemoved, backendAvailable }: Rem
     try {
       const formData = new FormData();
       formData.append('image', imageFile);
-      formData.append('edge_threshold', '30');
+      formData.append('edge_threshold', String(removeBgThreshold));
+      if (bgModel && bgModel !== 'frontend') {
+        formData.append('model', bgModel);
+      }
       formData.append('task_id', taskId);
 
       const response = await fetch('/api/remove-bg', {
@@ -84,10 +85,9 @@ export function RemoveBgButton({ imageFile, onBgRemoved, backendAvailable }: Rem
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
-      lastBlobUrlRef.current = url;
-      onBgRemoved(url);
-    } catch (err: any) {
-      setError(err.message || '背景移除失败');
+      setRemovedPreview(url);
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : String(err)) || '背景移除失败');
     } finally {
       setIsRemoving(false);
       if (esRef.current) {
@@ -95,15 +95,17 @@ export function RemoveBgButton({ imageFile, onBgRemoved, backendAvailable }: Rem
         esRef.current = null;
       }
     }
-  }, [imageFile, onBgRemoved]);
+  }, [imageFile, removeBgThreshold, bgModel]);
 
   const handleRemoveBgFallback = useCallback(async () => {
     if (!imageFile) return;
     setIsRemoving(true);
     setError(null);
+    let tempBlobUrl: string | null = null;
     try {
       const img = new Image();
-      img.src = URL.createObjectURL(imageFile);
+      tempBlobUrl = URL.createObjectURL(imageFile);
+      img.src = tempBlobUrl;
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
         img.onerror = () => reject(new Error('图片加载失败'));
@@ -117,23 +119,61 @@ export function RemoveBgButton({ imageFile, onBgRemoved, backendAvailable }: Rem
       ctx.drawImage(img, 0, 0);
 
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const result = removeBgFrontend(imageData, 80);
+      const result = removeBgFrontend(imageData, removeBgThreshold);
       ctx.putImageData(result, 0, 0);
 
       const blob = await new Promise<Blob>((resolve) => {
         canvas.toBlob((b) => resolve(b!), 'image/png');
       });
       const url = URL.createObjectURL(blob);
-      lastBlobUrlRef.current = url;
-      onBgRemoved(url);
-    } catch (err: any) {
-      setError(err.message || '背景移除失败');
+      setRemovedPreview(url);
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : String(err)) || '背景移除失败');
     } finally {
       setIsRemoving(false);
+      if (tempBlobUrl) {
+        URL.revokeObjectURL(tempBlobUrl);
+      }
     }
-  }, [imageFile, onBgRemoved]);
+  }, [imageFile, removeBgThreshold]);
+
+  const handleConfirm = useCallback(() => {
+    if (removedPreview) {
+      transferredRef.current.add(removedPreview);
+      onBgRemoved(removedPreview);
+      setRemovedPreview(null);
+    }
+  }, [removedPreview, onBgRemoved]);
+
+  const handleCancel = useCallback(() => {
+    if (removedPreview) {
+      URL.revokeObjectURL(removedPreview);
+      setRemovedPreview(null);
+    }
+  }, [removedPreview]);
 
   if (!imageFile) return null;
+
+  if (removedPreview) {
+    return (
+      <div className="flex flex-col gap-2.5">
+        <div
+          className="rounded-xl overflow-hidden border border-[var(--border-subtle)] flex items-center justify-center"
+          style={{ background: 'repeating-linear-gradient(45deg, #ddd, #ddd 4px, #fff 4px, #fff 8px)' }}
+        >
+          <img src={removedPreview} alt="背景消除预览" className="block max-w-full max-h-[140px]" />
+        </div>
+        <div className="flex gap-2">
+          <Button variant="primary" block onClick={handleConfirm}>
+            确认
+          </Button>
+          <Button variant="ghost" block onClick={handleCancel}>
+            取消
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -164,15 +204,15 @@ export function RemoveBgButton({ imageFile, onBgRemoved, backendAvailable }: Rem
 
       {isRemoving && (
         <div className="flex flex-col gap-1">
-          <div className="dop-progress">
-            <div className="dop-progress-bar" style={{ width: `${progress}%` }} />
+          <div className="nook-progress">
+            <div className="nook-progress-bar" style={{ width: `${progress}%` }} />
           </div>
           <span className="text-xs font-bold text-[var(--text-muted)] text-center">{status}</span>
         </div>
       )}
 
       {error && (
-        <div className="dop-alert dop-alert-danger">
+        <div className="nook-alert nook-alert-danger">
           <ImageOff className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>

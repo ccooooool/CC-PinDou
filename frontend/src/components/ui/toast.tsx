@@ -1,134 +1,209 @@
 "use client"
 
-import * as React from "react"
-import { createPortal } from "react-dom"
+import { Toaster as SonnerToaster, toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { X } from "lucide-react"
 
-export interface ToastProps {
-  id: string
-  title?: string
-  description?: string
-  variant?: "success" | "error" | "info"
-  icon?: React.ReactNode
+/* ------------------------------------------------------------------ */
+/*  NookUI-styled Sonner Toaster                                       */
+/* ------------------------------------------------------------------ */
+
+interface ToasterProps {
+  position?:
+    | "top-left"
+    | "top-right"
+    | "bottom-left"
+    | "bottom-right"
+    | "top-center"
+    | "bottom-center"
+  richColors?: boolean
+  expand?: boolean
   duration?: number
-  onClose?: (id: string) => void
+  visibleToasts?: number
+  closeButton?: boolean
+  className?: string
 }
 
-const variantIconMap: Record<string, React.ReactNode> = {
-  success: "🌿",
-  error: "💝",
-  info: "💧",
-}
-
-function ToastItem({
-  id,
-  title,
-  description,
-  variant = "info",
-  icon,
+function Toaster({
+  position = "top-center",
+  richColors = false,
+  expand = false,
   duration = 3000,
-  onClose,
-}: ToastProps) {
-  const [visible, setVisible] = React.useState(false)
-
-  React.useEffect(() => {
-    requestAnimationFrame(() => setVisible(true))
-    const timer = setTimeout(() => {
-      setVisible(false)
-      setTimeout(() => onClose?.(id), 300)
-    }, duration)
-    return () => clearTimeout(timer)
-  }, [id, duration, onClose])
-
+  visibleToasts = 4,
+  closeButton = true,
+  className,
+}: ToasterProps) {
   return (
-    <div
-      className={cn(
-        "nook-toast transition-all duration-300",
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-      )}
+    <SonnerToaster
+      position={position}
+      richColors={richColors}
+      expand={expand}
+      duration={duration}
+      visibleToasts={visibleToasts}
+      closeButton={closeButton}
+      className={cn("nook-toaster", className)}
+      toastOptions={{
+        classNames: {
+          toast:
+            "nook-toast-item group rounded-[20px] border-[3px] bg-[var(--bg-surface)] shadow-toast font-nook",
+          title: "nook-toast-title text-[var(--text-heading)] font-semibold",
+          description: "nook-toast-desc text-[var(--text-secondary)] text-sm",
+          actionButton:
+            "nook-toast-action rounded-button bg-ac-green text-white font-semibold hover:-translate-y-0.5 transition-transform",
+          cancelButton:
+            "nook-toast-cancel rounded-button bg-[var(--bg-surface-alt)] text-[var(--text-secondary)] font-semibold hover:-translate-y-0.5 transition-transform",
+          closeButton:
+            "nook-toast-close text-[var(--text-secondary)] hover:text-[var(--text-heading)] hover:scale-110 transition-all",
+          success:
+            "border-[var(--ac-green)] !bg-[var(--ac-green)]/10",
+          error:
+            "border-[var(--ac-coral)] !bg-[var(--ac-coral)]/10",
+          info:
+            "border-[var(--ac-blue)] !bg-[var(--ac-blue)]/10",
+          warning:
+            "border-[var(--ac-yellow)] !bg-[var(--ac-yellow)]/10",
+        },
+      }}
+      icons={{
+        success: <SuccessIcon />,
+        error: <ErrorIcon />,
+        info: <InfoIcon />,
+        warning: <WarningIcon />,
+        loading: <LoadingIcon />,
+      }}
+    />
+  )
+}
+
+/* ---------- Lucide-style inline icons (no extra deps) ---------- */
+
+function SuccessIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="var(--ac-green)"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <div className={cn("nook-toast-icon", variant)}>
-        {icon || variantIconMap[variant]}
-      </div>
-      <div className="nook-toast-content">
-        {title && <div className="nook-toast-title">{title}</div>}
-        {description && <div className="nook-toast-desc">{description}</div>}
-      </div>
-      <button
-        type="button"
-        className="nook-toast-close"
-        onClick={() => {
-          setVisible(false)
-          setTimeout(() => onClose?.(id), 300)
-        }}
-      >
-        <X className="h-3.5 w-3.5" />
-      </button>
-    </div>
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
   )
 }
 
-/* ---------- Toast Provider ---------- */
-interface ToastItemData {
-  id: string
-  title?: string
-  description?: string
-  variant?: "success" | "error" | "info"
-  icon?: React.ReactNode
-  duration?: number
-}
-
-interface ToastContextValue {
-  addToast: (toast: Omit<ToastItemData, "id">) => void
-}
-
-const ToastContext = React.createContext<ToastContextValue | null>(null)
-
-export function useToast() {
-  const ctx = React.useContext(ToastContext)
-  if (!ctx) throw new Error("useToast must be used inside <ToastProvider>")
-  return ctx
-}
-
-export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = React.useState<ToastItemData[]>([])
-  const [mounted, setMounted] = React.useState(false)
-
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  const addToast = React.useCallback((toast: Omit<ToastItemData, "id">) => {
-    const id = Math.random().toString(36).slice(2, 9)
-    setToasts((prev) => [...prev, { id, ...toast }])
-  }, [])
-
-  const removeToast = React.useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id))
-  }, [])
-
-  const portalContent = (
-    <div className="nook-sonner">
-      {toasts.map((t) => (
-        <ToastItem
-          key={t.id}
-          id={t.id}
-          title={t.title}
-          description={t.description}
-          variant={t.variant}
-          icon={t.icon}
-          duration={t.duration}
-          onClose={removeToast}
-        />
-      ))}
-    </div>
-  )
-
+function ErrorIcon() {
   return (
-    <ToastContext.Provider value={{ addToast }}>
-      {children}
-      {mounted && createPortal(portalContent, document.body)}
-    </ToastContext.Provider>
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="var(--ac-coral)"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="m15 9-6 6M9 9l6 6" />
+    </svg>
   )
 }
+
+function InfoIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="var(--ac-blue)"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4M12 8h.01" />
+    </svg>
+  )
+}
+
+function WarningIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="var(--ac-yellow)"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+      <path d="M12 9v4M12 17h.01" />
+    </svg>
+  )
+}
+
+function LoadingIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="var(--ac-green)"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="animate-spin"
+      style={{ animationDuration: "1s" }}
+    >
+      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </svg>
+  )
+}
+
+/* ---------- Legacy compatibility layer ---------- */
+
+/** @deprecated Use `toast.success()` / `toast.error()` / `toast()` directly instead. */
+function useToast() {
+  return {
+    addToast: (opts: {
+      title?: string
+      description?: string
+      variant?: "success" | "error" | "info"
+      duration?: number
+    }) => {
+      const { title, description, variant = "info", duration = 3000 } = opts
+      const msg = title ? (
+        <div>
+          <div className="font-semibold">{title}</div>
+          {description && (
+            <div className="text-sm text-[var(--text-secondary)]">{description}</div>
+          )}
+        </div>
+      ) : (
+        description || ""
+      )
+      if (variant === "success") toast.success(msg, { duration })
+      else if (variant === "error") toast.error(msg, { duration })
+      else toast(msg, { duration })
+    },
+  }
+}
+
+/** @deprecated Use `<Toaster />` from sonner instead. */
+function ToastProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      {children}
+      <Toaster />
+    </>
+  )
+}
+
+export { Toaster, ToastProvider, useToast, toast }
+export default Toaster

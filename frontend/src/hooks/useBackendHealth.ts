@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export interface BackendHealth {
   available: boolean;
@@ -16,7 +16,7 @@ export function useBackendHealth(enabled: boolean = true): BackendHealth {
   const [checking, setChecking] = useState(true);
   const abortRef = useRef<AbortController | null>(null);
 
-  const check = async () => {
+  const check = useCallback(async () => {
     setChecking(true);
     if (abortRef.current) {
       abortRef.current.abort();
@@ -34,7 +34,7 @@ export function useBackendHealth(enabled: boolean = true): BackendHealth {
     } finally {
       setChecking(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!enabled) {
@@ -48,7 +48,7 @@ export function useBackendHealth(enabled: boolean = true): BackendHealth {
         abortRef.current.abort();
       }
     };
-  }, [enabled]);
+  }, [enabled, check]);
 
   return { available, checking, retry: check };
 }

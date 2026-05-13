@@ -1,5 +1,6 @@
 """rembg 模型扫描与懒加载管理。"""
 import os
+import threading
 
 from rembg import new_session
 
@@ -23,11 +24,15 @@ AVAILABLE_MODELS = scan_available_models()
 
 # 懒加载 session 字典
 _rembg_sessions = {}
+_session_lock = threading.Lock()
 
 
 def get_rembg_session(model_name):
-    """获取或创建指定模型的 rembg session。"""
+    """获取或创建指定模型的 rembg session。线程安全。"""
     if model_name not in _rembg_sessions:
-        logger.info("Loading rembg session: %s", model_name)
-        _rembg_sessions[model_name] = new_session(model_name)
+        with _session_lock:
+            # 双重检查，避免锁竞争后重复创建
+            if model_name not in _rembg_sessions:
+                logger.info("Loading rembg session: %s", model_name)
+                _rembg_sessions[model_name] = new_session(model_name)
     return _rembg_sessions[model_name]

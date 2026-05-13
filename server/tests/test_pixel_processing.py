@@ -37,7 +37,7 @@ class TestGeneratePixelData:
         path = self._create_pixel_art(pixel_size=8)
         try:
             result = generate_pixel_data(
-                path, pixel_size=8, offset_x=0, offset_y=0,
+                Image.open(path), pixel_size=8, offset_x=0, offset_y=0,
                 sampling_mode='center'
             )
             assert 'grid_data' in result
@@ -63,7 +63,7 @@ class TestGeneratePixelData:
             results = []
             for _ in range(5):
                 result = generate_pixel_data(
-                    path, pixel_size=8, offset_x=0, offset_y=0,
+                    Image.open(path), pixel_size=8, offset_x=0, offset_y=0,
                     sampling_mode='center', color_quantize=50
                 )
                 hex_set = {c['hex'] for c in result['color_list']}
@@ -86,11 +86,11 @@ class TestGeneratePixelData:
         path = self._create_pixel_art(pixel_size=8, colors=colors)
         try:
             result_no_quant = generate_pixel_data(
-                path, pixel_size=8, offset_x=0, offset_y=0,
+                Image.open(path), pixel_size=8, offset_x=0, offset_y=0,
                 sampling_mode='center', color_quantize=0
             )
             result_quant = generate_pixel_data(
-                path, pixel_size=8, offset_x=0, offset_y=0,
+                Image.open(path), pixel_size=8, offset_x=0, offset_y=0,
                 sampling_mode='center', color_quantize=80
             )
 
@@ -103,7 +103,7 @@ class TestGeneratePixelData:
         path = self._create_pixel_art(pixel_size=16)
         try:
             result = generate_pixel_data(
-                path, pixel_size=0, offset_x=-1, offset_y=-1,
+                Image.open(path), pixel_size=0, offset_x=-1, offset_y=-1,
                 sampling_mode='center'
             )
             assert 'detected' in result
@@ -128,7 +128,7 @@ class TestGeneratePixelData:
 
         try:
             result = generate_pixel_data(
-                path, pixel_size=8, offset_x=0, offset_y=0,
+                Image.open(path), pixel_size=8, offset_x=0, offset_y=0,
                 sampling_mode='center', remove_bg=True, bg_threshold=50
             )
             # 边框红色应被移除（变为 transparent）

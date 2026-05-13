@@ -1,11 +1,11 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface UIState {
   // ========== 模式 ==========
   mode: 'normal' | 'pixel' | 'draw';
 
   // ========== 面板状态 ==========
-  showWelcome: boolean;
   leftPanelCollapsed: boolean;
   legendCollapsed: boolean;
   lastSavedAt: number | null;
@@ -23,12 +23,8 @@ interface UIState {
   replaceTargetColor: string | null;
   replaceTargetCodes: Record<string, string>;
 
-  // ========== 体验增强 ==========
-  previewMode: 'normal' | '3d';
-
   // ========== Actions ==========
   setMode: (mode: 'normal' | 'pixel' | 'draw') => void;
-  setShowWelcome: (show: boolean) => void;
   toggleLeftPanel: () => void;
   toggleLegend: () => void;
   setLastSavedAt: (ts: number | null) => void;
@@ -42,45 +38,55 @@ interface UIState {
   setReplaceMode: (mode: 'brush' | 'global') => void;
   setReplaceSourceColor: (hex: string | null) => void;
   setReplaceTargetColor: (hex: string | null, codes?: Record<string, string>) => void;
-
-  setPreviewMode: (mode: 'normal' | '3d') => void;
 }
 
-export const useUIStore = create<UIState>((set) => ({
-  mode: 'normal',
-  showWelcome: true,
-  leftPanelCollapsed: false,
-  legendCollapsed: false,
-  lastSavedAt: null,
+export const useUIStore = create<UIState>()(
+  persist(
+    (set) => ({
+      mode: 'normal',
+      leftPanelCollapsed: false,
+      legendCollapsed: false,
+      lastSavedAt: null,
 
-  drawTool: 'pen',
-  symmetryMode: 'none',
-  brushSize: 1,
-  drawGridSize: 32,
-  shapeFilled: true,
+      drawTool: 'pen',
+      symmetryMode: 'none',
+      brushSize: 1,
+      drawGridSize: 32,
+      shapeFilled: true,
 
-  replaceMode: 'brush',
-  replaceSourceColor: null,
-  replaceTargetColor: null,
-  replaceTargetCodes: {},
+      replaceMode: 'brush',
+      replaceSourceColor: null,
+      replaceTargetColor: null,
+      replaceTargetCodes: {},
 
-  previewMode: 'normal',
+      setMode: (mode) => set({ mode }),
+      toggleLeftPanel: () => set((state) => ({ leftPanelCollapsed: !state.leftPanelCollapsed })),
+      toggleLegend: () => set((state) => ({ legendCollapsed: !state.legendCollapsed })),
+      setLastSavedAt: (ts) => set({ lastSavedAt: ts }),
 
-  setMode: (mode) => set({ mode }),
-  setShowWelcome: (show) => set({ showWelcome: show }),
-  toggleLeftPanel: () => set((state) => ({ leftPanelCollapsed: !state.leftPanelCollapsed })),
-  toggleLegend: () => set((state) => ({ legendCollapsed: !state.legendCollapsed })),
-  setLastSavedAt: (ts) => set({ lastSavedAt: ts }),
+      setDrawTool: (tool) => set({ drawTool: tool }),
+      setSymmetryMode: (mode) => set({ symmetryMode: mode }),
+      setBrushSize: (v) => set({ brushSize: v }),
+      setDrawGridSize: (v) => set({ drawGridSize: v }),
+      setShapeFilled: (v) => set({ shapeFilled: v }),
 
-  setDrawTool: (tool) => set({ drawTool: tool }),
-  setSymmetryMode: (mode) => set({ symmetryMode: mode }),
-  setBrushSize: (v) => set({ brushSize: v }),
-  setDrawGridSize: (v) => set({ drawGridSize: v }),
-  setShapeFilled: (v) => set({ shapeFilled: v }),
-
-  setReplaceMode: (mode) => set({ replaceMode: mode }),
-  setReplaceSourceColor: (hex) => set({ replaceSourceColor: hex }),
-  setReplaceTargetColor: (hex, codes) => set({ replaceTargetColor: hex, replaceTargetCodes: codes || {} }),
-
-  setPreviewMode: (mode) => set({ previewMode: mode }),
-}));
+      setReplaceMode: (mode) => set({ replaceMode: mode }),
+      setReplaceSourceColor: (hex) => set({ replaceSourceColor: hex }),
+      setReplaceTargetColor: (hex, codes) => set({ replaceTargetColor: hex, replaceTargetCodes: codes || {} }),
+    }),
+    {
+      name: 'pindou-ui',
+      partialize: (state) => ({
+        drawTool: state.drawTool,
+        symmetryMode: state.symmetryMode,
+        brushSize: state.brushSize,
+        drawGridSize: state.drawGridSize,
+        shapeFilled: state.shapeFilled,
+        replaceMode: state.replaceMode,
+        replaceSourceColor: state.replaceSourceColor,
+        replaceTargetColor: state.replaceTargetColor,
+        replaceTargetCodes: state.replaceTargetCodes,
+      }),
+    }
+  )
+);

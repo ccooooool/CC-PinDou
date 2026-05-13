@@ -1,8 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { useUIStore, useEditorStore } from '../store/usePerlerStore';
+import { useUIStore } from '../store/useUIStore';
+import { useEditorStore } from '../store/useEditorStore';
+import { getModeTheme } from '../utils/theme';
 import { ColorPickerPopover } from './ColorPickerPopover';
 import { ToolPropertiesPopover } from './ToolPropertiesPopover';
 import { Modal } from './ui/modal';
+import { toast } from '@/components/ui/toast';
 import {
   Pencil, Minus, Square, Circle, PaintBucket, Eraser, Wand2, Replace,
   RotateCw, FlipHorizontal, FlipVertical, RotateCcw,
@@ -47,6 +50,7 @@ const SYMMETRIES = [
 ];
 
 export function DrawToolBar() {
+  const theme = getModeTheme('draw');
   const { drawTool, setDrawTool, symmetryMode, setSymmetryMode } = useUIStore();
   const { flipHorizontal, flipVertical, rotateCW, rotateCCW, gridData, setGridData } = useEditorStore();
   const [toolPropsOpen, setToolPropsOpen] = useState(false);
@@ -66,7 +70,7 @@ export function DrawToolBar() {
     e.preventDefault();
     const tool = TOOLS.find((t) => t.key === toolKey);
     if (!tool?.hasProps) {
-      alert('该工具没有可设置的选项');
+      toast.error('该工具没有可设置的选项');
       return;
     }
     const btn = buttonRefs.current[toolKey];
@@ -131,7 +135,7 @@ export function DrawToolBar() {
   const SymmetryIcon = currentSymmetry.icon;
 
   return (
-    <div className="flex flex-col items-center gap-3 p-3" style={{ width: 48, height: '100%' }}>
+    <div className="flex flex-col items-center gap-3 p-3 w-12 h-full">
       {TOOLS.map((t) => {
         const Icon = t.icon;
         const active = drawTool === t.key;
@@ -142,14 +146,15 @@ export function DrawToolBar() {
             title={t.label + (t.hasProps ? '（右键打开设置）' : '')}
             onClick={() => setDrawTool(t.key)}
             onContextMenu={(e) => handleContextMenu(e, t.key)}
-            className={'dop-tool' + (active ? ' active' : '')}
+            className={'nook-tool' + (active ? ' active' : '')}
+            style={active ? { background: theme.light8, borderColor: theme.main, color: theme.dark1 } : undefined}
           >
             <Icon className="w-[18px] h-[18px]" />
           </button>
         );
       })}
 
-      <div className="w-7 h-[2px] bg-[var(--dop-pink)] my-1 rounded-full" />
+      <div className="w-7 h-[2px] my-1 rounded-full" style={{ background: theme.main }} />
 
       {/* 变换按钮 */}
       {(() => {
@@ -159,7 +164,7 @@ export function DrawToolBar() {
           <button
             ref={transformBtnRef}
             title={tDef.label + '（右键展开选项）'}
-            className="dop-tool"
+            className="nook-tool"
             onClick={() => handleTransformAction(tDef.action)}
             onContextMenu={handleTransformContextMenu}
           >
@@ -172,7 +177,8 @@ export function DrawToolBar() {
       <button
         ref={symmetryBtnRef}
         title={currentSymmetry.label + '（右键展开选项）'}
-        className={'dop-tool' + (symmetryMode !== 'none' ? ' active' : '')}
+        className={'nook-tool' + (symmetryMode !== 'none' ? ' active' : '')}
+        style={symmetryMode !== 'none' ? { background: theme.light8, borderColor: theme.main, color: theme.dark1 } : undefined}
         onClick={() => setSymmetryMode(symmetryMode === 'none' ? 'horizontal' : 'none')}
         onContextMenu={(e) => { e.preventDefault(); setSymmetryOpen(true); }}
       >
@@ -185,7 +191,7 @@ export function DrawToolBar() {
       <div className="mt-auto" />
       <button
         title="清空画板"
-        className="dop-tool"
+        className="nook-tool"
         onClick={() => setClearConfirmOpen(true)}
       >
         <Trash2 className="w-[18px] h-[18px]" />
@@ -202,7 +208,7 @@ export function DrawToolBar() {
       {transformOpen && (
         <div
           ref={transformPopoverRef}
-          className="dop-panel fixed flex flex-col z-[100] py-1"
+          className="nook-panel fixed flex flex-col z-[100] py-1"
           style={{ left: transformPos.left, top: transformPos.top, width: 160 }}
         >
           {TRANSFORMS.map((t) => {
@@ -233,7 +239,7 @@ export function DrawToolBar() {
       {symmetryOpen && (
         <div
           ref={symmetryPopoverRef}
-          className="dop-panel fixed flex flex-col z-[100] py-1"
+          className="nook-panel fixed flex flex-col z-[100] py-1"
           style={{ left: symmetryPos.left, top: symmetryPos.top, width: 160 }}
         >
           {SYMMETRIES.map((s) => {
@@ -264,11 +270,11 @@ export function DrawToolBar() {
         onClose={() => setClearConfirmOpen(false)}
         footer={
           <div className="flex items-center gap-2 justify-end">
-            <button className="dop-btn dop-btn-secondary" onClick={() => setClearConfirmOpen(false)}>
+            <button className="nook-btn nook-btn-secondary" onClick={() => setClearConfirmOpen(false)}>
               取消
             </button>
             <button
-              className="dop-btn dop-btn-primary"
+              className="nook-btn nook-btn-primary"
               onClick={() => {
                 if (gridData) {
                   const newGrid = gridData.map((row) =>

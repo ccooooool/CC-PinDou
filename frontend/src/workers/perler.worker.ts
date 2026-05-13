@@ -75,10 +75,10 @@ self.onmessage = (e: MessageEvent<GeneratePayload>) => {
       };
 
       self.postMessage(response);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const response: WorkerResponse = {
         status: 'error',
-        error: err?.message || 'Worker 计算失败',
+        error: (err instanceof Error ? err.message : String(err)) || 'Worker 计算失败',
       };
       self.postMessage(response);
     }

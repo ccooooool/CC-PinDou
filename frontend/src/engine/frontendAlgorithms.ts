@@ -79,18 +79,18 @@ export function simplifyColorsFrontend(
 
 export function removeBgFrontend(
   imageData: ImageData,
-  threshold: number = 80
+  threshold: number = 40
 ): ImageData {
   const { data, width, height } = imageData;
   const out = new Uint8ClampedArray(data);
 
-  // 采样边框颜色
+  // 采样边框颜色（4-bit 量化，合并肉眼难以区分的相近颜色）
   const borderColors = new Map<number, number>();
   const samplePixel = (x: number, y: number) => {
     const idx = (y * width + x) * 4;
-    const r = out[idx];
-    const g = out[idx + 1];
-    const b = out[idx + 2];
+    const r = (out[idx] >> 4) << 4;
+    const g = (out[idx + 1] >> 4) << 4;
+    const b = (out[idx + 2] >> 4) << 4;
     const key = (r << 16) | (g << 8) | b;
     borderColors.set(key, (borderColors.get(key) || 0) + 1);
   };
@@ -122,13 +122,9 @@ export function removeBgFrontend(
   const totalBorder = Array.from(borderColors.values()).reduce((a, b) => a + b, 0);
   const bgRatio = maxCount / totalBorder;
 
-  // 如果边框颜色不够统一，放弃移除
-  if (bgRatio * 100 < threshold) {
-    return imageData;
-  }
-
-  // 将所有接近背景色的像素设为透明
-  const tolerance = 30;
+  // 边框颜色统一时用小容差精确移除；不够统一时用大容差宽松移除，绝不直接返回原图
+  const isUniform = bgRatio * 100 >= threshold;
+  const tolerance = isUniform ? 30 : 60;
   for (let i = 0; i < out.length; i += 4) {
     const r = out[i];
     const g = out[i + 1];
@@ -379,13 +375,14 @@ export async function exportImageFrontend(
   const rows = gridData.length;
   const cols = gridData[0]?.length || 0;
 
-  // 计算图例尺寸
-  const legendItemHeight = 28;
-  const legendWidth = 180;
-  const legendHeight = showLegend ? colorList.length * legendItemHeight + 20 : 0;
+  // 计算图例尺寸（水平排列，下方，自动换行）
+  const legendItemWidth = 100;
+  const itemsPerRow = showLegend ? Math.max(1, Math.floor((cols * beadSize + margin * 2 - 40) / legendItemWidth)) : 0;
+  const legendRows = showLegend ? Math.ceil(colorList.length / itemsPerRow) : 0;
+  const legendHeight = showLegend ? legendRows * 30 + 40 : 0;
 
-  const canvasWidth = cols * beadSize + margin * 2 + (showLegend ? legendWidth + 20 : 0);
-  const canvasHeight = Math.max(rows * beadSize + margin * 2, legendHeight + margin * 2);
+  const canvasWidth = cols * beadSize + margin * 2;
+  const canvasHeight = rows * beadSize + margin * 2 + legendHeight + 20;
 
   const canvas = document.createElement('canvas');
   canvas.width = canvasWidth;
@@ -399,7 +396,7 @@ export async function exportImageFrontend(
   // 坐标轴标签
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = '12px Arial';
+  ctx.font = "12px 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-serif";
   ctx.fillStyle = '#5D4037';
   for (let i = 0; i < cols; i++) {
     ctx.fillText(String(i + 1), margin + i * beadSize + beadSize / 2, margin / 2);
@@ -465,43 +462,54 @@ export async function exportImageFrontend(
     ctx.stroke();
   }
 
-  // 图例
+  // 图例（图片下方，水平排列，自动换行）
   if (showLegend) {
-    const legendX = margin + cols * beadSize + 20;
-    let legendY = margin;
+    const legendX = margin;
+    const legendY = margin + rows * beadSize + 20;
 
     ctx.fillStyle = '#5D4037';
-    ctx.font = 'bold 14px Arial';
+    ctx.font = "bold 14px 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-serif";
     ctx.textAlign = 'left';
     ctx.fillText('颜色图例', legendX, legendY);
-    legendY += 24;
 
-    ctx.font = '12px Arial';
+    ctx.font = "12px 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-serif";
+    let xPos = legendX;
+    let yPos = legendY + 30;
+
     for (const color of colorList) {
       ctx.fillStyle = color.hex;
-      ctx.fillRect(legendX, legendY - 10, 18, 18);
+      ctx.fillRect(xPos, yPos - 10, 18, 18);
       ctx.strokeStyle = '#F3E5D8';
       ctx.lineWidth = 1;
-      ctx.strokeRect(legendX, legendY - 10, 18, 18);
+      ctx.strokeRect(xPos, yPos - 10, 18, 18);
 
       const code = color.codes[brand] || '';
       ctx.fillStyle = '#5D4037';
-      ctx.fillText(`${code} × ${color.count}`, legendX + 26, legendY + 2);
-      legendY += legendItemHeight;
+      ctx.fillText(`${code} × ${color.count}`, xPos + 26, yPos + 2);
+
+      xPos += legendItemWidth;
+      if (xPos > canvasWidth - legendItemWidth) {
+        xPos = legendX;
+        yPos += 30;
+      }
     }
   }
 
-  return new Promise((resolve) => {
+  return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
-      resolve(blob!);
+      if (!blob) {
+        reject(new Error('Canvas toBlob 失败'));
+        return;
+      }
+      resolve(blob);
     }, format === 'jpg' ? 'image/jpeg' : 'image/png', 0.95);
   });
 }
 
 function hexBrightness(hex: string): number {
   if (hex === 'transparent') return 255;
-  const r = parseInt(hex.substr(1, 2), 16);
-  const g = parseInt(hex.substr(3, 2), 16);
-  const b = parseInt(hex.substr(5, 2), 16);
+  const r = parseInt(hex.substring(1, 3), 16);
+  const g = parseInt(hex.substring(3, 5), 16);
+  const b = parseInt(hex.substring(5, 7), 16);
   return (r + g + b) / 3;
 }

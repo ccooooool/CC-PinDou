@@ -264,39 +264,38 @@ def sample_pixel_block(img_arr, x0, y0, block_w, block_h, sampling_mode='mode'):
         mean_a = np.mean(alphas)
         return (int(mean_rgb[0]), int(mean_rgb[1]), int(mean_rgb[2]), int(mean_a))
 
-    # mode (default): 众数采样
+    # mode (default): 众数采样（只编码 RGB，opaque_mask 已保证 alpha ≥ 128）
     pixels = block.reshape(-1, 4)
     opaque_mask = pixels[:, 3] >= 128
     if not opaque_mask.any():
         return None
     opaque_pixels = pixels[opaque_mask]
-    encoded = (opaque_pixels[:, 0].astype(np.uint32) * 256 * 256 * 256 +
-               opaque_pixels[:, 1].astype(np.uint32) * 256 * 256 +
-               opaque_pixels[:, 2].astype(np.uint32) * 256 +
-               opaque_pixels[:, 3].astype(np.uint32))
+    encoded = (opaque_pixels[:, 0].astype(np.uint32) * 256 * 256 +
+               opaque_pixels[:, 1].astype(np.uint32) * 256 +
+               opaque_pixels[:, 2].astype(np.uint32))
     unique, counts = np.unique(encoded, return_counts=True)
     most_common = unique[counts.argmax()]
-    a = most_common & 0xFF
-    most_common >>= 8
     b = most_common & 0xFF
     most_common >>= 8
     g = most_common & 0xFF
     most_common >>= 8
     r = most_common & 0xFF
-    return (r, g, b, a)
+    return (r, g, b, 255)
 
 
-def generate_pixel_data(input_path, pixel_size, pixel_size_w=None, pixel_size_h=None,
+def generate_pixel_data(img, pixel_size, pixel_size_w=None, pixel_size_h=None,
                         offset_x=0, offset_y=0,
                         sampling_mode='mode', remove_bg=False, bg_threshold=80,
                         color_quantize=0, color_mode='full'):
     """
     处理像素风格图片，支持多种采样方式和预处理。
+    img: PIL.Image 对象（RGBA 模式）
     pixel_size: 0=自动检测（当 pixel_size_w/h 未指定时作为默认值）
     pixel_size_w/pixel_size_h: 可分别指定宽/高方向像素块大小，实现长宽不一致网格
     offset_x/offset_y: -1=自动检测
     """
-    img = Image.open(input_path).convert("RGBA")
+    if img.mode != 'RGBA':
+        img = img.convert('RGBA')
     img_w, img_h = img.size
     img_arr = np.array(img)
 
@@ -388,8 +387,12 @@ def generate_pixel_data(input_path, pixel_size, pixel_size_w=None, pixel_size_h=
                 closest_hex = "transparent"
                 codes = {}
             else:
-                rgb = (color[0], color[1], color[2])
-                if bg_color is not None and rgb == bg_color:
+                rgb = (int(color[0]), int(color[1]), int(color[2]))
+                if bg_color is not None and max(
+                    abs(rgb[0] - int(bg_color[0])),
+                    abs(rgb[1] - int(bg_color[1])),
+                    abs(rgb[2] - int(bg_color[2]))
+                ) < 10:
                     closest_hex = "transparent"
                     codes = {}
                 else:

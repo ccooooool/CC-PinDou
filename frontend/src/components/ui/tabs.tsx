@@ -1,11 +1,9 @@
-"use client"
-
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
 interface TabsContextValue {
-  activeTab: string
-  setActiveTab: (value: string) => void
+  value?: string
+  onChange: (value: string) => void
 }
 
 const TabsContext = React.createContext<TabsContextValue | null>(null)
@@ -16,8 +14,7 @@ function useTabs() {
   return ctx
 }
 
-/* ---------- Tabs ---------- */
-interface TabsProps {
+export interface TabsProps {
   defaultValue?: string
   value?: string
   onChange?: (value: string) => void
@@ -25,34 +22,40 @@ interface TabsProps {
   className?: string
 }
 
-function Tabs({ defaultValue, value, onChange, children, className }: TabsProps) {
-  const [internalValue, setInternalValue] = React.useState(defaultValue || "")
-  const activeTab = value !== undefined ? value : internalValue
-  const setActiveTab = (v: string) => {
-    setInternalValue(v)
-    onChange?.(v)
+export function Tabs({ defaultValue, value, onChange, children, className }: TabsProps) {
+  const [internalValue, setInternalValue] = React.useState(defaultValue)
+  const activeValue = value !== undefined ? value : internalValue
+
+  const handleChange = (val: string) => {
+    setInternalValue(val)
+    onChange?.(val)
   }
 
   return (
-    <TabsContext.Provider value={{ activeTab, setActiveTab }}>
-      <div className={cn("nook-tabs", className)}>{children}</div>
+    <TabsContext.Provider value={{ value: activeValue, onChange: handleChange }}>
+      <div className={cn("w-full", className)}>{children}</div>
     </TabsContext.Provider>
   )
 }
 
-/* ---------- TabTrigger ---------- */
-interface TabTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface TabTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   value: string
-  children?: React.ReactNode
 }
 
-function TabTrigger({ value, children, className, ...props }: TabTriggerProps) {
-  const { activeTab, setActiveTab } = useTabs()
+export function TabTrigger({ className, value, children, ...props }: TabTriggerProps) {
+  const { value: activeValue, onChange } = useTabs()
+  const isActive = activeValue === value
+
   return (
     <button
-      type="button"
-      className={cn("nook-tab", activeTab === value && "active", className)}
-      onClick={() => setActiveTab(value)}
+      className={cn(
+        "inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-nook font-bold transition-all duration-200 ease-nook",
+        isActive
+          ? "bg-[var(--bg-surface)] text-ac-green shadow-tabs-active"
+          : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]",
+        className
+      )}
+      onClick={() => onChange(value)}
       {...props}
     >
       {children}
@@ -60,20 +63,17 @@ function TabTrigger({ value, children, className, ...props }: TabTriggerProps) {
   )
 }
 
-/* ---------- TabContent ---------- */
-interface TabContentProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface TabContentProps extends React.HTMLAttributes<HTMLDivElement> {
   value: string
-  children?: React.ReactNode
 }
 
-function TabContent({ value, children, className, ...props }: TabContentProps) {
-  const { activeTab } = useTabs()
-  if (activeTab !== value) return null
+export function TabContent({ className, value, children, ...props }: TabContentProps) {
+  const { value: activeValue } = useTabs()
+  if (activeValue !== value) return null
+
   return (
-    <div className={cn("nook-tab-panel active", className)} {...props}>
+    <div className={cn("mt-4 animate-slide-up", className)} {...props}>
       {children}
     </div>
   )
 }
-
-export { Tabs, TabTrigger, TabContent }

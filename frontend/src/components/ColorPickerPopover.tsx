@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { useEditorStore, useConfigStore } from '../store/usePerlerStore';
+import { useEditorStore } from '../store/useEditorStore';
+import { useConfigStore } from '../store/useConfigStore';
 import colorMappingJson from '../data/colorSystemMapping.json';
 import type { ColorMapping } from '../types/perler';
 
@@ -75,9 +76,15 @@ export function ColorPickerPopover() {
         ref={buttonRef}
         onClick={handleToggle}
         title="选择颜色"
-        className={`dop-swatch ${open ? 'active' : ''}`}
+        className="relative flex-shrink-0 overflow-hidden cursor-pointer"
         style={{
+          width: 28,
+          height: 28,
+          borderRadius: 'var(--radius-sm)',
+          border: '1px solid var(--nook-wood)',
           backgroundColor: isTransparent ? '#fff' : selectedColor?.hex || '#E8E8F0',
+          transition: 'transform 0.1s, box-shadow 0.15s',
+          boxShadow: open ? '0 0 0 2px var(--text-secondary)' : undefined,
         }}
       >
         {isTransparent && (
@@ -99,7 +106,7 @@ export function ColorPickerPopover() {
       {open && (
         <div
           ref={popoverRef}
-          className="dop-panel fixed flex flex-col overflow-hidden z-[100]"
+          className="nook-panel fixed flex flex-col overflow-hidden z-[100]"
           style={{
             left: panelPos.left,
             top: panelPos.top,
@@ -108,16 +115,16 @@ export function ColorPickerPopover() {
           }}
         >
           {/* 顶部全色/221色切换*/}
-          <div className="flex gap-1 px-3 py-2.5 border-b border-[#f1f5f9]">
+          <div className="flex gap-1 px-3 py-2.5 border-b border-[var(--border-subtle)]">
             <button
               onClick={() => setColorMode('full')}
-              className={`dop-btn flex-1 ${colorMode === 'full' ? 'dop-btn-primary' : 'dop-btn-secondary'}`}
+              className={`nook-btn flex-1 ${colorMode === 'full' ? 'nook-btn-primary' : 'nook-btn-secondary'}`}
             >
               全色
             </button>
             <button
               onClick={() => setColorMode('221')}
-              className={`dop-btn flex-1 ${colorMode === '221' ? 'dop-btn-primary' : 'dop-btn-secondary'}`}
+              className={`nook-btn flex-1 ${colorMode === '221' ? 'nook-btn-primary' : 'nook-btn-secondary'}`}
             >
               221色            </button>
           </div>
@@ -137,12 +144,20 @@ export function ColorPickerPopover() {
                   className="flex flex-col items-center gap-0.5 p-1 cursor-pointer"
                 >
                   <div
-                    className={`dop-swatch ${isSelected ? 'active' : ''}`}
-                    style={{ background: color.hex }}
+                    className="relative flex-shrink-0 overflow-hidden cursor-pointer"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--nook-wood)',
+                      background: color.hex,
+                      transition: 'transform 0.1s, box-shadow 0.15s',
+                      boxShadow: isSelected ? '0 0 0 2px var(--text-secondary)' : undefined,
+                    }}
                   />
                   <span
                     className={`text-[10px] font-medium ${
-                      isSelected ? 'text-[var(--dop-pink)]' : 'text-[var(--text-caption)]'
+                      isSelected ? 'text-[var(--color-primary)]' : 'text-[var(--text-caption)]'
                     }`}
                   >
                     {color.code}

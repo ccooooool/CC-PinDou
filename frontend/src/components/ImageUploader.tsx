@@ -1,5 +1,5 @@
-import { useRef, useCallback, useState } from 'react';
-import { Card } from '@/components/ui';
+import { useCallback, useState } from 'react';
+import { Uploader } from '@/components/ui';
 import { Upload } from 'lucide-react';
 import { ImageCropModal } from './ImageCropModal';
 
@@ -8,7 +8,6 @@ interface ImageUploaderProps {
 }
 
 export function ImageUploader({ onImageSelect }: ImageUploaderProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const [cropOpen, setCropOpen] = useState(false);
   const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
   const [cropFile, setCropFile] = useState<File | null>(null);
@@ -48,13 +47,11 @@ export function ImageUploader({ onImageSelect }: ImageUploaderProps) {
     setCropOpen(false);
     setCropImageUrl(null);
     setCropFile(null);
-    if (inputRef.current) inputRef.current.value = '';
   }, []);
 
-  const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      const file = e.dataTransfer.files[0];
+  const onFiles = useCallback(
+    (files: FileList) => {
+      const file = files[0];
       if (file) handleFile(file);
     },
     [handleFile]
@@ -62,37 +59,23 @@ export function ImageUploader({ onImageSelect }: ImageUploaderProps) {
 
   return (
     <>
-    <Card color="app-yellow">
-      <div
-        className="dop-uploader"
-        style={{ borderStyle: 'dashed', borderColor: 'var(--dop-pink)' }}
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={onDrop}
+      <Uploader
+        accept="image/*"
+        onFiles={onFiles}
+        className="w-full"
       >
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleFile(file);
-          }}
-        />
-        <Upload className="w-10 h-10 text-[var(--text-muted)] mx-auto" />
-        <p className="mt-2 mb-1 text-sm font-bold text-[var(--text-main)]">点击或拖拽上传图片</p>
-        <p className="m-0 text-xs font-bold text-[var(--text-muted)]">支持 JPG、PNG 格式</p>
-      </div>
-    </Card>
-    <ImageCropModal
-      isOpen={cropOpen}
-      imageUrl={cropImageUrl}
-      originalFile={cropFile}
-      onClose={handleCancel}
-      onCrop={handleCrop}
-      onSkip={handleSkip}
-    />
+        <Upload className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-2" />
+        <div className="font-bold text-[var(--text-heading)]">点击或拖拽上传图片</div>
+        <div className="text-xs text-[var(--text-caption)] mt-1">支持 JPG、PNG 格式</div>
+      </Uploader>
+      <ImageCropModal
+        isOpen={cropOpen}
+        imageUrl={cropImageUrl}
+        originalFile={cropFile}
+        onClose={handleCancel}
+        onCrop={handleCrop}
+        onSkip={handleSkip}
+      />
     </>
   );
 }

@@ -13,7 +13,7 @@ import time
 from flask import Flask, jsonify, request, send_file, send_from_directory, Response, stream_with_context
 from flask_cors import CORS
 
-from config import PARAM_LIMITS, MAX_EXPORT_GRID_SIZE, MAX_UPLOAD_SIZE_MB
+from config import PARAM_LIMITS, MAX_EXPORT_GRID_SIZE, MAX_UPLOAD_SIZE_MB, get_upload_folder
 from export_generator import generate_export_image
 from image_processing import enhance_lines, remove_background
 from models_manager import AVAILABLE_MODELS, DEFAULT_MODEL
@@ -31,9 +31,18 @@ app = Flask(__name__, static_folder=_static_folder, static_url_path='')
 CORS(app)
 app.config['MAX_CONTENT_LENGTH'] = MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
-# 全局进度存储: {task_id: {'progress': int, 'status': str, 'done': bool}}
+# 模块启动时缓存 send_file 兼容性检查，避免每次请求都反射
+_HAS_DOWNLOAD_NAME = 'download_name' in inspect.signature(send_file).parameters
+
+# SSE 并发连接限制
+_sse_connections = 0
+_sse_conn_lock = threading.Lock()
+MAX_SSE_CONNECTIONS = 16
+
+# 全局进度存储: {task_id: {'progress': int, 'status': str, 'done': bool, 'ts': float}}
 progress_store = {}
 progress_lock = threading.Lock()
+PROGRESS_TTL_SECONDS = 300  # 5 分钟过期清理
 
 
 def set_progress(task_id, progress, status='', done=False):
@@ -42,6 +51,7 @@ def set_progress(task_id, progress, status='', done=False):
             'progress': progress,
             'status': status,
             'done': done,
+            'ts': time.time(),
         }
 
 
@@ -50,15 +60,35 @@ def clear_progress(task_id):
         progress_store.pop(task_id, None)
 
 
+def _cleanup_expired_progress():
+    """后台线程：定期清理过期的 progress 记录。"""
+    while True:
+        time.sleep(60)
+        now = time.time()
+        with progress_lock:
+            expired = [
+                tid for tid, data in progress_store.items()
+                if now - data.get('ts', 0) > PROGRESS_TTL_SECONDS
+            ]
+            for tid in expired:
+                progress_store.pop(tid, None)
+
+
+# 启动后台清理线程（守护线程）
+_cleanup_thread = threading.Thread(target=_cleanup_expired_progress, daemon=True)
+_cleanup_thread.start()
+
+
 # ========================================================================
 # 辅助函数
 # ========================================================================
 
 
 def _save_upload(file_storage):
-    """保存上传文件到系统临时目录，返回文件路径。"""
+    """保存上传文件到上传目录，返回文件路径。"""
     file_ext = os.path.splitext(file_storage.filename.lower())[1]
-    fd, file_path = tempfile.mkstemp(suffix=file_ext)
+    upload_dir = get_upload_folder()
+    fd, file_path = tempfile.mkstemp(suffix=file_ext, dir=upload_dir)
     os.close(fd)
     file_storage.save(file_path)
     return file_path
@@ -102,7 +132,7 @@ def api_remove_bg():
             set_progress(task_id, 5, '上传图片...')
         file_path = _save_upload(file)
         with open(file_path, 'rb') as f:
-            is_valid_img, verify_msg = verify_image_bytes(f.read())
+            is_valid_img, verify_msg = verify_image_bytes(f.read(65536))
         if not is_valid_img:
             if task_id:
                 set_progress(task_id, 0, f'验证失败: {verify_msg}', done=True)
@@ -139,21 +169,35 @@ def api_remove_bg():
             set_progress(task_id, 0, '处理出错', done=True)
         return _error_response('背景移除处理失败，请稍后重试或更换图片', 500, log_exception=True)
     finally:
-        _cleanup(file_path)
+        try:
+            _cleanup(file_path)
+        except Exception:
+            pass
 
 
 @app.route('/api/progress/<task_id>')
 def api_progress(task_id):
-    """SSE 进度流。"""
+    """SSE 进度流。限制最大并发连接数，避免 waitress 线程池耗尽。"""
+    global _sse_connections
+    with _sse_conn_lock:
+        if _sse_connections >= MAX_SSE_CONNECTIONS:
+            return jsonify({"error": "Too many concurrent progress streams"}), 503
+        _sse_connections += 1
+
     def event_stream():
-        for _ in range(300):  # 最多轮询 60 秒
-            with progress_lock:
-                data = progress_store.get(task_id, {'progress': 0, 'status': '等待中...', 'done': False})
-            yield f"data: {json.dumps(data)}\n\n"
-            if data.get('done'):
-                clear_progress(task_id)
-                break
-            time.sleep(0.2)
+        try:
+            for _ in range(300):  # 最多轮询 60 秒
+                with progress_lock:
+                    data = progress_store.get(task_id, {'progress': 0, 'status': '等待中...', 'done': False})
+                yield f"data: {json.dumps(data)}\n\n"
+                if data.get('done'):
+                    break
+                time.sleep(0.2)
+        finally:
+            clear_progress(task_id)
+            global _sse_connections
+            with _sse_conn_lock:
+                _sse_connections = max(0, _sse_connections - 1)
     return Response(stream_with_context(event_stream()), mimetype='text/event-stream')
 
 
@@ -175,7 +219,7 @@ def api_enhance_lines():
     try:
         file_path = _save_upload(file)
         with open(file_path, 'rb') as f:
-            is_valid_img, verify_msg = verify_image_bytes(f.read())
+            is_valid_img, verify_msg = verify_image_bytes(f.read(65536))
         if not is_valid_img:
             return jsonify({"error": verify_msg}), 400
 
@@ -197,7 +241,10 @@ def api_enhance_lines():
     except Exception as e:
         return _error_response('线条增强处理失败，请稍后重试', 500, log_exception=True)
     finally:
-        _cleanup(file_path)
+        try:
+            _cleanup(file_path)
+        except Exception:
+            pass
 
 
 @app.route('/api/detect-pixel', methods=['POST'])
@@ -218,7 +265,7 @@ def detect_pixel():
     try:
         file_path = _save_upload(file)
         with open(file_path, 'rb') as f:
-            is_valid_img, verify_msg = verify_image_bytes(f.read())
+            is_valid_img, verify_msg = verify_image_bytes(f.read(65536))
         if not is_valid_img:
             return jsonify({"error": verify_msg}), 400
 
@@ -235,7 +282,10 @@ def detect_pixel():
     except Exception as e:
         return _error_response('像素检测失败，请确保上传的是有效的像素风图片', 500, log_exception=True)
     finally:
-        _cleanup(file_path)
+        try:
+            _cleanup(file_path)
+        except Exception:
+            pass
 
 
 @app.route('/export', methods=['POST'])
@@ -244,18 +294,29 @@ def export_image():
     高清图纸导出接口。
     接收 grid_data 和导出参数，返回 PNG/JPG 图片。
     """
-    data = request.get_json()
+    data = request.get_json() or {}
     grid_data = data.get('grid_data', [])
     color_list = data.get('color_list', [])
     brand = data.get('brand', 'MARD')
-    show_code = data.get('show_code', False)
-    show_legend = data.get('show_legend', True)
-    circle_mode = data.get('circle_mode', False)
-    show_mark_lines = data.get('show_mark_lines', False)
-    mark_interval = data.get('mark_interval', 5)
-    fmt = data.get('format', 'png')
 
-    if not grid_data:
+    # 明确类型转换和边界检查
+    show_code = bool(data.get('show_code', False))
+    show_legend = bool(data.get('show_legend', True))
+    circle_mode = bool(data.get('circle_mode', False))
+    show_mark_lines = bool(data.get('show_mark_lines', False))
+
+    try:
+        mark_interval = int(data.get('mark_interval', 5))
+    except (ValueError, TypeError):
+        mark_interval = 5
+    if mark_interval < 1:
+        mark_interval = 1
+
+    fmt = str(data.get('format', 'png')).lower()
+    if fmt not in ('png', 'jpg', 'jpeg'):
+        fmt = 'png'
+
+    if not grid_data or not isinstance(grid_data, list):
         return jsonify({"error": "No grid data"}), 400
 
     # 安全检查：限制 grid_data 维度，防止 DoS
@@ -276,7 +337,7 @@ def export_image():
 
         mime = 'image/jpeg' if fmt.lower() in ('jpg', 'jpeg') else 'image/png'
 
-        if 'download_name' in inspect.signature(send_file).parameters:
+        if _HAS_DOWNLOAD_NAME:
             response = send_file(
                 buf, mimetype=mime, as_attachment=True,
                 download_name='拼豆图案.' + fmt.lower()
@@ -307,4 +368,21 @@ def get_models():
 @app.route('/')
 def index():
     """首页。"""
-    return send_from_directory(app.static_folder, 'index.html', mimetype='text/html; charset=utf-8')
+    response = send_from_directory(app.static_folder, 'index.html', mimetype='text/html; charset=utf-8')
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+
+@app.route('/<path:path>')
+def catch_all(path):
+    """SPA catch-all：未匹配路由返回 index.html，由前端路由处理。"""
+    # 排除 API 和静态资源路径
+    if path.startswith('api/') or path.startswith('export') or path.startswith('static/'):
+        return jsonify({"error": "Not found"}), 404
+    response = send_from_directory(app.static_folder, 'index.html', mimetype='text/html; charset=utf-8')
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response

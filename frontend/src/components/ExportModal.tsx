@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react';
-import { useEditorStore, useConfigStore } from '../store/usePerlerStore';
+import { useEditorStore } from '../store/useEditorStore';
+import { useConfigStore } from '../store/useConfigStore';
 import { Modal, Input, Switch } from '@/components/ui';
 import { Download, AlertCircle, Loader2 } from 'lucide-react';
 import { exportImageFrontend } from '../engine/frontendAlgorithms';
@@ -82,8 +83,8 @@ export function ExportModal({ isOpen, onClose, backendAvailable }: ExportModalPr
       window.URL.revokeObjectURL(url);
 
       onClose();
-    } catch (err: any) {
-      setExportError(err.message || '导出失败');
+    } catch (err: unknown) {
+      setExportError((err instanceof Error ? err.message : String(err)) || '导出失败');
     } finally {
       setIsExporting(false);
     }
@@ -96,11 +97,11 @@ export function ExportModal({ isOpen, onClose, backendAvailable }: ExportModalPr
       onClose={onClose}
       footer={
         <>
-          <button className="dop-btn dop-btn-secondary" onClick={onClose}>
+          <button className="nook-btn nook-btn-secondary" onClick={onClose}>
             取消
           </button>
           <button
-            className="dop-btn dop-btn-primary"
+            className="nook-btn nook-btn-primary"
             disabled={isExporting || !gridData}
             onClick={handleExport}
           >
@@ -124,13 +125,13 @@ export function ExportModal({ isOpen, onClose, backendAvailable }: ExportModalPr
           <label className="block text-xs font-bold text-[var(--text-muted)] mb-1.5">格式</label>
           <div className="flex gap-2">
             <button
-              className={`dop-btn flex-1 ${format === 'png' ? 'dop-btn-primary' : 'dop-btn-secondary'}`}
+              className={`nook-btn flex-1 ${format === 'png' ? 'nook-btn-primary' : 'nook-btn-secondary'}`}
               onClick={() => setFormat('png')}
             >
               PNG
             </button>
             <button
-              className={`dop-btn flex-1 ${format === 'jpg' ? 'dop-btn-primary' : 'dop-btn-secondary'}`}
+              className={`nook-btn flex-1 ${format === 'jpg' ? 'nook-btn-primary' : 'nook-btn-secondary'}`}
               onClick={() => setFormat('jpg')}
             >
               JPG
@@ -161,23 +162,23 @@ export function ExportModal({ isOpen, onClose, backendAvailable }: ExportModalPr
               <label className="text-xs text-[var(--text-caption)]">间隔</label>
               <input
                 type="text"
-                className="dop-input w-[60px] ml-2 text-center"
+                className="nook-input w-[60px] ml-2 text-center"
                 value={String(markInterval)}
-                onChange={(e) => setMarkInterval(Number(e.target.value))}
+                onChange={(e) => setMarkInterval(Math.max(1, Number(e.target.value) || 1))}
               />
             </div>
           )}
         </div>
 
         {!backendAvailable && (
-          <div className="dop-panel flex items-center gap-2 text-xs text-[var(--text-muted)] px-3 py-2 bg-[var(--nook-wood-light)]">
+          <div className="nook-panel flex items-center gap-2 text-xs text-[var(--text-caption)] px-3 py-2 bg-[var(--bg-surface-alt)]">
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
             后端不可用，使用前端降级导出（质量可能略有差异）
           </div>
         )}
 
         {exportError && (
-          <div className="dop-panel text-[13px] text-[var(--dop-danger)] px-3 py-2 bg-[rgba(255,71,87,0.05)]">
+          <div className="nook-panel text-[13px] text-[var(--color-danger)] px-3 py-2 bg-[rgba(252,77,80,0.06)]">
             {exportError}
           </div>
         )}

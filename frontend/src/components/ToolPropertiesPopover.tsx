@@ -1,5 +1,7 @@
 ﻿import { useRef, useEffect } from 'react';
-import { useUIStore, useEditorStore, useConfigStore } from '../store/usePerlerStore';
+import { useUIStore } from '../store/useUIStore';
+import { useEditorStore } from '../store/useEditorStore';
+import { useConfigStore } from '../store/useConfigStore';
 
 function ReplaceToolSettings() {
   const selectedColor = useEditorStore((s) => s.selectedColor);
@@ -11,7 +13,7 @@ function ReplaceToolSettings() {
       <div className="flex items-center gap-2">
         <span className="text-[11px] text-[var(--text-caption)]">目标色。</span>
         <div
-          className="w-5 h-5 rounded border border-[#f1f5f9]"
+          className="w-5 h-5 rounded border border-[var(--border-subtle)]"
           style={{
             background: selectedColor?.hex || '#e2e8f0',
             backgroundImage: selectedColor?.hex === 'transparent' ? 'repeating-conic-gradient(#ccc 0 25%, #fff 0 50%)' : undefined,
@@ -75,7 +77,7 @@ export function ToolPropertiesPopover({ open, onClose, anchorEl, targetTool }: T
   return (
     <div
       ref={popoverRef}
-      className="dop-panel fixed flex flex-col z-[100] p-3.5 gap-3"
+      className="nook-panel fixed flex flex-col z-[100] p-3.5 gap-3"
       style={{
         left,
         top,
@@ -94,7 +96,7 @@ export function ToolPropertiesPopover({ open, onClose, anchorEl, targetTool }: T
         </div>
         <input
           type="range"
-          className="dop-slider"
+          className="nook-slider"
           min={1}
           max={5}
           step={1}
@@ -109,10 +111,10 @@ export function ToolPropertiesPopover({ open, onClose, anchorEl, targetTool }: T
           <span className="text-xs font-semibold text-[var(--text-main)]">内部填充</span>
           <button
             onClick={() => setShapeFilled(!shapeFilled)}
-            className={`dop-btn w-10 h-[22px] rounded-full border-none cursor-pointer relative transition-colors p-0 ${shapeFilled ? 'dop-btn-primary' : 'dop-btn-secondary'}`}
+            className={`nook-btn w-10 h-[22px] rounded-full border-none cursor-pointer relative transition-colors p-0 ${shapeFilled ? 'nook-btn-primary' : 'nook-btn-secondary'}`}
           >
             <div
-              className="w-[18px] h-[18px] rounded-full bg-white absolute top-0.5 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
+              className="w-[18px] h-[18px] rounded-full bg-[var(--bg-surface)] absolute top-0.5 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
               style={{
                 left: shapeFilled ? 20 : 2,
               }}

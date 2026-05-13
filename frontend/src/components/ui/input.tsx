@@ -27,10 +27,16 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <input
           type={type}
           className={cn(
-            "dop-input",
-            size === "sm" && "h-8 px-3 text-xs rounded-xl",
-            size === "default" && "h-10",
-            allowClear && "pr-9",
+            "w-full font-nook font-semibold text-[var(--text-heading)]",
+            "bg-[var(--bg-surface)] border-[3px] border-[var(--nook-wood-light)]",
+            "rounded-input",
+            "placeholder:text-[var(--text-caption)]",
+            "transition-all duration-200 ease-nook",
+            "focus:outline-none focus:border-ac-green focus:ring-2 focus:ring-[var(--color-focus)] focus:ring-offset-1",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
+            size === "sm" && "h-9 px-3 text-sm",
+            size === "default" && "h-11 px-4 text-base",
+            allowClear && "pr-10",
             className
           )}
           ref={inputRef}
@@ -42,7 +48,13 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-[#C8C8D8] transition-colors hover:bg-[rgba(255,107,157,0.08)] hover:text-[var(--dop-pink)]"
+            className={cn(
+              "absolute right-3 top-1/2 -translate-y-1/2",
+              "rounded-full p-1 text-[var(--text-caption)]",
+              "transition-all duration-200 ease-nook",
+              "hover:bg-[var(--ac-coral)]/10 hover:text-[var(--ac-coral)] hover:scale-110",
+              "active:scale-95"
+            )}
           >
             <X className="h-3.5 w-3.5" />
           </button>

@@ -1,6 +1,6 @@
-# CC-PinDou 拼豆图案生成器 — Agent 指南
+<!-- CC-PinDou 拼豆图案生成器 — Agent 指南 -->
 
-> 本文档面向 AI 编程助手。如果你从未接触过本项目，请优先阅读本文件而非 `README.md`。本文档包含项目结构、技术决策、编码规范及常见陷阱。
+> 本文档面向 AI 编程助手。如果你从未接触过本项目，请优先阅读本文件。本文档基于当前项目实际内容编写，所有信息均可通过文件系统验证。
 
 ---
 
@@ -10,7 +10,7 @@ CC-PinDou 是一个将任意图片转换为拼豆（Perler Beads / 融合珠）�
 
 - **普通图片模式**：上传照片 → AI 背景移除 → 颜色简化 → 生成拼豆网格
 - **像素图模式**：针对像素风素材优化，支持自动检测像素块大小和对齐偏移
-- **自由绘制模式**：空白画板，提供画笔/直线/矩形/圆形/填充/橡皮擦等工具
+- **自由绘制模式**：空白画板，提供画笔/直线/矩形/圆形/填充/橡皮擦/魔棒替换等工具，支持多图层
 
 项目采用前后端分离架构。前端承担大部分轻量计算（颜色匹配、网格生成），后端负责重型任务（AI 背景移除、高清导出、像素自动检测）。
 
@@ -25,8 +25,9 @@ CC-PinDou 是一个将任意图片转换为拼豆（Perler Beads / 融合珠）�
 | 数据库 | SQLite（色号映射，`data/colors.db`） |
 | 前端 | Vite 5 + React 18 + TypeScript 5 + Tailwind CSS 3 + shadcn/ui |
 | 状态管理 | Zustand（已按领域拆分为 `useEditorStore` / `useUIStore` / `useConfigStore`） |
+| UI 设计系统 | NookUI（Animal Crossing 马卡龙风格） |
+| 路由 | React Router v7（嵌套路由 `/simple/:mode`、`/full/:mode`） |
 | 测试 | Vitest（前端）+ pytest（后端） |
-| 构建工具 | Vite（前端）、Python 脚本（后端） |
 
 ---
 
@@ -57,91 +58,127 @@ CC-PinDou/
 │   └── uploads/                # 临时上传目录（程序自动清理）
 │
 ├── frontend/                   # 前端（Vite + React + TypeScript）
-│   ├── package.json
+│   ├── package.json            # npm 依赖与脚本（版本 2.0.0）
 │   ├── vite.config.ts          # Vite 配置（dev 端口 6789，代理 /api 和 /export 到 localhost:5678）
 │   ├── vitest.config.ts        # Vitest 配置（jsdom 环境，setupFiles: src/test/setup.ts）
-│   ├── tailwind.config.js      # Tailwind 配置（shadcn/ui 风格）
+│   ├── tailwind.config.js      # Tailwind 配置（NookUI 设计令牌扩展）
 │   ├── postcss.config.js
 │   ├── components.json         # shadcn/ui 配置
 │   ├── tsconfig.json           # 项目引用 tsconfig.app.json + tsconfig.node.json
 │   └── src/
-│       ├── main.tsx            # React 入口（挂载到 #root，添加 .dopamine-skill 类）
+│       ├── main.tsx            # React 入口（挂载到 #root，添加 .nookui 类）
 │       ├── App.tsx             # 主应用组件（三模式路由/状态协调）
-│       ├── Router.tsx          # react-router-dom 路由（/ → EntryPage, /simple, /full）
+│       ├── Router.tsx          # react-router-dom 路由（/ → EntryPage, /simple/:mode, /full/:mode）
 │       ├── pages/              # 页面组件（EntryPage / SimplePage / FullPage）
 │       ├── components/         # React 组件
 │       │   ├── CanvasEditor.tsx       # 主画板编辑器（Canvas 渲染 + 交互）
 │       │   ├── Toolbar.tsx            # 顶部工具栏
 │       │   ├── ParamPanel.tsx         # 普通图参数面板
 │       │   ├── PixelPanel.tsx         # 像素图参数面板
-│       │   ├── DrawPanel.tsx          # 绘制模式右侧面板
+│       │   ├── EditPanel.tsx          # 绘制模式右侧面板
 │       │   ├── DrawToolBar.tsx        # 绘制模式左侧工具栏
-│       │   ├── ColorLegend.tsx        # 颜色图例
+│       │   ├── LayerPanel.tsx         # 图层面板
+│       │   ├── ColorLegend.tsx        # 颜色图例（底部用量统计条）
 │       │   ├── ExportModal.tsx        # 导出设置弹窗
+│       │   ├── SaveModal.tsx          # 保存工程弹窗
 │       │   ├── RemoveBgButton.tsx     # AI 背景移除按钮（SSE 进度）
-│       │   ├── ui/                    # shadcn/ui 基础组件（Button、Slider、Select 等）
-│       │   └── ...
+│       │   ├── ModeTabs.tsx           # 模式切换标签
+│       │   ├── ImageUploader.tsx      # 图片上传组件
+│       │   ├── ImageCropModal.tsx     # 图片裁剪弹窗
+│       │   ├── BgRemovePanel.tsx      # 背景移除参数面板
+│       │   ├── SettingsPanel.tsx      # 设置面板
+│       │   └── ui/                    # shadcn/ui 基础组件（Button、Slider、Select 等）
 │       ├── hooks/              # 自定义 Hooks
-│       │   ├── useCanvasRenderer.ts   # Canvas 渲染逻辑（方块/圆形/melted 三模式）
+│       │   ├── useCanvasRenderer.ts   # Canvas 渲染逻辑（方块/圆形/bead 三模式，离屏缓存优化）
+│       │   ├── useCanvasInteractions.ts # 画布交互（点击/拖拽/空格平移）
 │       │   ├── useDrawingTools.ts     # 绘制工具（Bresenham 直线、FloodFill 填充）
 │       │   ├── usePanZoom.ts          # 滚轮缩放 + 空格拖拽平移
-│       │   └── useBackendHealth.ts    # 后端健康检测
+│       │   ├── usePatternGenerator.ts # 图纸生成逻辑（Web Worker + fallback）
+│       │   ├── usePixelProcessor.ts   # 像素图处理逻辑
+│       │   ├── usePerlerEngine.ts     # PerlerEngine 封装
+│       │   ├── useAutoSave.ts         # IndexedDB 自动保存
+│       │   ├── useBackendHealth.ts    # 后端健康检测
+│       │   ├── useProjectExport.ts    # 工程导出
+│       │   └── useImageUpload.ts      # 图片上传逻辑
 │       ├── store/              # Zustand 状态管理
-│       │   ├── useEditorStore.ts      # 编辑状态（gridData、colorList、historyStack）
-│       │   ├── useUIStore.ts          # UI 状态（面板折叠、欢迎弹窗、当前模式）
-│       │   ├── useConfigStore.ts      # 配置状态（品牌、网格大小、颜色模式等）
+│       │   ├── useEditorStore.ts      # 编辑状态（gridData、colorList、historyStack、图层系统）
+│       │   ├── useUIStore.ts          # UI 状态（mode、drawTool、symmetryMode、面板状态）
+│       │   ├── useConfigStore.ts      # 配置状态（brand、gridSize、colorMode 等参数）
 │       │   └── usePerlerStore.ts      # 兼容层（re-export 三个子 Store）
 │       ├── engine/             # 前端计算引擎
 │       │   ├── PerlerEngine.ts        # OKLab 颜色匹配、网格生成、BFS 连通合并
 │       │   ├── PerlerEngine.test.ts   # Vitest 单元测试
 │       │   └── frontendAlgorithms.ts  # 前端降级算法（颜色简化、线条增强）
+│       ├── workers/            # Web Worker
+│       │   └── perler.worker.ts       # 重型计算卸载（generateGrid + bfsMerge）
 │       ├── utils/              # 工具函数
 │       │   ├── soundEngine.ts         # Web Audio 音效
 │       │   ├── colorList.ts           # 颜色统计工具
 │       │   ├── colorList.test.ts      # Vitest 单元测试
-│       │   └── autoSave.ts            # IndexedDB 自动保存
+│       │   ├── autoSave.ts            # IndexedDB 自动保存底层
+│       │   ├── pixelIcon.ts           # 像素图标工具
+│       │   ├── theme.ts               # 主题相关工具
+│       │   └── viewTransition.ts      # 视图过渡动画
 │       ├── api/                # API 客户端
-│       │   └── client.ts              # 统一封装 fetch，含类型定义和错误处理
+│       │   ├── client.ts              # 统一封装 fetch，含类型定义和错误处理
+│       │   └── index.ts
 │       ├── types/              # TypeScript 类型定义
-│       │   └── perler.ts              # 核心类型（GridCell、ColorInfo、HistoryAction 等）
+│       │   └── perler.ts              # 核心类型（GridCell、ColorInfo、HistoryAction、Layer 等）
 │       ├── styles/             # 样式文件
-│       │   ├── pindou-theme.css       # 拼豆主题 CSS 变量（多巴胺可爱风格）
-│       │   └── dopamine-skill.css     # 多巴胺组件工具类
-│       ├── workers/            # Web Worker
-│       │   └── perler.worker.ts       # 重型计算卸载（generateGrid + bfsMerge）
+│       │   ├── pindou-theme.css       # 基础全局样式
+│       │   └── nookui-theme.css       # NookUI 设计令牌 + 组件类（~1400 行）
+│       ├── data/
+│       │   └── colorSystemMapping.json # 5 品牌色号映射 JSON 数据
 │       └── test/
 │           └── setup.ts               # Vitest 测试初始化（ImageData polyfill）
 │
+├── NookUI/                     # NookUI 组件库（独立子项目，被 .gitignore 忽略）
+│   ├── package.json            # NookUI 自身为 React + Vite 项目
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   ├── src/                    # React 组件实现（40+ 组件）
+│   ├── public/
+│   ├── legacy/                 # 旧版零依赖实现（nookui.css + nookui.js + nookui-docs.html）
+│   └── AGENTS.md               # NookUI 子项目专用 Agent 指南
+│
 ├── data/
 │   ├── colors.db               # SQLite 色号数据库（运行时自动生成/读取）
-│   └── colorSystemMapping.json # 5 品牌色号映射源数据（JSON）
+│   └── colorSystemMapping.json # 5 品牌色号映射源数据
 │
-├── models/                     # ONNX 模型文件（rembg 使用）
-│   ├── u2net.onnx              # 默认模型
+├── models/                     # ONNX 模型文件（rembg 使用，被 .gitignore 忽略）
+│   ├── u2net.onnx
 │   ├── isnet-anime.onnx
 │   ├── silueta.onnx
 │   └── u2net_human_seg.onnx
 │
-├── NookUI/                     # NookUI 组件库（独立 HTML/CSS/JS，Animal Crossing 风格）
-│   ├── nookui.css              # 样式源文件（~75KB，马卡龙配色系统 + 全部组件样式）
-│   ├── nookui.js               # 交互逻辑（~23KB，Carousel/Accordion/Drawer/Table/Tree 等）
-│   └── nookui.html             # 组件展示页（浏览器直接打开即可预览全部组件）
+├── scripts/                    # 调试与工具脚本
+│   ├── test_api.py
+│   ├── test_remove_bg.py
+│   ├── cleanup_dop_css.py
+│   └── replace_dop_to_nook.py
 │
-├── NookUI/                     # NookUI 组件库（Animal Crossing 马卡龙风格，项目唯一设计系统）
-│   ├── nookui.css              # 样式源文件（~75KB，马卡龙配色系统 + 全部组件样式）
-│   ├── nookui.js               # 交互逻辑（~23KB，Vanilla JS）
-│   └── nookui.html             # 组件展示页（浏览器直接打开即可预览）
-│
-├── web_backup/                 # 旧版前端（jQuery + 原生 JS），仅保留参考
-│
-└── scripts/                    # 调试脚本
-    ├── test_api.py
-    └── test_remove_bg.py
+└── web_backup/                 # 旧版前端（jQuery + 原生 JS），仅保留参考
 ```
 
 ---
 
-## 构建与启动
+## 关键配置文件
+
+| 文件 | 说明 |
+|------|------|
+| `requirements.txt` | Python 依赖：Flask、flask-cors、Pillow、numpy、scipy、rembg、waitress |
+| `frontend/package.json` | 前端依赖与 npm 脚本（版本 2.0.0） |
+| `frontend/vite.config.ts` | Vite 构建配置、dev server 端口 6789、代理规则、manualChunks 拆包策略 |
+| `frontend/vitest.config.ts` | Vitest 测试配置（jsdom、globals、setupFiles） |
+| `frontend/tailwind.config.js` | Tailwind CSS 配置，扩展了 NookUI 设计令牌和动画 keyframes |
+| `frontend/tsconfig.json` | TypeScript 项目引用配置（引用 tsconfig.app.json + tsconfig.node.json） |
+| `frontend/components.json` | shadcn/ui 初始化配置 |
+| `.prettierrc.json` | 代码格式化：前端 2 空格单引号，Python 4 空格双引号，LF 换行 |
+| `.gitignore` | 忽略 node_modules、dist、ONNX 模型、备份目录、IDE 配置、NookUI 子项目等 |
+
+---
+
+## 启动与构建
 
 ### 环境要求
 
@@ -149,24 +186,17 @@ CC-PinDou/
 - **Node.js**: >= 18（npm 随同安装）
 - **编码**: 全项目强制 UTF-8 无 BOM
 
-### 当前开发环境（参考）
-
-> 以下路径记录自 `DEVELOP_ENV.txt`，供快速定位本地环境：
-
-| 项目 | 路径 |
-|------|------|
-| Python (Conda 环境) | `D:\ProgramData\Anaconda3\envs\pindou_py312` |
-| Node.js | `C:\Program Files\nodejs` |
-| 操作系统 | Windows 11 |
-| 文件编码 | UTF-8 无 BOM |
-
-### 开发模式
+### 开发环境启动
 
 ```bash
 # 终端 1：启动后端（生产服务器 waitress，端口 5678）
 python run.py
 
-# 终端 2：启动前端 dev server（端口 6789，自动代理 /api 到后端）
+# 或者手动进入 server 目录启动
+cd server
+python -m waitress --listen=127.0.0.1:5678 app:app
+
+# 终端 2：启动前端 dev server（端口 6789，自动代理 /api 和 /export 到后端）
 cd frontend
 npm run dev
 ```
@@ -175,26 +205,39 @@ npm run dev
 
 ### 生产构建
 
+推荐使用根目录下的联合构建脚本：
+
 ```bash
-# 方式 1：使用联合构建脚本（推荐）
+# 完整构建（含环境检查、依赖安装、前后端测试、前端构建）
 python build.py
 
-# 方式 2：手动构建
-cd frontend
-npm run build        # 输出到 frontend/dist/
-cd ..
-python run.py        # Flask 会自动 serve frontend/dist/
+# 跳过测试，快速构建
+python build.py --skip-tests
+
+# 仅检查环境
+python build.py --check-only
 ```
 
-`build.py` 支持以下参数：
-- `--skip-tests`：跳过前后端测试，快速构建
-- `--check-only`：仅检查环境（Python/Node/模型文件），不执行构建
+手动构建流程：
+
+```bash
+# 1. 构建前端
+cd frontend
+npm run build        # 输出到 frontend/dist/
+
+# 2. 启动后端（Flask 会自动 serve frontend/dist/）
+cd ..
+python run.py
+```
+
+`app.py` 中静态目录配置为 `../frontend/dist`，若不存在则 fallback 到 `../web`。
 
 ### 首次运行注意事项
 
 1. `rembg` 首次使用背景移除时会自动下载 ONNX 模型到 `models/` 目录（已通过 `U2NET_HOME` 环境变量配置为项目本地目录，避免下载到用户目录）。
 2. `data/colors.db` 若不存在，`colors.py` 会在首次访问时自动从 `data/colorSystemMapping.json` 初始化。
 3. `server/uploads/` 为临时上传目录，程序会在处理完成后自动清理。
+4. `NookUI/` 是被 `.gitignore` 忽略的独立子项目（含自己的 Git 仓库），修改 NookUI 代码时请参考 `NookUI/AGENTS.md`。
 
 ---
 
@@ -224,66 +267,44 @@ python -m pytest tests/ -v
 
 ---
 
+## 代码风格规范
+
+### 通用
+
+- **编码**：UTF-8 无 BOM
+- **缩进**：前端 2 空格，Python 4 空格（`.prettierrc.json` 已配置）
+- **换行符**：LF（`.prettierrc.json` 配置 `endOfLine: lf`）
+
+### TypeScript / React
+
+- 使用 **单引号**（`singleQuote: true`，`jsxSingleQuote: true`）
+- 函数组件使用箭头函数或普通函数均可，但同一文件保持一致
+- 自定义 Hooks 以 `use` 开头
+- Store 选择器优先使用精确字段订阅，避免解构整个 Store（防止不必要的重渲染）
+- Canvas 渲染逻辑集中在 `useCanvasRenderer.ts`，避免在组件中直接操作 Canvas context
+- 路径别名 `@/` 指向 `frontend/src/`
+
+### Python
+
+- 模块级常量使用全大写 + 下划线
+- 图像处理函数优先接收 `PIL.Image` 对象而非文件路径，便于测试
+- 避免在模块导入时执行副作用（`colors.py` 的数据库初始化已改为惰性加载）
+- 所有后端 API 错误响应使用 `_error_response()` 统一包装，禁止将内部异常详情（如文件路径）暴露给客户端
+
+---
+
 ## 样式指导（NookUI）
 
 本项目**统一使用 NookUI** 作为唯一的设计系统。NookUI 是受《集合啦！动物森友会》启发的马卡龙风格组件库。
 
-**迁移状态**：Dopamine Cute UI 已全部迁移至 NookUI。前端 `dop-*` 类已批量替换为 `nook-*` 类，`dopamine-skill.css` 已删除，由 `frontend/src/styles/nookui-theme.css` 接管。
+### NookUI 双版本说明
 
-### NookUI 组件库
+NookUI 在 `NookUI/` 目录下包含两个版本：
 
-NookUI 是位于 `NookUI/` 目录下的独立组件库，浏览器直接打开 `nookui.html` 即可运行。
+1. **当前活跃版本**：React + TypeScript + Vite 项目（`NookUI/src/`），含 40+ 组件，支持 Day/Night 双主题
+2. **Legacy 版本**：零依赖 Vanilla JS 实现（`NookUI/legacy/nookui.css` + `nookui.js` + `nookui-docs.html`）
 
-#### 文件
-
-| 文件 | 说明 |
-|------|------|
-| `NookUI/nookui.css` | **样式源文件**（~75KB），含完整马卡龙设计系统 + 全部组件样式 |
-| `NookUI/nookui.js` | **交互逻辑**（~23KB），所有组件的 Vanilla JS 实现 |
-| `NookUI/nookui.html` | 组件展示页，直接浏览器打开即可预览 |
-
-#### 核心设计令牌
-
-```css
-/* 马卡龙主色（Animal Crossing 配色） */
---nook-cream:   #FFF8F0;   /* 页面底色 */
---ac-green:     #A8E6CF;   /* 主色（动森绿） */
---ac-pink:      #FFB7C5;   /* 粉色 */
---ac-blue:      #A0D8EF;   /* 天蓝 */
---ac-yellow:    #F7DC6F;   /* 暖黄 */
---ac-coral:     #FFAAA5;   /* 珊瑚 */
---ac-lavender:  #C7B8E6;   /* 薰衣草 */
---nook-brown:   #5D4037;   /* 文字主色 */
-
-/* 圆角 */
---radius-sm:  12px;
---radius-md:  20px;
---radius-lg:  28px;
---radius-xl:  36px;
---radius-full: 9999px;
-
-/* 动效 */
---ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
-
-/* 字体 */
-font-family: 'Nunito', sans-serif;   /* Google Fonts，圆角人文感 */
-```
-
-#### 组件清单
-
-**基础组件**：Button（6 变体 + 尺寸）、Form（input/select/checkbox/radio/toggle）、Card、Badge、Tag、Alert、Progress、Loader、Modal、Tabs、List、Pagination、Toast、Tooltip
-
-**增强组件**：Upload Zone（拖拽上传）、Number Input（步进器）、Range Slider（双控件联动）、Switch Card / Segment Button、Dropdown（单选/多选）
-
-**新组件**：Carousel（自动轮播）、Steps（步骤条）、Timeline（时间轴）、Accordion（手风琴）、Rate（五星评分）、Search（搜索框）、Skeleton（骨架屏）、BackTop（回到顶部）
-
-**查漏补缺组件**：Popconfirm（气泡确认）、Notification（通知提醒）、Spin（加载中）、Table（可排序表格）、Tree（树形控件）、Virtual List（虚拟列表）、Watermark（水印）、Drawer（左右抽屉）、Empty（空状态）、Result（结果页）、Image Preview（图片预览）、Countdown（倒计时）
-
-#### 使用方式
-
-1. **直接使用**：复制 `nookui.css` + `nookui.js` 到新项目，引入 HTML 即可
-2. **不依赖构建工具**：纯 Vanilla JS，无需 npm/webpack/vite
-3. **与 Tailwind 共存**：NookUI 使用独立命名空间（`.nook-*` / `.ac-*`），不会冲突
+> **注意**：`NookUI/` 被主项目 `.gitignore` 忽略，因为它是一个含独立 Git 仓库的子项目。修改 NookUI 时请在其内部操作，并参考 `NookUI/AGENTS.md`。
 
 ### 前端 React 项目中的使用
 
@@ -303,53 +324,39 @@ React 前端通过 `frontend/src/styles/nookui-theme.css` 引入 NookUI 设计�
 </div>
 ```
 
+### 核心设计令牌
+
+```css
+/* 马卡龙主色（Animal Crossing 配色） */
+--nook-cream:   #f8f8f0;   /* 页面底色 */
+--ac-green:     #2BB4AB;   /* 主色（动森绿） */
+--ac-pink:      #FFB7C5;   /* 粉色 */
+--ac-blue:      #5783F7;   /* 天蓝 */
+--ac-yellow:    #FFCF01;   /* 暖黄 */
+--ac-coral:     #FC4D50;   /* 珊瑚 */
+--nook-brown:   #5D4037;   /* 文字主色 */
+
+/* 圆角 */
+--radius-sm:  12px;
+--radius-md:  20px;
+--radius-lg:  28px;
+--radius-xl:  36px;
+--radius-full: 9999px;
+
+/* 动效 */
+--ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+/* 字体 */
+font-family: 'Nunito', 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+```
+
 ### 样式变更原则
 
-- **权威源文件**：`NookUI/nookui.css` 和 `NookUI/nookui.js` 是权威版本
-- **前端副本**：`frontend/src/styles/nookui-theme.css` 是 React 前端使用的适配版本，如需修改组件样式，先改 `nookui-theme.css`，再同步回 `NookUI/nookui.css`
+- **前端权威样式源**：`frontend/src/styles/nookui-theme.css` 是 React 前端使用的权威版本
+- **NookUI 子项目同步**：如需将样式反向同步到 NookUI React 组件库，需同时修改 `NookUI/src/styles/globals.css`
+- **Legacy 版本**：仅在维护旧版零依赖实现时操作 `NookUI/legacy/` 内的文件
 - **UTF-8 编码**：所有文件必须保存为 UTF-8 无 BOM
 - **组件类前缀**：新组件统一使用 `nook-*` 前缀
-
-### 新组件创建流程（NookUI ↔ React 双向同步）
-
-在 React 前端中创建新 UI 组件时，按以下流程操作：
-
-1. **设计阶段**：使用 NookUI 设计令牌（`--ac-*`、`--nook-*`、`--radius-*` 等）
-2. **React 实现**：在 `frontend/src/components/ui/` 或 `frontend/src/components/` 中创建组件，使用 `nook-*` 类名
-3. **提取通用样式**：如果组件是通用 UI 组件（非业务专用），将其核心 `nook-*` CSS 添加到 `frontend/src/styles/nookui-theme.css`
-4. **同步到 NookUI**：将同样的样式添加到 `NookUI/nookui.css`，并在 `NookUI/nookui.html` 中添加演示区域
-5. **文档更新**：在 `AGENTS.md` 的组件清单中记录新组件
-
----
-
-### 历史遗留：Dopamine Cute UI
-
-`dopamine/` 目录下的 Dopamine Cute UI 是项目早期使用的设计系统（多巴胺可爱风格）。**现已废弃，不再维护。** 所有新开发和样式迭代统一使用 NookUI。`dopamine/` 目录仅保留作为历史参考，未来将逐步清理替换。
-
----
-
-## 代码风格规范
-
-### 通用
-
-- **编码**：UTF-8 无 BOM（`.vscode/settings.json` 已配置）
-- **缩进**：前端 2 空格，Python 4 空格（`.prettierrc.json` 已配置）
-- **换行符**：LF（`.prettierrc.json` 配置 `endOfLine: lf`）
-
-### TypeScript / React
-
-- 使用 **单引号**（`singleQuote: true`，`jsxSingleQuote: true`）
-- 函数组件使用箭头函数或普通函数均可，但同一文件保持一致
-- 自定义 Hooks 以 `use` 开头
-- Store 选择器优先使用精确字段订阅，避免解构整个 Store（防止不必要的重渲染）
-- Canvas 渲染逻辑集中在 `useCanvasRenderer.ts`，避免在组件中直接操作 Canvas context
-
-### Python
-
-- 模块级常量使用全大写 + 下划线
-- 图像处理函数优先接收 `PIL.Image` 对象而非文件路径，便于测试
-- 避免在模块导入时执行副作用（如 `colors.py` 的数据库初始化已改为惰性加载）
-- 所有后端 API 错误响应使用 `_error_response()` 统一包装，禁止将内部异常详情（如文件路径）暴露给客户端
 
 ---
 
@@ -378,19 +385,46 @@ React 前端通过 `frontend/src/styles/nookui-theme.css` 引入 NookUI 设计�
 
 原 `usePerlerStore` 为 70+ 字段的巨型单体 Store，已拆分为三个独立 Store：
 
-- `useEditorStore`：`gridData`、`colorList`、`historyStack`、`redoStack`、图层操作
-- `useUIStore`：`mode`（normal/pixel/draw）、`showWelcome`、`leftPanelCollapsed`
+- `useEditorStore`：`gridData`、`colorList`、`historyStack`、`redoStack`、图层操作（`layers`、`activeLayerId`）、质量检查、魔法棒选区
+- `useUIStore`：`mode`（normal/pixel/draw）、`drawTool`、`symmetryMode`、面板折叠状态
 - `useConfigStore`：`brand`、`gridSize`、`colorMode`（full/221）、`colorSimplify` 等参数
 
 新代码应直接导入对应的子 Store，不要使用旧的 `usePerlerStore` 兼容层。
 
+### 图层系统
+
+自由绘制模式支持 Photoshop 风格的多图层系统：
+- **BeadLayer**：拼豆格子图层，含 `gridData` 和 `colorList`
+- **ImageLayer**：背景图片图层，含 `imageUrl` 和 `transform`（位移/缩放/旋转）
+- 支持图层可见性、锁定、不透明度、层级调整、合并图层
+
 ### Web Worker
 
-`frontend/src/workers/perler.worker.ts` 已实现基本的计算卸载。`App.tsx` 中生成图案时会优先尝试 Worker，失败后降级到主线程同步计算。Worker 内部复用 `PerlerEngine` 的纯计算逻辑。
+`frontend/src/workers/perler.worker.ts` 已实现基本的计算卸载。`usePatternGenerator.ts` 中生成图案时会优先尝试 Worker，失败后降级到主线程同步计算。Worker 内部复用 `PerlerEngine` 的纯计算逻辑。
 
 ### SSE 进度推送
 
-后端 `app.py` 使用内存中的全局字典 `progress_store` + 线程锁实现 SSE 进度推送（`/api/progress/<task_id>`）。当前仅用于 AI 背景移除任务的进度反馈。
+后端 `app.py` 使用内存中的全局字典 `progress_store` + 线程锁实现 SSE 进度推送（`/api/progress/<task_id>`）。当前仅用于 AI 背景移除任务的进度反馈。后台守护线程每 60 秒清理一次过期记录（TTL 5 分钟）。
+
+### 路由结构
+
+```
+/                  → EntryPage（入口欢迎页）
+/simple            → SimplePage（简化布局外壳）
+/simple/normal     → App variant="simple" mode="normal"
+/simple/pixel      → App variant="simple" mode="pixel"
+/simple/draw       → App variant="simple" mode="draw"
+/full              → FullPage（完整布局外壳）
+/full/normal       → App variant="full" mode="normal"
+/full/pixel        → App variant="full" mode="pixel"
+/full/draw         → App variant="full" mode="draw"
+```
+
+### 模式切换规则
+
+- **normal/pixel → draw**：生成后可带着内容直接进入 draw 模式编辑，无需确认
+- **draw → normal/pixel**：切换时弹出二次确认，确认后清空图纸并跳转
+- **normal ↔ pixel**：有图纸时切换需确认清空；无图纸时直接跳转并自动清空图片缓存
 
 ---
 
@@ -402,16 +436,21 @@ React 前端通过 `frontend/src/styles/nookui-theme.css` 引入 NookUI 设计�
 4. **错误信息脱敏**：生产环境禁止将 `str(e)` 直接返回客户端，统一使用 `_error_response()` 包装为通用提示，异常详情记入服务器日志。
 5. **临时文件清理**：使用 `tempfile.mkstemp()` + `safe_remove()` 确保异常时也能清理上传文件。
 6. **生产服务器**：`run.py` 使用 `waitress`（多线程 WSGI），不再使用 Flask 开发服务器。
+7. **SSE 连接限制**：最大并发 SSE 连接数限制为 16，防止连接耗尽。
 
 ---
 
-## 已知陷阱
+## 已知陷阱与注意事项
 
-1. **Canvas 渲染性能**：当前为单层全量重绘，修改一个 cell 会重绘整个画布。`melted`（3D 热熔）模式下每 cell 都创建 `createRadialGradient`，大图帧率很低。性能优化在 `ROADMAP.md` 中有详细计划。
+1. **Canvas 渲染性能**：当前为单层全量重绘，修改一个 cell 会重绘整个画布。`melted`（3D 热熔）模式下每 cell 都创建 `createRadialGradient`，大图帧率很低。如需优化，考虑分层渲染或脏矩形策略。
 2. **inline style 泛滥**：大量组件使用内联 `style` 而非 Tailwind class，修改主题时需注意 CSS 变量和内联样式的优先级。
 3. **字体跨平台**：`export_generator.py` 使用 `arial.ttf`，在 Linux/macOS 下可能缺失，会自动 fallback 到默认字体，但中文显示效果不佳。
 4. **ImageData polyfill**：`src/test/setup.ts` 为 jsdom 环境提供了 `ImageData` polyfill，但在 Worker 中使用时需确认环境支持。
 5. **Blob URL 泄漏**：`RemoveBgButton.tsx` 等组件在使用 `URL.createObjectURL()` 后，需在组件卸载或重新上传时调用 `URL.revokeObjectURL()`。
+6. **自动保存限制**：IndexedDB 自动保存不恢复图片文件状态（blob URL 无法持久化），仅保存 gridData、colorList 和图层结构。
+7. **大图片处理**：超过 2000px 的图片会被后端自动缩放处理，避免内存溢出。
+8. **ONNX 模型**：`models/*.onnx` 文件被 `.gitignore` 忽略，新克隆的仓库需要首次运行时自动下载或手动放置模型文件。
+9. **NookUI 子项目隔离**：`NookUI/` 被主项目 `.gitignore` 忽略，修改其代码不会影响主项目 Git 状态，需单独在其内部提交。
 
 ---
 
@@ -420,13 +459,10 @@ React 前端通过 `frontend/src/styles/nookui-theme.css` 引入 NookUI 设计�
 | 文档 | 说明 |
 |------|------|
 | `README.md` | 面向用户的功能说明、安装指南、使用教程 |
-| `ROADMAP.md` | 综合发展计划，含 P0 Bug 清单、性能优化方案、技术债务追踪 |
-| `NookUI/nookui.css` | NookUI 样式源文件（Animal Crossing 马卡龙风格，权威版本） |
-| `NookUI/nookui.js` | NookUI 交互逻辑（Vanilla JS，独立可复用） |
-| `NookUI/nookui.html` | NookUI 组件展示页，浏览器直接打开 |
-| `NookUI/nookui.css` | NookUI 样式源文件（Animal Crossing 马卡龙风格） |
-| `NookUI/nookui.js` | NookUI 交互逻辑（Vanilla JS，独立可复用） |
-| `NookUI/nookui.html` | NookUI 组件展示页，浏览器直接打开 |
-| `frontend/.plan-slider-track-fix.md` | Slider Track 不可见问题的修复方案 |
-| `DEVELOP_ENV.txt` | 开发环境路径记录（Conda + Node.js） |
+| `NookUI/AGENTS.md` | NookUI 子项目专用 Agent 指南（React 版本架构、组件规范、构建命令） |
+| `NookUI/legacy/nookui.css` | NookUI Legacy 样式源文件（Animal Crossing 马卡龙风格） |
+| `NookUI/legacy/nookui.js` | NookUI Legacy 交互逻辑（Vanilla JS，独立可复用） |
+| `NookUI/legacy/nookui-docs.html` | NookUI Legacy 组件展示页，浏览器直接打开 |
+| `NookUI/legacy/project.md` | NookUI Legacy 独立项目说明 |
+| `DEVELOP_ENV.txt` | 开发环境路径记录（Conda + Node.js），被 `.gitignore` 忽略 |
 | `data/colorSystemMapping.json` | 5 品牌色号源数据（MARD / COCO / 漫漫 / 盼盼 / 咪小窝） |

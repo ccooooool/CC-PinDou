@@ -8,7 +8,16 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+_upload_folder_initialized = False
+
+
+def get_upload_folder():
+    """惰性初始化上传目录，首次调用时创建。"""
+    global _upload_folder_initialized
+    if not _upload_folder_initialized:
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        _upload_folder_initialized = True
+    return UPLOAD_FOLDER
 
 # 数据库与 JSON 路径
 
@@ -133,7 +142,7 @@ PARAM_LIMITS = {
 
     'enhance_lines_strength': (0, 10, 0),
 
-    'pixel_size': (1, 500, 16),
+    'pixel_size': (1, 128, 16),
 
     'offset_x': (0, 500, 0),
 

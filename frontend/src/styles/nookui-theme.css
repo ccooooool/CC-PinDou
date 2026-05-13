@@ -1,73 +1,898 @@
+
+/* ========== 字体定义 ========== */
+@font-face {
+  font-family: 'WenYuanRounded';
+  src: url('/fonts/WenYuanRoundedSC-VF.otf') format('opentype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ========== 设计令牌（Day 主题�?========== */
+:root {
+  /* === 动物森友会马卡龙色系 === */
+  --nook-cream: #f8f8f0;
+  --nook-paper: #f0e8d8;
+  --nook-brown: #5D4037;
+  --nook-wood: #C4986A;
+  --nook-wood-light: #E0C8A8;
+
+  --ac-green: #2BB4AB;
+  --ac-green-dark: #1E9A92;
+  --ac-blue: #5783F7;
+  --ac-blue-dark: #4568D0;
+  --ac-yellow: #FFCF01;
+  --ac-yellow-dark: #E5B800;
+  --ac-coral: #FC4D50;
+  --ac-coral-dark: #E03538;
+  --ac-sky: #1591D1;
+  --ac-sky-dark: #1278B0;
+
+  --text-primary: #794f27;
+  --text-secondary: #9f927d;
+  --text-muted: #c4b89e;
+  --border-light: rgba(255,255,255,0.6);
+  --shadow-soft: 0 8px 32px rgba(93, 64, 55, 0.08);
+  --shadow-colored: 0 4px 20px rgba(43, 180, 171, 0.25);
+  --shadow-colored-blue: 0 4px 20px rgba(87, 131, 247, 0.25);
+  --shadow-colored-coral: 0 4px 20px rgba(252, 77, 80, 0.25);
+  --shadow-colored-yellow: 0 4px 20px rgba(255, 207, 1, 0.25);
+  --shadow-card-hover: 0 20px 40px rgba(93, 64, 55, 0.12);
+  --shadow-card-hover-blue: 0 20px 40px rgba(87, 131, 247, 0.15);
+  --shadow-card-hover-green: 0 20px 40px rgba(43, 180, 171, 0.15);
+  --shadow-card-hover-coral: 0 20px 40px rgba(252, 77, 80, 0.15);
+  --shadow-card-hover-yellow: 0 20px 40px rgba(255, 207, 1, 0.15);
+  --shadow-modal: 0 24px 64px rgba(93, 64, 55, 0.2);
+  --shadow-switch-thumb: 0 2px 6px rgba(93, 64, 55, 0.2);
+  --shadow-inset-toggle: inset 0 2px 4px rgba(93, 64, 55, 0.1);
+  --shadow-inset-toggle-off: inset 0 2px 4px rgba(93, 64, 55, 0.05);
+  --color-overlay: rgba(0, 0, 0, 0.4);
+  /* 精确 shadow token（逐组件还�?legacy�?*/
+  --shadow-btn-green: 0 2px 8px rgba(43, 180, 171, 0.25);
+  --shadow-btn-green-hover: 0 4px 12px rgba(43, 180, 171, 0.3);
+  --shadow-btn-blue: 0 2px 8px rgba(87, 131, 247, 0.25);
+  --shadow-btn-blue-hover: 0 4px 12px rgba(87, 131, 247, 0.3);
+  --shadow-btn-coral: 0 2px 8px rgba(252, 77, 80, 0.25);
+  --shadow-btn-coral-hover: 0 4px 12px rgba(252, 77, 80, 0.3);
+  --shadow-btn-yellow: 0 2px 8px rgba(255, 207, 1, 0.25);
+  --shadow-btn-yellow-hover: 0 4px 12px rgba(255, 207, 1, 0.3);
+  --shadow-tag: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-tag-hover: 0 4px 12px rgba(43, 180, 171, 0.2);
+  --shadow-tabs-active: 0 4px 12px rgba(43, 180, 171, 0.3);
+  --shadow-steps-active: 0 4px 16px rgba(43, 180, 171, 0.4);
+  --shadow-pagination-active: 0 4px 12px rgba(43, 180, 171, 0.3);
+  --shadow-toast: 0 8px 32px rgba(93, 64, 55, 0.15);
+  --shadow-tooltip: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-toggle3d: 0 3px 0 0 var(--nook-shadow-btn);
+  --shadow-toggle3d-active: 0 3px 0 0 #5a9e1e;
+  --shadow-progress-shimmer: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+
+  /* 3D 按键阴影系统 */
+  --nook-shadow-btn: #bdaea0;
+  --nook-shadow-btn-hover: #bdaea0;
+  --nook-shadow-btn-active: #bdaea0;
+  --nook-shadow-input: #d4c9b4;
+
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-xl: 36px;
+  --radius-full: 9999px;
+  --radius-button-rect: 18px;
+  --radius-game: 20px;
+
+  /* 字体�?*/
+  --font-family: 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  /* === 语义层（Semantic Tokens�?=== */
+  /* 主题色：Nook 薄荷�?*/
+  --color-primary: var(--ac-green);
+  --color-primary-dark: var(--ac-green-dark);
+  /* 辅助色体�?*/
+  --color-success: var(--ac-green);
+  --color-success-dark: var(--ac-green-dark);
+  --color-info: var(--ac-blue);
+  --color-info-dark: var(--ac-blue-dark);
+  --color-warning: var(--ac-yellow);
+  --color-warning-dark: var(--ac-yellow-dark);
+  --color-danger: var(--ac-coral);
+  --color-danger-dark: var(--ac-coral-dark);
+  /* 次要/强调 */
+  --color-secondary: var(--ac-blue);
+  --color-secondary-dark: var(--ac-blue-dark);
+  --color-accent: var(--ac-yellow);
+  --color-accent-dark: var(--ac-yellow-dark);
+  --color-focus: #ffcc00;
+
+  --bg-page: var(--nook-cream);
+  --bg-surface: #ffffff;
+  --bg-surface-alt: var(--nook-paper);
+  --bg-elevated: #ffffff;
+
+  --text-heading: var(--text-primary);
+  --text-body: var(--text-secondary);
+  --text-caption: var(--text-muted);
+  --text-inverse: #ffffff;
+
+  --text-on-bright: #FCFED6;
+  --text-on-blue: #BDD8FF;
+  --text-on-yellow: #867253;
+  --text-info: #00B8D9;
+  --text-danger: #FC4D50;
+
+  --border-subtle: rgba(93, 64, 55, 0.08);
+  --border-default: rgba(93, 64, 55, 0.15);
+  --border-strong: rgba(93, 64, 55, 0.3);
+
+  --shadow-3d-btn: 0 5px 0 0 var(--nook-shadow-btn);
+  --shadow-3d-btn-hover: 0 6px 0 0 var(--nook-shadow-btn-hover);
+  --shadow-3d-btn-active: 0 1px 0 0 var(--nook-shadow-btn-active);
+  --shadow-3d-input: 0 3px 0 0 var(--nook-shadow-input);
+
+  /* === 自然主题拓展色（Nature Tokens�?=== */
+  --ac-sky-bright: #6ABFFD;
+  --ac-dodo: #1590CF;
+  --ac-nintendo: #E60012;
+  --ac-nook-mint: #2BB4AB;
+  --ac-sand: #FFF696;
+  --ac-grass: #62B75B;
+  --ac-leaf: #568773;
+  --ac-autumn: #F55031;
+  --ac-starry: #006898;
+  --ac-ocean: #5AA5E8;
+
+  /* === 按钮浅色环（HSL: S=80%, L=87%�?=== */
+  --btn-ring-green: #ACF5F0;
+  --btn-ring-blue: #ACC0F5;
+  --btn-ring-yellow: #F5E7AC;
+  --btn-ring-coral: #F5ACAD;
+
+  /* 圆角语义 */
+  --radius-button: var(--radius-full);
+  --radius-card: var(--radius-xl);
+  --radius-input: var(--radius-lg);
+  --radius-panel: var(--radius-md);
+  --radius-chip: var(--radius-sm);
+
+  /* === 模式主题色（Element Plus tint/shade 变体） === */
+  /* 普通模式 — 天蓝 #5783F7 */
+  --theme-normal:        #5783F7;
+  --theme-normal-light-1:#688FF8; --theme-normal-light-2:#799CF9; --theme-normal-light-3:#89A8F9;
+  --theme-normal-light-4:#9AB5FA; --theme-normal-light-5:#ABC1FB; --theme-normal-light-6:#BCCDFC;
+  --theme-normal-light-7:#CDDAFD; --theme-normal-light-8:#DDE6FD; --theme-normal-light-9:#EEF3FE;
+  --theme-normal-dark-1: #4E76DE; --theme-normal-dark-2: #4669C6; --theme-normal-dark-3: #3D5CAD;
+
+  /* 像素模式 — 暖黄 #FFCF01 */
+  --theme-pixel:         #FFCF01;
+  --theme-pixel-light-1: #FFD41A; --theme-pixel-light-2:#FFD934; --theme-pixel-light-3:#FFDD4D;
+  --theme-pixel-light-4: #FFE267; --theme-pixel-light-5:#FFE780; --theme-pixel-light-6:#FFEC99;
+  --theme-pixel-light-7: #FFF1B3; --theme-pixel-light-8:#FFF5CC; --theme-pixel-light-9:#FFFAE6;
+  --theme-pixel-dark-1:  #E6BA01; --theme-pixel-dark-2: #CCA601; --theme-pixel-dark-3: #B29101;
+
+  /* 绘制模式 — 动森绿 #2BB4AB */
+  --theme-draw:          #2BB4AB;
+  --theme-draw-light-1:  #40BCB3; --theme-draw-light-2:#55C3BC; --theme-draw-light-3:#6BCAC4;
+  --theme-draw-light-4:  #80D2CD; --theme-draw-light-5:#95DAD5; --theme-draw-light-6:#AAE1DD;
+  --theme-draw-light-7:  #BFE8E6; --theme-draw-light-8:#D5F0EE; --theme-draw-light-9:#EAF8F7;
+  --theme-draw-dark-1:   #27A29A; --theme-draw-dark-2: #229089; --theme-draw-dark-3: #1E7E78;
+
+  /* 危险色 — 珊瑚红 #FC4D50 */
+  --theme-danger:        #FC4D50;
+  --theme-danger-light-1:#FC5F62; --theme-danger-light-2:#FD7173; --theme-danger-light-3:#FD8284;
+  --theme-danger-light-4:#FD9496; --theme-danger-light-5:#FEA6A8; --theme-danger-light-6:#FEB8B9;
+  --theme-danger-light-7:#FECACA; --theme-danger-light-8:#FEDBDC; --theme-danger-light-9:#FFEDEE;
+  --theme-danger-dark-1: #E34548; --theme-danger-dark-2: #CA3E40; --theme-danger-dark-3: #B03638;
+}
+
+/* ========== Night 主题（精确复刻） ========== */
+[data-theme="night"] {
+  /* === 基础色（降低明度 + 提高饱和度） === */
+  --nook-cream: #1A1828;
+  --nook-paper: #252240;
+  --nook-wood: #3A3560;
+  --nook-wood-light: #4A4570;
+  --ac-green: #5DD3C8;
+  --ac-green-dark: #4BB8A8;
+  --ac-blue: #8ECDE8;
+  --ac-blue-dark: #6BB0D0;
+  --ac-yellow: #F0D878;
+  --ac-yellow-dark: #D8BC58;
+  --ac-coral: #F09090;
+  --ac-coral-dark: #D07070;
+  --ac-sky: #6BBEE8;
+  --ac-sky-dark: #5AA8D0;
+
+  /* === 文字色（紫调灰） === */
+  --text-primary: #F0ECF8;
+  --text-secondary: #C0B8D8;
+  --text-muted: #988FB0;
+  --border-light: rgba(240, 236, 248, 0.15);
+  --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-colored: 0 4px 20px rgba(93, 233, 200, 0.2);
+  --shadow-colored-blue: 0 4px 20px rgba(142, 205, 232, 0.2);
+  --shadow-colored-coral: 0 4px 20px rgba(240, 144, 144, 0.2);
+  --shadow-colored-yellow: 0 4px 20px rgba(240, 216, 120, 0.2);
+  --shadow-card-hover: 0 20px 40px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover-blue: 0 20px 40px rgba(87, 131, 247, 0.2);
+  --shadow-card-hover-green: 0 20px 40px rgba(93, 233, 200, 0.2);
+  --shadow-card-hover-coral: 0 20px 40px rgba(240, 144, 144, 0.2);
+  --shadow-card-hover-yellow: 0 20px 40px rgba(240, 216, 120, 0.2);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.4);
+  --shadow-switch-thumb: 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-inset-toggle: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-inset-toggle-off: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  /* Night 精确 shadow token */
+  --shadow-btn-green: 0 2px 8px rgba(93, 233, 200, 0.2);
+  --shadow-btn-green-hover: 0 4px 12px rgba(93, 233, 200, 0.25);
+  --shadow-btn-blue: 0 2px 8px rgba(142, 205, 232, 0.2);
+  --shadow-btn-blue-hover: 0 4px 12px rgba(142, 205, 232, 0.25);
+  --shadow-btn-coral: 0 2px 8px rgba(240, 144, 144, 0.2);
+  --shadow-btn-coral-hover: 0 4px 12px rgba(240, 144, 144, 0.25);
+  --shadow-btn-yellow: 0 2px 8px rgba(240, 216, 120, 0.2);
+  --shadow-btn-yellow-hover: 0 4px 12px rgba(240, 216, 120, 0.25);
+  --shadow-tag: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-tag-hover: 0 4px 12px rgba(93, 233, 200, 0.15);
+  --shadow-tabs-active: 0 4px 12px rgba(93, 233, 200, 0.25);
+  --shadow-steps-active: 0 4px 16px rgba(93, 233, 200, 0.3);
+  --shadow-pagination-active: 0 4px 12px rgba(93, 233, 200, 0.25);
+  --shadow-toast: 0 8px 32px rgba(0, 0, 0, 0.25);
+  --shadow-tooltip: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-toggle3d: 0 3px 0 0 var(--nook-shadow-btn);
+  --shadow-toggle3d-active: 0 3px 0 0 #4a8a1e;
+  --shadow-progress-shimmer: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+
+  /* 3D 按键阴影系统 */
+  --nook-shadow-btn: #3A3560;
+  --nook-shadow-btn-hover: #4A4570;
+  --nook-shadow-btn-active: #2A2548;
+  --nook-shadow-input: #3A3560;
+
+  /* === 语义�?=== */
+  --color-primary: var(--ac-green);
+  --color-primary-dark: var(--ac-green-dark);
+  --color-success: var(--ac-green);
+  --color-success-dark: var(--ac-green-dark);
+  --color-info: var(--ac-blue);
+  --color-info-dark: var(--ac-blue-dark);
+  --color-warning: var(--ac-yellow);
+  --color-warning-dark: var(--ac-yellow-dark);
+  --color-danger: var(--ac-coral);
+  --color-danger-dark: var(--ac-coral-dark);
+  --color-secondary: var(--ac-blue);
+  --color-secondary-dark: var(--ac-blue-dark);
+  --color-accent: var(--ac-yellow);
+  --color-accent-dark: var(--ac-yellow-dark);
+  --color-focus: #FFD54F;
+
+  --bg-page: var(--nook-cream);
+  --bg-surface: #2D2A48;
+  --bg-surface-alt: #363258;
+  --bg-elevated: #3E3A60;
+
+  --text-heading: var(--text-primary);
+  --text-body: var(--text-secondary);
+  --text-caption: var(--text-muted);
+  --text-inverse: #1A1828;
+
+  --text-on-bright: #FCFED6;
+  --text-on-blue: #BDD8FF;
+  --text-on-yellow: #867253;
+  --text-info: #00B8D9;
+  --text-danger: #F09090;
+
+  --border-subtle: rgba(240, 236, 248, 0.08);
+  --border-default: rgba(240, 236, 248, 0.15);
+  --border-strong: rgba(240, 236, 248, 0.3);
+
+  --shadow-3d-btn: 0 5px 0 0 #3A3560;
+  --shadow-3d-btn-hover: 0 6px 0 0 #4A4570;
+  --shadow-3d-btn-active: 0 1px 0 0 #2A2548;
+  --shadow-3d-input: 0 3px 0 0 #3A3560;
+
+  /* === 模式主题色 Night 变体 === */
+  --theme-normal:        #8ECDE8;
+  --theme-normal-light-1:#99D2EA; --theme-normal-light-2:#A5D7ED; --theme-normal-light-3:#B0DCEF;
+  --theme-normal-light-4:#BBE1F1; --theme-normal-light-5:#C6E6F4; --theme-normal-light-6:#D2EBF6;
+  --theme-normal-light-7:#DDF0F8; --theme-normal-light-8:#E8F5FA; --theme-normal-light-9:#F4FAFD;
+  --theme-normal-dark-1: #80B8D1; --theme-normal-dark-2: #72A4BA; --theme-normal-dark-3: #6390A2;
+
+  --theme-pixel:         #F0D878;
+  --theme-pixel-light-1: #F2DC86; --theme-pixel-light-2:#F3E093; --theme-pixel-light-3:#F4E4A0;
+  --theme-pixel-light-4: #F6E8AE; --theme-pixel-light-5:#F8ECBC; --theme-pixel-light-6:#F9EFC9;
+  --theme-pixel-light-7: #FAF3D6; --theme-pixel-light-8:#FCF7E4; --theme-pixel-light-9:#FEFBF2;
+  --theme-pixel-dark-1:  #D8C26C; --theme-pixel-dark-2: #C0AD60; --theme-pixel-dark-3: #A89754;
+
+  --theme-draw:          #5DD3C8;
+  --theme-draw-light-1:  #6DD7CE; --theme-draw-light-2:#7DDCD3; --theme-draw-light-3:#8EE0D8;
+  --theme-draw-light-4:  #9EE5DE; --theme-draw-light-5:#AEE9E4; --theme-draw-light-6:#BEEDE9;
+  --theme-draw-light-7:  #CEF2EE; --theme-draw-light-8:#DFF6F4; --theme-draw-light-9:#EFFBFA;
+  --theme-draw-dark-1:   #54BEB4; --theme-draw-dark-2: #4AA9A0; --theme-draw-dark-3: #41948C;
+
+  --theme-danger:        #F09090;
+  --theme-danger-light-1:#F29B9B; --theme-danger-light-2:#F3A6A6; --theme-danger-light-3:#F4B1B1;
+  --theme-danger-light-4:#F6BCBC; --theme-danger-light-5:#F8C8C8; --theme-danger-light-6:#F9D3D3;
+  --theme-danger-light-7:#FADEDE; --theme-danger-light-8:#FCE9E9; --theme-danger-light-9:#FEF4F4;
+  --theme-danger-dark-1: #D88282; --theme-danger-dark-2: #C07373; --theme-danger-dark-3: #A86565;
+}
+
+/* === Night 模式组件适配（精确复刻） === */
+[data-theme="night"] .card,
+[data-theme="night"] .modal,
+[data-theme="night"] .alert,
+[data-theme="night"] .form-input,
+[data-theme="night"] .search-input,
+[data-theme="night"] .number-control,
+[data-theme="night"] .dropdown-menu,
+[data-theme="night"] .toast,
+[data-theme="night"] .inventory-slot,
+[data-theme="night"] .badge-ghost,
+[data-theme="night"] .tag,
+[data-theme="night"] .toggle-wrapper,
+[data-theme="night"] .progress,
+[data-theme="night"] .check-item,
+[data-theme="night"] .select-wrapper {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+}
+
+[data-theme="night"] .card-organic-green,
+[data-theme="night"] .card-organic-leaf,
+[data-theme="night"] .modal-blob-clipped {
+    background: var(--bg-surface-alt);
+    color: var(--text-primary);
+}
+
+[data-theme="night"] .modal-blob .modal-blob-clipped {
+    background: var(--bg-surface-alt);
+}
+
+[data-theme="night"] .dropdown-menu-item:hover,
+[data-theme="night"] .dropdown-item:hover {
+    background: var(--bg-elevated);
+}
+
+[data-theme="night"] .alert-green {
+    background: rgba(125, 211, 180, 0.12);
+    border-left-color: var(--ac-green);
+    color: var(--ac-green);
+}
+[data-theme="night"] .alert-blue {
+    background: rgba(142, 205, 232, 0.12);
+    border-left-color: var(--ac-blue);
+    color: var(--ac-blue);
+}
+[data-theme="night"] .alert-yellow {
+    background: rgba(240, 216, 120, 0.12);
+    border-left-color: var(--ac-yellow);
+    color: var(--ac-yellow);
+}
+[data-theme="night"] .alert-coral {
+    background: rgba(240, 144, 144, 0.12);
+    border-left-color: var(--ac-coral);
+    color: var(--ac-coral);
+}
+[data-theme="night"] .alert-pink {
+  background: rgba(240, 144, 144, 0.08);
+  border-left-color: var(--ac-coral);
+  color: var(--ac-coral);
+}
+
+[data-theme="night"] .tooltip {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+}
+[data-theme="night"] .tooltip::after {
+    border-top-color: var(--bg-elevated);
+}
+
+[data-theme="night"] .sticky-note {
+    filter: brightness(0.75) saturate(0.85);
+}
+
+[data-theme="night"] .theme-switcher {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* 主题切换时的过渡动画 */
+[data-theme="night"] body {
+    transition: background-color 0.6s ease, color 0.6s ease;
+}
+[data-theme="night"] * {
+    transition: background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease, color 0.4s ease;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-page);
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(43, 180, 171, 0.15) 0%, transparent 20%),
+    radial-gradient(circle at 90% 80%, rgba(232, 144, 160, 0.15) 0%, transparent 20%),
+    radial-gradient(circle at 50% 50%, rgba(255, 207, 1, 0.1) 0%, transparent 30%);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+  transition: background-color 0.4s, color 0.4s;
+}
+
+  /* === 滚动条美化 === */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--nook-paper);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--ac-green);
+    border-radius: 4px;
+  }
+  /* Firefox 兼容 */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ac-green) var(--nook-paper);
+  }
+
+  /* === 无障碍支�?=== */
+  :focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+/* === 动画关键帧（精确复刻�?=== */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+
+@keyframes popIn {
+  0% { opacity: 0; transform: scale(0.8) translateY(20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes bounceSoft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes leafSway {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+@keyframes stripeFlow {
+  0% { background-position: 0 0; }
+  100% { background-position: 24px 0; }
+}
+
+@keyframes splashBurst {
+  0%   { transform: scale(0); opacity: 0.6; }
+  50%  { transform: scale(1.2); opacity: 0.3; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+@keyframes ripple-splash {
+  0%   { transform: translate(-50%, -50%) scale(0); opacity: 0.5; }
+  100% { transform: translate(-50%, -50%) scale(4); opacity: 0; }
+}
+
+@keyframes slideUp {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+@keyframes slideInRight {
+  0% { opacity: 0; transform: translateX(30px) scale(0.95); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes bubblePop {
+  0% { opacity: 0; transform: scale(0.5) translateY(20px); }
+  70% { transform: scale(1.05) translateY(-4px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes bubbleIdle {
+  0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+  25% { border-radius: 40% 60% 70% 30% / 50% 60% 30% 60%; }
+  50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+  75% { border-radius: 50% 40% 30% 60% / 60% 40% 60% 30%; }
+}
+
+@keyframes leafWiggle {
+  0%, 100% { transform: rotate(-10deg); }
+  50% { transform: rotate(10deg); }
+}
+
+@keyframes handWiggle {
+  0%, 100% { transform: rotate(-10deg) translateY(0); }
+  50% { transform: rotate(10deg) translateY(-3px); }
+}
+
+@keyframes iconBounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* === 动画工具类（精确复刻�?=== */
+.animate-float { animation: float 4s ease-in-out infinite; }
+.animate-wiggle:hover { animation: wiggle 0.5s ease-in-out; }
+.animate-pop { animation: popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-bounce-soft { animation: bounceSoft 2s ease-in-out infinite; }
+.animate-shimmer { animation: shimmer 2s linear infinite; }
+.animate-leaf-sway { animation: leafSway 2s ease-in-out infinite; }
+.animate-stripe-flow { animation: stripeFlow 0.6s linear infinite; }
+.animate-splash-burst { animation: splashBurst 0.6s ease-out forwards; }
+.animate-ripple-splash { animation: ripple-splash 0.5s ease-out forwards; }
+.animate-slide-up { animation: slideUp 0.4s ease-out forwards; }
+.animate-pulse-ring { animation: pulse-ring 1.5s ease-out infinite; }
+.animate-slide-in-right { animation: slideInRight 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-bubble-pop { animation: bubblePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-blob-idle { animation: bubbleIdle 4s ease-in-out infinite; }
+.animate-leaf-wiggle { animation: leafWiggle 0.3s ease-in-out; }
+.animate-hand-wiggle { animation: handWiggle 1.5s ease-in-out infinite; }
+.animate-icon-bounce { animation: iconBounce 0.3s ease-in-out; }
+.animate-blink { animation: blink 1s step-end infinite; }
+.animate-spin-fast { animation: spin 0.8s linear infinite; }
+.animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+
+/* === 斜条纹选中 === */
+.stripe-active {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent, transparent 6px,
+    rgba(255,255,255,0.25) 6px, rgba(255,255,255,0.25) 12px
+  );
+  background-size: 24px 24px;
+  animation: stripeFlow 0.6s linear infinite;
+}
+
+/* === 喷溅反馈�?=== */
+.splash-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 4px solid var(--ac-green);
+  pointer-events: none;
+  animation: splashBurst 0.6s ease-out forwards;
+  z-index: 10;
+}
+
+/* === 按钮水波�?=== */
+.btn-ripple {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+  animation: ripple-splash 0.5s ease-out forwards;
+}
+
+/* === 导航�?=== */
+.nav-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 251, 240, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 2px solid var(--border-light);
+  padding: 1rem 2rem;
+}
+
+/* === 容器 === */
+.container-nook {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* === 主题切换器控�?=== */
+.theme-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255,255,255,0.15);
+  border-radius: var(--radius-full);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 2px solid rgba(255,255,255,0.2);
+}
+.theme-switcher-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 1rem;
+  display: grid;
+  place-items: center;
+  background: transparent;
+}
+.theme-switcher-btn:hover {
+  transform: scale(1.15);
+}
+.theme-switcher-btn.active {
+  border-color: var(--ac-yellow);
+  box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.3);
+  background: rgba(255, 204, 0, 0.15);
+}
+
+/* === 代码�?=== */
+.code-block {
+  background: #2C2416;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+  border: 2px solid var(--nook-wood-light);
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.code-block-lang {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-family: var(--font-family);
+}
+.code-block-dots {
+  display: flex;
+  gap: 6px;
+}
+.code-block-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.code-block-dots span:nth-child(1) { background: var(--ac-coral); }
+.code-block-dots span:nth-child(2) { background: var(--ac-yellow); }
+.code-block-dots span:nth-child(3) { background: var(--color-primary); }
+.code-block-copy {
+  padding: 0.35rem 0.875rem;
+  border-radius: var(--radius-full);
+  border: none;
+  background: rgba(43, 180, 171, 0.12);
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-family);
+}
+.code-block-copy:hover {
+  background: rgba(43, 180, 171, 0.25);
+  transform: translateY(-1px);
+}
+.code-block-copy:active {
+  transform: translateY(1px);
+}
+.code-block-copy.copied {
+  background: var(--color-primary);
+  color: var(--nook-brown);
+}
+.code-block-body {
+  padding: 1.25rem 1.5rem;
+  overflow-x: auto;
+  max-height: 320px;
+}
+.code-block-body pre {
+  margin: 0;
+  font-family: inherit;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: #E8E4D8;
+  white-space: pre;
+  word-break: break-all;
+}
+.code-block-body pre .tok-tag { color: #7ECF98; }
+.code-block-body pre .tok-attr { color: #FFD700; }
+.code-block-body pre .tok-val { color: #A8D5BA; }
+.code-block-body pre .tok-comment { color: #8B8B8B; font-style: italic; }
+.code-block-body pre .tok-entity { color: #FF9EB0; }
+
+/* === 装饰性圆�?=== */
+.deco-circle {
+  position: fixed;
+  z-index: -1;
+  filter: blur(40px);
+  opacity: 0.3;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.deco-1 {
+  width: 300px;
+  height: 300px;
+  background: rgba(43, 180, 171, 0.2);
+  top: 10%;
+  left: -100px;
+}
+.deco-2 {
+  width: 250px;
+  height: 250px;
+  background: rgba(87, 131, 247, 0.15);
+  bottom: 20%;
+  right: -80px;
+}
+.deco-3 {
+  width: 200px;
+  height: 200px;
+  background: rgba(255, 207, 1, 0.15);
+  top: 50%;
+  left: 60%;
+}
+
+/* === 分割�?=== */
+.divider-wave {
+  height: 12px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z' fill='%23C4986A' opacity='.2'/%3E%3C/svg%3E");
+  background-size: 1200px 100%;
+  opacity: 0.8;
+}
+.divider-wood {
+  height: 8px;
+  background: repeating-linear-gradient(
+    90deg,
+    #C4986A 0px, #C4986A 40px,
+    #B08860 40px, #B08860 80px
+  );
+  opacity: 0.6;
+}
+.divider-cloud {
+  height: 16px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,60 Q150,10 300,60 T600,60 T900,60 T1200,60 V120 H0 Z' fill='%23ffffff' opacity='.3'/%3E%3C/svg%3E");
+  background-size: 600px 100%;
+  opacity: 0.8;
+}
+
+/* === 页脚装饰 === */
+.footer-wave {
+  height: 80px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%232BB4AB' fill-opacity='0.15' d='M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E");
+  background-size: 1440px 100%;
+}
+.footer-forest {
+  height: 60px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%235D4037' fill-opacity='0.2' d='M0,224L48,213.3C96,203,192,181,288,181.3C384,181,480,203,576,224C672,245,768,267,864,261.3C960,256,1056,224,1152,208C1248,192,1344,192,1392,192L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E");
+  background-size: 1440px 100%;
+}
+
+/* === 纹理系统 === */
+.texture-paper {
+  background-color: var(--nook-paper);
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.06'/%3E%3C/svg%3E");
+  background-blend-mode: multiply;
+}
+
+.texture-cork {
+  background-color: #c9a87c;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(160,120,80,0.3) 0%, transparent 40%),
+    radial-gradient(circle at 70% 60%, rgba(140,100,60,0.25) 0%, transparent 35%),
+    radial-gradient(circle at 40% 80%, rgba(180,140,100,0.2) 0%, transparent 45%);
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+}
+
+.texture-wood {
+  background-color: #d4b896;
+  background-image:
+    repeating-linear-gradient(90deg, transparent, transparent 50px, rgba(0,0,0,0.03) 50px, rgba(0,0,0,0.03) 53px),
+    repeating-linear-gradient(0deg, transparent, transparent 30px, rgba(0,0,0,0.02) 30px, rgba(0,0,0,0.02) 33px);
+  box-shadow: inset 0 0 30px rgba(0,0,0,0.05);
+}
+
+.texture-fabric {
+  background-color: #f5f0e8;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 5px, rgba(160,130,90,0.04) 5px, rgba(160,130,90,0.04) 6px),
+    repeating-linear-gradient(90deg, transparent, transparent 5px, rgba(160,130,90,0.04) 5px, rgba(160,130,90,0.04) 6px);
+}
+
+/* === 减少动画偏好 === */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* ============================================
-   NookUI Theme — 极简骨架版（已剥离全部样式美化）
-   保留 CSS 变量防止内联 style 崩溃，值已改为中性色
+   ƴ����Ŀ���ݱ������䣨NookUI δ���嵫���������
    ============================================ */
 
 :root {
-  --nook-cream:     #ffffff;
-  --nook-paper:     #f9fafb;
-  --nook-wood:      #e5e7eb;
-  --nook-wood-light:#f3f4f6;
+  /* ��������չɫ */
+  --ac-pink:        #FFB7C5;
+  --ac-pink-dark:   #E89AA8;
+  --ac-lavender:    #C7B8E6;
+  --ac-lavender-dark: #B89AE8;
+  --ac-mint:        #B5EAD7;
+  --ac-peach:       #FFDAC1;
 
-  --ac-green:       #9ca3af;
-  --ac-green-dark:  #6b7280;
-  --ac-blue:        #9ca3af;
-  --ac-blue-dark:   #6b7280;
-  --ac-pink:        #9ca3af;
-  --ac-pink-dark:   #6b7280;
-  --ac-yellow:      #e5e7eb;
-  --ac-yellow-dark: #9ca3af;
-  --ac-coral:       #9ca3af;
-  --ac-coral-dark:  #6b7280;
-  --ac-lavender:    #9ca3af;
-  --ac-lavender-dark:#6b7280;
-  --ac-mint:        #d1d5db;
-  --ac-peach:       #d1d5db;
-
-  --text-primary:   #1f2937;
-  --text-secondary: #6b7280;
-  --text-muted:     #9ca3af;
-  --text-caption:   #d1d5db;
+  /* ������� */
   --text-main:      var(--text-primary);
+  --text-caption:   var(--text-muted);
 
-  --bg-base:        #ffffff;
+  /* ����� */
+  --bg-base:        var(--nook-cream);
   --surface:        rgba(255, 255, 255, 0.92);
   --surface-solid:  #ffffff;
-  --surface-hover:  rgba(0, 0, 0, 0.04);
+  --surface-hover:  rgba(93, 64, 55, 0.06);
 
-  --nook-pink-5:   rgba(0,0,0,0.02);
-  --nook-pink-15:  rgba(0,0,0,0.06);
-  --nook-mint-8:   rgba(0,0,0,0.03);
-  --nook-mint-20:  rgba(0,0,0,0.08);
-  --nook-coral-8:  rgba(0,0,0,0.03);
-  --nook-coral-20: rgba(0,0,0,0.08);
-  --nook-lemon-8:  rgba(0,0,0,0.03);
-  --nook-lemon-20: rgba(0,0,0,0.08);
+  /* ͸����ɫ�� */
+  --nook-pink-5:   rgba(43, 180, 171, 0.02);
+  --nook-pink-15:  rgba(43, 180, 171, 0.06);
+  --nook-mint-8:   rgba(43, 180, 171, 0.03);
+  --nook-mint-20:  rgba(43, 180, 171, 0.08);
+  --nook-coral-8:  rgba(252, 77, 80, 0.03);
+  --nook-coral-20: rgba(252, 77, 80, 0.08);
+  --nook-lemon-8:  rgba(255, 207, 1, 0.03);
+  --nook-lemon-20: rgba(255, 207, 1, 0.08);
 
-  --grad-pink-coral:    linear-gradient(135deg, #e5e7eb, #d1d5db);
-  --grad-sky-mint:      linear-gradient(135deg, #e5e7eb, #d1d5db);
-  --grad-lemon-peach:   linear-gradient(135deg, #e5e7eb, #d1d5db);
-  --grad-lavender-pink: linear-gradient(135deg, #e5e7eb, #d1d5db);
-  --grad-mint-sky:      linear-gradient(135deg, #e5e7eb, #d1d5db);
+  /* ���� */
+  --grad-pink-coral:    linear-gradient(135deg, #FFB7C5, #FC4D50);
+  --grad-sky-mint:      linear-gradient(135deg, #1591D1, #2BB4AB);
+  --grad-lemon-peach:   linear-gradient(135deg, #FFCF01, #FFDAC1);
+  --grad-lavender-pink: linear-gradient(135deg, #C7B8E6, #FFB7C5);
+  --grad-mint-sky:      linear-gradient(135deg, #2BB4AB, #1591D1);
 
-  --shadow-sm:      0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md:      0 1px 3px rgba(0,0,0,0.1);
-  --shadow-lg:      0 4px 6px rgba(0,0,0,0.1);
-  --shadow-glow:    none;
-  --shadow-inset:   inset 0 1px 2px rgba(0,0,0,0.05);
+  /* ������Ӱ */
+  --shadow-glow:    0 0 20px rgba(43, 180, 171, 0.15);
+  --shadow-inset:   inset 0 2px 4px rgba(93, 64, 55, 0.06);
 
-  --radius-sm:   4px;
-  --radius-md:   6px;
-  --radius-lg:   8px;
-  --radius-xl:   10px;
-  --radius-full: 9999px;
-
-  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-  --duration-fast: 0.15s;
-  --duration-normal: 0.2s;
-
-  /* 向后兼容别名 */
+  /* �����ݱ�����ƴ���������ʹ�ã� */
   --dop-pink:      var(--ac-pink);
   --dop-coral:     var(--ac-coral);
   --dop-lemon:     var(--ac-yellow);
@@ -88,10 +913,9 @@
   --nook-coral:    var(--ac-coral);
   --nook-warning:  var(--ac-yellow-dark);
 }
-
 /* 基础容器 */
 .nookui {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-family);
   color: var(--text-main);
   background: var(--bg-base);
   min-height: 100vh;
@@ -122,6 +946,16 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+.nook-btn-primary {
+  background: var(--text-secondary);
+  color: #fff;
+  border-color: var(--text-secondary);
+}
+.nook-btn-secondary {
+  background: var(--surface-solid);
+  color: var(--text-secondary);
+  border-color: var(--nook-wood-light);
+}
 
 /* ─── 工具按钮骨架 ─── */
 .nook-tool {
@@ -140,7 +974,7 @@
   color: var(--text-primary);
 }
 
-/* ─── 输入框骨架 ─── */
+/* ─── 输入框骨�?─── */
 .nook-input {
   background: var(--surface-solid);
   border: 1px solid var(--nook-wood);
@@ -177,32 +1011,7 @@
   width: 100%;
 }
 
-/* ─── dop 下拉选择器 ─── */
-.dop-select {
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: 4px;
-  padding: 6px 10px;
-  background: var(--surface-solid);
-  border: 1px solid var(--nook-wood);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-  cursor: pointer;
-  outline: none;
-  transition: border-color 0.15s, background 0.15s;
-}
-.dop-select:focus-visible {
-  border-color: var(--text-secondary);
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.06);
-}
-.dop-select[data-disabled] {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+/* ─── dop 下拉选择�?─── */
 
 /* ─── 滑块骨架 ─── */
 .nook-slider {
@@ -265,25 +1074,19 @@
   z-index: 50;
 }
 
-/* ─── 工具类 ─── */
+/* ─── 工具�?─── */
 .nook-flex-center { display: flex; align-items: center; justify-content: center; }
 .nook-flex-between { display: flex; align-items: center; justify-content: space-between; }
 .nook-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ============================================
-   补充：dop-* / nook-* 缺失类名的基本骨架样式
-   确保所有组件元素能正常显示层级和结构
+   补充：dop-* / nook-* 缺失类名的基本骨架样�?
+   确保所有组件元素能正常显示层级和结�?
    ============================================ */
 
 /* ─── dop 布局工具 ─── */
-.dop-flex-center { display: flex; align-items: center; justify-content: center; }
 
 /* ─── dop 面板 ─── */
-.dop-panel {
-  background: var(--surface-solid);
-  border: 1px solid var(--nook-wood-light);
-  border-radius: var(--radius-sm);
-}
 
 /* ─── dop 卡片 ─── */
 .dop-card {
@@ -323,49 +1126,12 @@
 }
 
 /* ─── dop 按钮 ─── */
-.dop-btn {
-  padding: 6px 16px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  border: 1px solid var(--nook-wood);
-  background: var(--surface-solid);
-  color: var(--text-primary);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.dop-btn-primary {
-  background: var(--text-secondary);
-  color: #fff;
-  border-color: var(--text-secondary);
-}
-.dop-btn-secondary {
-  background: var(--surface-solid);
-  color: var(--text-secondary);
-  border-color: var(--nook-wood-light);
-}
 
-/* ─── dop 输入框 ─── */
-.dop-input {
-  background: var(--surface-solid);
-  border: 1px solid var(--nook-wood);
-  border-radius: var(--radius-sm);
-  padding: 6px 10px;
-  font-size: 14px;
-  color: var(--text-primary);
-  width: 100%;
-  outline: none;
-}
+/* ─── dop 输入�?─── */
 
 /* ─── dop 滑块 ─── */
-.dop-slider {
-  width: 100%;
-  accent-color: var(--text-secondary);
-}
 
-/* ─── dop 开关 ─── */
+/* ─── dop 开�?─── */
 .dop-switch {
   appearance: none;
   width: 40px; height: 22px;
@@ -392,49 +1158,10 @@
 }
 
 /* ─── dop 工具按钮 ─── */
-.dop-tool {
-  width: 36px; height: 36px;
-  border-radius: var(--radius-sm);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  background: var(--surface-solid);
-  border: 1px solid var(--nook-wood-light);
-  color: var(--text-muted);
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-.dop-tool:hover {
-  background: var(--surface-hover);
-  border-color: var(--nook-wood);
-  color: var(--text-primary);
-}
-.dop-tool.active {
-  background: var(--nook-wood-light);
-  border-color: var(--text-secondary);
-  color: var(--text-primary);
-}
 
 /* ─── dop 颜色方块 ─── */
-.dop-swatch {
-  width: 28px; height: 28px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--nook-wood);
-  cursor: pointer;
-  overflow: hidden;
-  position: relative;
-  transition: transform 0.1s, box-shadow 0.15s;
-  flex-shrink: 0;
-}
-.dop-swatch:hover {
-  transform: scale(1.08);
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.08);
-}
-.dop-swatch.active {
-  box-shadow: 0 0 0 2px var(--text-secondary);
-}
 
-/* ─── dop 进度条 ─── */
+/* ─── dop 进度�?─── */
 .dop-progress {
   width: 100%;
   height: 8px;
@@ -462,7 +1189,7 @@
   color: var(--text-secondary);
 }
 
-/* ─── dop 警告框 ─── */
+/* ─── dop 警告�?─── */
 .dop-alert {
   display: flex;
   align-items: center;
@@ -477,8 +1204,8 @@
 .dop-alert-warning { background: var(--nook-paper); color: var(--text-secondary); }
 .dop-alert-danger  { background: var(--nook-paper); color: var(--text-secondary); }
 
-/* ─── dop 图例 ─── */
-.dop-legend {
+/* ─── nook 图例 ─── */
+.nook-legend {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -486,7 +1213,7 @@
   padding: 8px 12px;
   overflow: hidden;
 }
-.dop-legend-item {
+.nook-legend-item {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -497,62 +1224,19 @@
   border: 1px solid var(--nook-wood-light);
   border-radius: var(--radius-sm);
 }
-.dop-legend-dot {
+.nook-legend-dot {
   width: 10px; height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-/* ─── dop 图层项 ─── */
-.dop-layer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: background 0.15s;
-}
-.dop-layer:hover {
-  background: var(--surface-hover);
-}
-.dop-layer.active {
-  background: var(--nook-wood-light);
-}
+/* ─── dop 图层�?─── */
 
-/* ─── dop 图层缩略图 ─── */
-.dop-layer-thumb {
-  width: 32px; height: 32px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  flex-shrink: 0;
-  background: var(--nook-wood);
-}
+/* ─── dop 图层缩略�?─── */
 
 /* ─── dop 浮动缩放 ─── */
-.dop-float-zoom {
-  position: fixed;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  z-index: 50;
-}
 
-/* ─── dop 上传区 ─── */
-.dop-uploader {
-  padding: 16px;
-  border: 2px dashed var(--nook-wood);
-  border-radius: var(--radius-sm);
-  text-align: center;
-  cursor: pointer;
-  background: var(--surface-solid);
-}
+/* ─── dop 上传�?─── */
 
 /* ─── PS 画布区域 ─── */
 .nook-ps-canvas-area {
@@ -571,6 +1255,11 @@
   background: var(--surface-solid);
   border: 1px solid var(--nook-wood-light);
   border-radius: var(--radius-sm);
+  width: fit-content;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(93, 64, 55, 0.1);
+  padding: 20px;
+  min-height: min-content;
 }
 
 /* ─── dop 弹窗 ─── */
@@ -723,7 +1412,26 @@
   z-index: 9999;
 }
 
-/* ─── nook 上传图标 ─── */
+/* ─── nook Uploader ─── */
+.nook-uploader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 20px;
+  border: 3px dashed var(--nook-wood-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-heading);
+  cursor: pointer;
+  transition: all 0.3s var(--ease-bounce);
+  text-align: center;
+}
+.nook-uploader:hover {
+  border-color: var(--uploader-hover-border, var(--color-primary));
+  background: var(--uploader-hover-bg, rgba(43, 180, 171, 0.04));
+  transform: translateY(-2px);
+}
 .nook-uploader-icon {
   width: 40px; height: 40px;
   display: flex;

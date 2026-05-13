@@ -25,6 +25,7 @@ npm-debug.log*
 models/*.onnx
 
 # Backups & temp
+*backup*/
 ProjectBackup/
 web_backup/
 NookUI/
@@ -49,3 +50,6 @@ DEVELOP_ENV.txt
 # OS
 .DS_Store
 Thumbs.db
+/游戏截图参考/
+/scripts/cleanup_dop_css.py
+/scripts/replace_dop_to_nook.py

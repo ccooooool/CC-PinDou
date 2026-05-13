@@ -8,6 +8,7 @@ export interface UploaderProps {
   multiple?: boolean
   disabled?: boolean
   className?: string
+  style?: React.CSSProperties
   children?: React.ReactNode
   onFiles?: (files: FileList) => void
 }
@@ -17,6 +18,7 @@ function Uploader({
   multiple,
   disabled,
   className,
+  style,
   children,
   onFiles,
 }: UploaderProps) {
@@ -52,10 +54,11 @@ function Uploader({
     <div
       className={cn(
         "nook-uploader",
-        dragOver && "border-[var(--text-secondary)] bg-[var(--nook-mint-8)] scale-[1.01]",
+        dragOver && "bg-[var(--nook-mint-8)] scale-[1.01]",
         disabled && "opacity-50 cursor-not-allowed",
         className
       )}
+      style={style}
       onClick={() => !disabled && inputRef.current?.click()}
       onDragEnter={onDragEnter}
       onDragLeave={onDragLeave}

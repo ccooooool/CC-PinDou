@@ -2,6 +2,7 @@
 import json
 import os
 import sqlite3
+import threading
 
 import numpy as np
 from scipy.spatial import cKDTree
@@ -9,9 +10,12 @@ from scipy.spatial import cKDTree
 from config import DB_PATH, JSON_PATH
 from utils import hex_to_rgb, logger
 
+# 线程锁：保护数据库初始化和全局变量加载
+_init_lock = threading.Lock()
+
 
 def init_db():
-    """从 JSON 初始化 SQLite 数据库（若不存在）。"""
+    """从 JSON 初始化 SQLite 数据库（若不存在）。线程安全。"""
     if os.path.exists(DB_PATH):
         return
 
@@ -21,7 +25,7 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''
-        CREATE TABLE colors (
+        CREATE TABLE IF NOT EXISTS colors (
             hex TEXT,
             brand TEXT,
             code TEXT,
@@ -31,7 +35,7 @@ def init_db():
     for hex_color, brands in data.items():
         for brand, code in brands.items():
             cursor.execute(
-                'INSERT INTO colors (hex, brand, code) VALUES (?, ?, ?)',
+                'INSERT OR IGNORE INTO colors (hex, brand, code) VALUES (?, ?, ?)',
                 (hex_color, brand, code)
             )
     conn.commit()
@@ -75,13 +79,18 @@ def _ensure_initialized():
     if _color_mapping is not None:
         return
 
-    # 自动创建 data 目录，避免目录缺失导致启动失败
-    data_dir = os.path.dirname(DB_PATH)
-    if data_dir:
-        os.makedirs(data_dir, exist_ok=True)
+    with _init_lock:
+        # 双重检查，避免锁竞争后重复初始化
+        if _color_mapping is not None:
+            return
 
-    init_db()
-    _color_mapping = load_color_mapping()
+        # 自动创建 data 目录，避免目录缺失导致启动失败
+        data_dir = os.path.dirname(DB_PATH)
+        if data_dir:
+            os.makedirs(data_dir, exist_ok=True)
+
+        init_db()
+        _color_mapping = load_color_mapping()
 
     # 预计算颜色查找数组，用于向量化最近色搜索
     # 全量 291 色

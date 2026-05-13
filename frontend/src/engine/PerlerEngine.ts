@@ -184,8 +184,19 @@ export class PerlerEngine {
     const paletteN = this.hexList.length;
     const result: string[] = new Array(n);
 
+    // 预先将所有像素批量转为 OKLab，避免在匹配循环中重复调用 rgbToOklab
+    const pixelOklab = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
-      const [L, A, B] = this.rgbToOklab(pixels[i * 3], pixels[i * 3 + 1], pixels[i * 3 + 2]);
+      const oklab = this.rgbToOklab(pixels[i * 3], pixels[i * 3 + 1], pixels[i * 3 + 2]);
+      pixelOklab[i * 3] = oklab[0];
+      pixelOklab[i * 3 + 1] = oklab[1];
+      pixelOklab[i * 3 + 2] = oklab[2];
+    }
+
+    for (let i = 0; i < n; i++) {
+      const L = pixelOklab[i * 3];
+      const A = pixelOklab[i * 3 + 1];
+      const B = pixelOklab[i * 3 + 2];
       let minDist = Infinity;
       let bestIdx = 0;
 
@@ -355,8 +366,6 @@ export class PerlerEngine {
     gridSize: number
   ): { grid: GridCell[][]; colorMap: Map<string, ColorInfo> } {
     const { width, height } = imageData;
-    const cellW = width / gridSize;
-    const cellH = height / gridSize;
 
     const grid: GridCell[][] = [];
     const colorMap = new Map<string, ColorInfo>();
@@ -364,10 +373,13 @@ export class PerlerEngine {
     for (let gy = 0; gy < gridSize; gy++) {
       const row: GridCell[] = [];
       for (let gx = 0; gx < gridSize; gx++) {
-        const sx = Math.floor(gx * cellW);
-        const sy = Math.floor(gy * cellH);
-        const sw = Math.max(1, Math.floor(cellW));
-        const sh = Math.max(1, Math.floor(cellH));
+        // 使用 Math.round 精确划分像素边界，避免浮点数累积误差导致采样偏移
+        const sx = Math.round(gx * width / gridSize);
+        const sy = Math.round(gy * height / gridSize);
+        const sxNext = Math.round((gx + 1) * width / gridSize);
+        const syNext = Math.round((gy + 1) * height / gridSize);
+        const sw = Math.max(1, sxNext - sx);
+        const sh = Math.max(1, syNext - sy);
 
         const dominant = this.dominantColor(imageData, sx, sy, sw, sh);
         let hex: string;

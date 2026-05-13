@@ -1,6 +1,7 @@
 
 
-import { useEditorStore } from '../store/usePerlerStore';
+import { useEditorStore } from '../store/useEditorStore';
+import type { EditorState } from '../store/useEditorStore';
 import { produce } from 'immer';
 
 import { Button } from '@/components/ui';
@@ -59,15 +60,15 @@ export function EditPanel(_props: EditPanelProps) {
 
   return (
 
-    <div className="dop-panel flex flex-col">
+    <div className="nook-panel flex flex-col">
 
       {/* Header */}
 
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-[rgba(255,107,157,0.08)]">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border-subtle)]">
 
-        <Paintbrush className="w-4 h-4 text-[var(--dop-pink)]" />
+        <Paintbrush className="w-4 h-4 text-[var(--color-primary)]" />
 
-        <h5 className="text-sm font-bold text-[var(--text-main)]">编辑色板</h5>
+        <h5 className="text-sm font-bold text-[var(--text-main)]">操作记录</h5>
 
       </div>
 
@@ -77,13 +78,13 @@ export function EditPanel(_props: EditPanelProps) {
 
         {/* 撤销/重做 */}
 
-        <div className="px-4 py-3 border-b border-[rgba(255,107,157,0.08)] last:border-b-0 flex flex-col gap-2">
+        <div className="px-4 py-3 border-b border-[var(--border-subtle)] last:border-b-0 flex flex-col gap-2">
 
           <div className="flex gap-2">
 
             <button
 
-              className="dop-btn dop-btn-secondary flex-1"
+              className="nook-btn nook-btn-secondary flex-1"
 
               disabled={historyStack.length === 0}
 
@@ -99,7 +100,7 @@ export function EditPanel(_props: EditPanelProps) {
 
             <button
 
-              className="dop-btn dop-btn-secondary flex-1"
+              className="nook-btn nook-btn-secondary flex-1"
 
               disabled={redoStack.length === 0}
 
@@ -123,9 +124,9 @@ export function EditPanel(_props: EditPanelProps) {
 
         {selectedCells.length > 0 && (
 
-          <div className="px-4 py-3 border-b border-[rgba(255,107,157,0.08)] last:border-b-0 flex flex-col gap-2">
+          <div className="px-4 py-3 border-b border-[var(--border-subtle)] last:border-b-0 flex flex-col gap-2">
 
-            <div className="text-xs font-semibold text-[var(--dop-lemon)] flex items-center gap-1">
+            <div className="text-xs font-semibold text-[var(--color-accent)] flex items-center gap-1">
 
               <Wand2 className="w-3 h-3" />
 
@@ -171,11 +172,12 @@ export function EditPanel(_props: EditPanelProps) {
 
                     }));
 
-                    useEditorStore.setState(produce((draft: any) => {
+                    useEditorStore.setState(produce((draft: EditorState) => {
                       for (const c of selectedCells) {
                         draft.gridData![c.y][c.x].color = selectedColor.hex;
                         draft.gridData![c.y][c.x].codes = { ...selectedColor.codes };
                       }
+                      if (draft.historyStack.length >= 50) draft.historyStack.shift();
                       draft.historyStack.push({ type: 'batch_paint', positions: records, layerId: activeLayerId || 'default' });
                       draft.redoStack = [];
                       draft.selectedCells = [];
@@ -193,14 +195,14 @@ export function EditPanel(_props: EditPanelProps) {
 
                 <Button
 
-                  variant="default"
+                  variant="secondary"
 
                   size="sm"
 
                   onClick={() => {
 
-                    useEditorStore.setState(produce((draft: any) => {
-                      const positions = selectedCells.map((c: any) => {
+                    useEditorStore.setState(produce((draft: EditorState) => {
+                      const positions = selectedCells.map((c: { x: number; y: number }) => {
                         const oldColor = draft.gridData![c.y][c.x].color;
                         const oldCodes = { ...draft.gridData![c.y][c.x].codes };
                         draft.gridData![c.y][c.x].color = 'transparent';
@@ -213,6 +215,7 @@ export function EditPanel(_props: EditPanelProps) {
                           newCodes: {},
                         };
                       });
+                      if (draft.historyStack.length >= 50) draft.historyStack.shift();
                       draft.historyStack.push({ type: 'batch_paint', layerId: activeLayerId || 'default', positions });
                       draft.redoStack = [];
                       draft.selectedCells = [];
@@ -250,7 +253,7 @@ export function EditPanel(_props: EditPanelProps) {
 
         {historyStack.length > 0 && (
 
-          <div className="px-4 py-3 border-b border-[rgba(255,107,157,0.08)] last:border-b-0 flex flex-col gap-2">
+          <div className="px-4 py-3 border-b border-[var(--border-subtle)] last:border-b-0 flex flex-col gap-2">
 
             <div className="text-xs font-bold text-[var(--text-muted)] mb-2 uppercase tracking-wider flex items-center gap-1">
 
@@ -280,7 +283,7 @@ export function EditPanel(_props: EditPanelProps) {
 
                   text = `批量涂色 ${action.positions.length} 个`;
 
-                  color = action.positions[0]?.newColor || 'var(--ai-border)';
+                  color = action.positions[0]?.newColor || 'var(--border-default)';
 
                 } else if (action.type === 'delete_color') {
 
@@ -298,7 +301,7 @@ export function EditPanel(_props: EditPanelProps) {
 
                     <div
 
-                      className="w-3 h-3 rounded-[3px] border border-[var(--ai-border)]"
+                      className="w-3 h-3 rounded-[3px] border border-[var(--border-default)]"
 
                       style={{
 

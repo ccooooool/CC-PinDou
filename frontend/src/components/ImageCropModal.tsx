@@ -95,25 +95,25 @@ export function ImageCropModal({ isOpen, imageUrl, originalFile, onClose, onCrop
       footer={
         <>
           <Button variant="text" onClick={handleCancel}>
-            <X style={{ width: 14, height: 14 }} />
+            <X className="w-3.5 h-3.5" />
             取消
           </Button>
-          <Button variant="default" onClick={handleSkip}>
-            <SkipForward style={{ width: 14, height: 14 }} />
+          <Button variant="secondary" onClick={handleSkip}>
+            <SkipForward className="w-3.5 h-3.5" />
             跳过（使用原图）
           </Button>
           <Button variant="primary" disabled={!ready} onClick={handleCrop}>
-            <Scissors style={{ width: 14, height: 14 }} />
+            <Scissors className="w-3.5 h-3.5" />
             确认裁剪
           </Button>
         </>
       }
     >
-      <div style={{ maxHeight: 480, overflow: 'hidden' }}>
+      <div className="max-h-[480px] overflow-hidden">
         <img
           ref={imgRef}
           alt="裁剪预览"
-          style={{ display: 'block', maxWidth: '100%', maxHeight: 400 }}
+          className="block max-w-full max-h-[400px]"
         />
       </div>
     </Modal>

@@ -1,13 +1,13 @@
-﻿import { useRef, useCallback, useState, useEffect } from 'react';
-import { useConfigStore, useEditorStore } from '../store/usePerlerStore';
-import { Slider } from './ui/slider';
-import colorMappingJson from '../data/colorSystemMapping.json';
-import type { ColorMapping } from '../types/perler';
-import { Card } from '@/components/ui';
+import { useState, useEffect } from 'react';
+import { useConfigStore } from '../store/useConfigStore';
+import { usePixelProcessor } from '../hooks/usePixelProcessor';
+import { FormSlider, Button } from '@/components/ui';
+import { Modal } from './ui/modal';
 import { Select } from './ui/select';
 import { ImageCropModal } from './ImageCropModal';
-import { Upload, Wand2, Loader2 } from 'lucide-react';
-import { detectPixelSizeFrontend } from '../engine/frontendAlgorithms';
+import { Upload, Wand2, Loader2, Trash2 } from 'lucide-react';
+import { getModeTheme } from '../utils/theme';
+
 
 const SAMPLE_OPTIONS = [
   { key: 'mode', label: '众数 (Mode)' },
@@ -20,248 +20,67 @@ interface PixelPanelProps {
 }
 
 export function PixelPanel({ backendAvailable }: PixelPanelProps) {
+  const theme = getModeTheme('pixel');
+  const { setPixelSampleMethod } = useConfigStore();
+
   const {
-    pixelSize: rawPixelSize,
+    inputRef,
+    previewCanvasRef,
+    pixelSize,
+    setPixelSize,
     pixelOffsetX,
-    pixelOffsetY,
-    pixelSampleMethod,
-    pixelImageUrl,
-    pixelCols,
-    pixelRows,
-    colorMode,
-    setPixelSize: setRawPixelSize,
     setPixelOffsetX,
+    pixelOffsetY,
     setPixelOffsetY,
-    setPixelSampleMethod,
-    setPixelImageUrl,
-    setPixelCols,
-    setPixelRows,
-  } = useConfigStore();
-  const pixelSize = Math.max(1, rawPixelSize || 1);
-  const setPixelSize = (v: number) => setRawPixelSize(Math.max(1, Number(v) || 1));
-  const { setGridData } = useEditorStore();
-
-  const inputRef = useRef<HTMLInputElement>(null);
-  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDetecting, setIsDetecting] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [detectError, setDetectError] = useState<string | null>(null);
-  const [previewImage, setPreviewImage] = useState<HTMLImageElement | null>(null);
-  const [cropOpen, setCropOpen] = useState(false);
-  const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
-  const [cropFile, setCropFile] = useState<File | null>(null);
-
-  const drawPreview = useCallback(() => {
-    const canvas = previewCanvasRef.current;
-    const img = previewImage;
-    if (!canvas || !img || pixelSize <= 0) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const maxW = 260;
-    const scale = Math.min(1, maxW / img.naturalWidth);
-    const cw = Math.floor(img.naturalWidth * scale);
-    const ch = Math.floor(img.naturalHeight * scale);
-    canvas.width = cw;
-    canvas.height = ch;
-
-    ctx.clearRect(0, 0, cw, ch);
-    ctx.drawImage(img, 0, 0, cw, ch);
-
-    // 画网格线
-    const ps = pixelSize * scale;
-    const ox = (pixelOffsetX % pixelSize) * scale;
-    const oy = (pixelOffsetY % pixelSize) * scale;
-
-    ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
-    ctx.lineWidth = 1;
-
-    for (let x = ox; x < cw; x += ps) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, ch);
-      ctx.stroke();
-    }
-    for (let y = oy; y < ch; y += ps) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(cw, y);
-      ctx.stroke();
-    }
-  }, [previewImage, pixelSize, pixelOffsetX, pixelOffsetY]);
-
-  useEffect(() => {
-    drawPreview();
-  }, [drawPreview]);
-
-  const loadCroppedImage = useCallback((file: File, dataUrl: string) => {
-    setPixelImageUrl(dataUrl);
-    const img = new Image();
-    img.onload = () => {
-      setPreviewImage(img);
-      autoDetect(file);
-    };
-    img.src = dataUrl;
-  }, [setPixelImageUrl]);
-
-  const handleFile = useCallback(
-    (file: File) => {
-      if (!file.type.startsWith('image/')) return;
-      setDetectError(null);
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        setCropFile(file);
-        setCropImageUrl(dataUrl);
-        setCropOpen(true);
-      };
-      reader.readAsDataURL(file);
-    },
-    []
-  );
-
-  const handleCrop = useCallback((file: File, dataUrl: string) => {
-    setCropOpen(false);
-    setCropImageUrl(null);
-    setCropFile(null);
-    loadCroppedImage(file, dataUrl);
-  }, [loadCroppedImage]);
-
-  const handleSkip = useCallback((dataUrl: string) => {
-    setCropOpen(false);
-    setCropImageUrl(null);
-    if (cropFile) {
-      loadCroppedImage(cropFile, dataUrl);
-    }
-    setCropFile(null);
-  }, [cropFile, loadCroppedImage]);
-
-  const handleCancel = useCallback(() => {
-    setCropOpen(false);
-    setCropImageUrl(null);
-    setCropFile(null);
-    if (inputRef.current) inputRef.current.value = '';
-  }, []);
-
-  const autoDetect = useCallback(async (file: File) => {
-    setIsDetecting(true);
-    setDetectError(null);
-    try {
-      if (backendAvailable) {
-        const form = new FormData();
-        form.append('image', file);
-        const res = await fetch('/api/detect-pixel', {
-          method: 'POST',
-          body: form,
-        });
-        const data = await res.json();
-        if (!res.ok || data.error) {
-          throw new Error(data.error || '检测失败');
-        }
-        setPixelSize(data.pixel_size || 16);
-        setPixelOffsetX(data.offset_x || 0);
-        setPixelOffsetY(data.offset_y || 0);
-      } else {
-        // 前端降级：使用前端像素检测
-        const img = new Image();
-        img.src = URL.createObjectURL(file);
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve();
-          img.onerror = () => reject(new Error('图片加载失败'));
-        });
-        const canvas = document.createElement('canvas');
-        const maxSize = 400;
-        const scale = Math.min(1, maxSize / Math.max(img.naturalWidth, img.naturalHeight));
-        canvas.width = Math.floor(img.naturalWidth * scale);
-        canvas.height = Math.floor(img.naturalHeight * scale);
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('Canvas not available');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const result = detectPixelSizeFrontend(imageData);
-        setPixelSize(result.pixelSize);
-        setPixelOffsetX(result.offsetX);
-        setPixelOffsetY(result.offsetY);
-      }
-    } catch (err: any) {
-      setDetectError(err.message || '自动检测失败，请手动调整');
-    } finally {
-      setIsDetecting(false);
-    }
-  }, [setPixelSize, setPixelOffsetX, setPixelOffsetY, backendAvailable]);
-
-  const handleGenerate = useCallback(async () => {
-    if (!previewImage || !pixelImageUrl) return;
-
-    setIsGenerating(true);
-    setDetectError(null);
-
-    try {
-      const { PerlerEngine } = await import('../engine/PerlerEngine');
-      const colorMapping = colorMappingJson as ColorMapping;
-      const engine = new PerlerEngine(colorMapping, colorMode);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = previewImage.naturalWidth;
-      canvas.height = previewImage.naturalHeight;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas not available');
-      ctx.drawImage(previewImage, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-      const { grid, colorMap, cols, rows } = engine.generatePixelGrid(
-        imageData,
-        pixelSize,
-        pixelOffsetX,
-        pixelOffsetY,
-        pixelSampleMethod
-      );
-
-      setPixelCols(cols);
-      setPixelRows(rows);
-
-      const colorList = Array.from(colorMap.values()).sort((a, b) => b.count - a.count);
-      setGridData(grid, colorList);
-    } catch (err: any) {
-      setDetectError('生成失败: ' + (err.message || String(err)));
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [
+    pixelSampleMethod,
     previewImage,
     pixelImageUrl,
-    pixelSize,
-    pixelOffsetX,
-    pixelOffsetY,
-    pixelSampleMethod,
-    colorMode,
-    setPixelCols,
-    setPixelRows,
-    setGridData,
-  ]);
+    isDetecting,
+    isGenerating,
+    detectError,
+    cropOpen,
+    cropImageUrl,
+    cropFile,
+    handleFile,
+    handleCrop,
+    handleSkip,
+    handleCancel,
+    handleClearImage,
+    onDrop,
+    handleGenerate,
+  } = usePixelProcessor(backendAvailable);
 
-  const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      const file = e.dataTransfer.files[0];
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  // 监听画布中央上传的文件
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const file = (e as CustomEvent).detail as File;
       if (file) handleFile(file);
-    },
-    [handleFile]
-  );
+    };
+    window.addEventListener('pixel-file-selected', handler);
+    return () => window.removeEventListener('pixel-file-selected', handler);
+  }, [handleFile]);
 
   return (
-    <div className="dop-panel flex flex-col">
+    <div className="flex flex-col">
       {/* 上传区域 */}
-      <div className="px-4 py-3 border-b border-[rgba(255,107,157,0.08)] last:border-b-0">
-        <Card color="app-yellow">
+      <div className="px-4 py-3 border-b border-[var(--border-subtle)]">
+        {!pixelImageUrl ? (
           <div
-            className="dop-panel p-8 text-center cursor-pointer"
-            style={{ borderStyle: 'dashed', borderColor: 'var(--dop-pink)' }}
+            className="p-8 text-center cursor-pointer rounded-xl transition-all duration-300"
+            style={{ borderStyle: 'dashed', borderColor: theme.main, borderWidth: '3px' }}
             onClick={() => inputRef.current?.click()}
             onDragOver={(e) => e.preventDefault()}
             onDrop={onDrop}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = `color-mix(in srgb, ${theme.main} 4%, transparent)`;
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '';
+              e.currentTarget.style.transform = '';
+            }}
           >
             <input
               ref={inputRef}
@@ -277,25 +96,36 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
             <p className="mt-2 mb-1 text-sm font-bold text-[var(--text-main)]">点击或拖拽上传像素图</p>
             <p className="m-0 text-xs font-bold text-[var(--text-muted)]">支持 JPG、PNG 格式</p>
           </div>
-        </Card>
-
-        {pixelImageUrl && (
-          <div className="mt-3">
-            <div className="rounded-xl overflow-hidden border border-[rgba(255,107,157,0.08)] inline-block">
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            <div
+              className="rounded-xl overflow-hidden border border-[var(--border-subtle)] flex items-center justify-center"
+              style={{ background: 'repeating-linear-gradient(45deg, #ddd, #ddd 4px, #fff 4px, #fff 8px)' }}
+            >
               <img
                 src={pixelImageUrl}
                 alt="预览"
                 className="block max-w-full max-h-[120px]"
               />
             </div>
+            <Button
+              variant="ghost"
+              block
+              color="coral"
+              onClick={() => setShowClearConfirm(true)}
+            >
+              <Trash2 className="w-4 h-4" />
+              清除图片
+            </Button>
           </div>
         )}
       </div>
 
       {/* 对齐预览 */}
       {pixelImageUrl && (
-        <div className="px-4 py-3 border-b border-[rgba(255,107,157,0.08)] last:border-b-0">
+        <div className="px-4 py-3 border-b border-[var(--border-subtle)]">
           <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide flex items-center gap-1.5 mb-2">
+            <span className="w-1 h-3 rounded-full" style={{ background: theme.main }} />
             对齐预览
             {isDetecting && (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -303,11 +133,11 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
           </div>
           <canvas
             ref={previewCanvasRef}
-            className="block max-w-full rounded-lg border border-[rgba(255,107,157,0.08)] bg-white"
+            className="block max-w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)]"
           />
-          {pixelCols > 0 && pixelRows > 0 && (
+          {pixelSize > 0 && previewImage && (
             <div className="text-xs text-[var(--text-muted)] mt-1.5">
-              预计尺寸: {pixelCols} × {pixelRows}
+              预计尺寸: {Math.floor(previewImage.naturalWidth / pixelSize)} × {Math.floor(previewImage.naturalHeight / pixelSize)}
             </div>
           )}
         </div>
@@ -315,82 +145,44 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
 
       {/* 参数调整 */}
       {pixelImageUrl && (
-        <div className="px-4 py-3 border-b border-[rgba(255,107,157,0.08)] last:border-b-0">
+        <div className="px-4 py-3 border-b border-[var(--border-subtle)]">
           <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide flex items-center gap-1.5 mb-3">
             对齐参数
           </div>
 
           <div className="flex flex-col gap-3">
             {/* 像素大小 */}
-            <div className="flex items-center gap-2.5">
-              <label className="text-xs font-bold text-[var(--text-muted)] w-20 shrink-0 flex items-center gap-1">
-                像素大小
-              </label>
-              <div className="flex-1 flex items-center gap-2.5">
-                <Slider
-                  value={[pixelSize]}
-                  onValueChange={([v]) => setPixelSize(v)}
-                  min={1}
-                  max={64}
-                  step={1}
-                  className="w-full"
-                />
-                <input
-                  type="number"
-                  min={1}
-                  max={64}
-                  value={pixelSize}
-                  onChange={(e) => setPixelSize(Number(e.target.value))}
-                  className="dop-input w-[50px] text-center px-1.5 py-1 text-sm"
-                />
-              </div>
-            </div>
+            <FormSlider
+              label="像素大小"
+              value={pixelSize}
+              onChange={setPixelSize}
+              min={1}
+              max={64}
+              inputWidth="w-[50px]"
+              themeColor={theme.main}
+            />
 
             {/* 偏移 X */}
-            <div className="flex items-center gap-2.5">
-              <label className="text-xs font-bold text-[var(--text-muted)] w-20 shrink-0">偏移 X</label>
-              <div className="flex-1 flex items-center gap-2.5">
-                <Slider
-                  value={[pixelOffsetX % pixelSize]}
-                  onValueChange={([v]) => setPixelOffsetX(v)}
-                  min={0}
-                  max={Math.max(pixelSize - 1, 0)}
-                  step={1}
-                  className="w-full"
-                />
-                <input
-                  type="number"
-                  min={0}
-                  max={Math.max(pixelSize - 1, 0)}
-                  value={pixelOffsetX % pixelSize}
-                  onChange={(e) => setPixelOffsetX(Number(e.target.value))}
-                  className="dop-input w-[50px] text-center px-1.5 py-1 text-sm"
-                />
-              </div>
-            </div>
+            <FormSlider
+              label="偏移 X"
+              value={pixelOffsetX % pixelSize}
+              onChange={setPixelOffsetX}
+              min={0}
+              max={Math.max(pixelSize - 1, 0)}
+              inputWidth="w-[50px]"
+              themeColor={theme.main}
+            />
 
             {/* 偏移 Y */}
-            <div className="flex items-center gap-2.5">
-              <label className="text-xs font-bold text-[var(--text-muted)] w-20 shrink-0">偏移 Y</label>
-              <div className="flex-1 flex items-center gap-2.5">
-                <Slider
-                  value={[pixelOffsetY % pixelSize]}
-                  onValueChange={([v]) => setPixelOffsetY(v)}
-                  min={0}
-                  max={Math.max(pixelSize - 1, 0)}
-                  step={1}
-                  className="w-full"
-                />
-                <input
-                  type="number"
-                  min={0}
-                  max={Math.max(pixelSize - 1, 0)}
-                  value={pixelOffsetY % pixelSize}
-                  onChange={(e) => setPixelOffsetY(Number(e.target.value))}
-                  className="dop-input w-[50px] text-center px-1.5 py-1 text-sm"
-                />
-              </div>
-            </div>
+            <FormSlider
+              label="偏移 Y"
+              value={pixelOffsetY % pixelSize}
+              onChange={setPixelOffsetY}
+              min={0}
+              max={Math.max(pixelSize - 1, 0)}
+              inputWidth="w-[50px]"
+              themeColor={theme.main}
+            />
 
             {/* 采样方式 */}
             <div className="flex items-center gap-2.5">
@@ -409,11 +201,14 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
 
       {/* 生成按钮 */}
       {pixelImageUrl && (
-        <div className="px-4 py-3 border-b border-[rgba(255,107,157,0.08)] last:border-b-0">
-          <button
-            className="dop-btn dop-btn-primary w-full justify-center"
+        <div className="px-4 py-3 border-b border-[var(--border-subtle)]">
+          <Button
+            variant="primary"
+            block
+            loading={isGenerating}
             disabled={isDetecting || isGenerating}
             onClick={handleGenerate}
+            style={{ background: theme.main, borderColor: theme.light5, boxShadow: `0 2px 8px ${theme.main}40` }}
           >
             {isGenerating ? (
               <>
@@ -426,7 +221,7 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
                 生成拼豆图案
               </>
             )}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -436,6 +231,27 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
           {detectError}
         </div>
       )}
+
+      {/* 清除图片二次确认弹窗 */}
+      <Modal
+        open={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        title="确认清除图片"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setShowClearConfirm(false)}>
+              取消
+            </Button>
+            <Button variant="primary" color="coral" onClick={handleClearImage}>
+              确认清除
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-[var(--text-body)]">
+          清除后图片预览和已生成的图纸都会被重置，是否继续？
+        </p>
+      </Modal>
 
       <ImageCropModal
         isOpen={cropOpen}

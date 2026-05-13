@@ -1,9 +1,39 @@
 """拼豆图案 PNG/JPG 导出生成。"""
+import os
 from io import BytesIO
 
 from PIL import Image, ImageDraw, ImageFont, ImageColor
 
 from utils import get_text_size, draw_checkerboard, logger
+
+
+# 模块级字体缓存，避免重复加载
+_font_cache = {}
+
+
+def _load_font(size):
+    """加载 WenYuanRounded 字体，不存在则使用系统默认字体。结果按 (path, size) 缓存。"""
+    cache_key = ('default', size)
+    if cache_key in _font_cache:
+        return _font_cache[cache_key]
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(base_dir)
+    font_paths = [
+        os.path.join(project_root, 'frontend', 'public', 'fonts', 'WenYuanRoundedSC-VF.otf'),
+        os.path.join(project_root, 'NookUI', 'fonts', 'WenYuanRoundedSC-VF.otf'),
+    ]
+    for path in font_paths:
+        if os.path.exists(path):
+            try:
+                font = ImageFont.truetype(path, size)
+                _font_cache[(path, size)] = font
+                return font
+            except Exception:
+                pass
+    default_font = ImageFont.load_default()
+    _font_cache[cache_key] = default_font
+    return default_font
 
 
 def generate_export_image(grid_data, color_list, brand='MARD', show_code=False,
@@ -33,27 +63,22 @@ def generate_export_image(grid_data, color_list, brand='MARD', show_code=False,
     img = Image.new('RGB', (canvas_width, canvas_height), 'white')
     draw = ImageDraw.Draw(img)
 
-    try:
-        font = ImageFont.truetype("arial.ttf", 14)
-        code_font = ImageFont.truetype("arial.ttf", 12)
-        legend_font = ImageFont.truetype("arial.ttf", 14)
-    except Exception:
-        font = ImageFont.load_default()
-        code_font = ImageFont.load_default()
-        legend_font = ImageFont.load_default()
+    font = _load_font(14)
+    code_font = _load_font(12)
+    legend_font = _load_font(14)
 
     # 绘制坐标轴数字
     for i in range(cols):
         text = str(i + 1)
         text_w, text_h = get_text_size(draw, text, font)
-        cx = margin + i * bead_size + bead_size / 2
-        cy = margin / 2
-        draw.text((cx - text_w / 2, cy - text_h / 2), text, fill='#333', font=font)
+        cx = margin + i * bead_size + bead_size // 2
+        cy = margin // 2
+        draw.text((cx - text_w // 2, cy - text_h // 2), text, fill='#333', font=font)
     for i in range(rows):
         text = str(i + 1)
         text_w, text_h = get_text_size(draw, text, font)
-        cy = margin + i * bead_size + bead_size / 2
-        draw.text((margin / 2 - text_w / 2, cy - text_h / 2), text, fill='#333', font=font)
+        cy = margin + i * bead_size + bead_size // 2
+        draw.text((margin // 2 - text_w // 2, cy - text_h // 2), text, fill='#333', font=font)
 
     # 绘制格子
     for y in range(rows):
@@ -66,9 +91,9 @@ def generate_export_image(grid_data, color_list, brand='MARD', show_code=False,
             if circle_mode:
                 # 圆形模式：先画白色背景方块，再画带浅描边的内接圆（半径小1px）
                 draw.rectangle([px, py, px + bead_size, py + bead_size], fill='white')
-                cx = px + bead_size / 2
-                cy = py + bead_size / 2
-                r = bead_size / 2 - 1
+                cx = px + bead_size // 2
+                cy = py + bead_size // 2
+                r = bead_size // 2 - 1
                 # 浅描边/阴影底（稍大一圈）
                 draw.ellipse([cx - r - 1, cy - r - 1, cx + r + 1, cy + r + 1], fill='#e0e0e0')
                 if color == 'transparent':
@@ -163,7 +188,6 @@ def generate_export_image(grid_data, color_list, brand='MARD', show_code=False,
 
     buf = BytesIO()
     if fmt.lower() == 'jpg' or fmt.lower() == 'jpeg':
-        img = img.convert('RGB')
         img.save(buf, format='JPEG', quality=95)
     else:
         img.save(buf, format='PNG')

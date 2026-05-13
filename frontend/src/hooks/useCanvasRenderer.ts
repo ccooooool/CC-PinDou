@@ -1,5 +1,7 @@
-import { useRef, useCallback, useEffect } from 'react';
-import { useEditorStore, useConfigStore, useUIStore } from '../store/usePerlerStore';
+import { useRef, useCallback, useEffect, useMemo } from 'react';
+import { useEditorStore } from '../store/useEditorStore';
+import { useConfigStore } from '../store/useConfigStore';
+import { useUIStore } from '../store/useUIStore';
 import type { GridCell, PerlerLayer } from '../types/perler';
 
 export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
@@ -14,12 +16,35 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
   const canvasConfig = useConfigStore((s) => s.canvasConfig);
   const mode = useUIStore((s) => s.mode);
   const symmetryMode = useUIStore((s) => s.symmetryMode);
-  const previewMode = useUIStore((s) => s.previewMode);
 
   const { beadSize, margin, zoomLevel, showCode, circleMode, showMarkLines, markInterval } = canvasConfig;
 
+  // ========== 缓存 Refs ==========
   const drawGridPendingRef = useRef(false);
   const canvasSizeRef = useRef({ width: 0, height: 0 });
+  const zoomLevelRef = useRef(zoomLevel);
+  zoomLevelRef.current = zoomLevel;
+
+  // 将频繁变化但不影响 drawGrid 函数引用稳定性的状态改为 ref 读取
+  // 避免 isolatedCells/unstableCells/selectedCells 变化时触发全量重绘
+  const isolatedCellsRef = useRef(isolatedCells);
+  isolatedCellsRef.current = isolatedCells;
+  const unstableCellsRef = useRef(unstableCells);
+  unstableCellsRef.current = unstableCells;
+  const selectedCellsRef = useRef(selectedCells);
+  selectedCellsRef.current = selectedCells;
+
+  // 圆形 bead 离屏缓存：key = `${beadSize}-${color}`
+  const beadCircleCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
+  // 透明 pattern 缓存
+  const patternCacheRef = useRef<{
+    pattern: CanvasPattern | null;
+    ctx: CanvasRenderingContext2D | null;
+  }>({ pattern: null, ctx: null });
+  // 亮度缓存
+  const brightnessCacheRef = useRef<Map<string, number>>(new Map());
+  // 图片缓存
+  const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
   // Shape 预览（line/rect/circle）
   const shapePreviewRef = useRef<{
@@ -37,15 +62,25 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
     enabled: boolean;
   }>({ x: 0, y: 0, size: 1, enabled: false });
 
-  // 缓存透明 pattern，避免每次 drawGrid 都重新创建
-  const patternCacheRef = useRef<{
-    pattern: CanvasPattern | null;
-    ctx: CanvasRenderingContext2D | null;
-  }>({ pattern: null, ctx: null });
+  // ========== 缓存清理：beadSize 变化时清空形状缓存，限制缓存大小 ==========
+  const lastBeadSizeRef = useRef(beadSize);
+  if (lastBeadSizeRef.current !== beadSize) {
+    lastBeadSizeRef.current = beadSize;
+    beadCircleCacheRef.current.clear();
+  }
+  // 限制圆形 bead 缓存数量，防止内存无限增长
+  const MAX_BEAD_CIRCLE_CACHE = 512;
+  if (beadCircleCacheRef.current.size > MAX_BEAD_CIRCLE_CACHE) {
+    beadCircleCacheRef.current.clear();
+  }
 
-  // 缓存已加载的图片，避免每帧重新加载
-  const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  // ========== 可见图层缓存 ==========
+  const visibleLayers = useMemo(
+    () => [...layers].filter((l) => l.visible).sort((a, b) => a.zIndex - b.zIndex),
+    [layers],
+  );
 
+  // ========== 辅助函数 ==========
   const getTransparentPattern = useCallback((context: CanvasRenderingContext2D) => {
     if (patternCacheRef.current.pattern && patternCacheRef.current.ctx === context) {
       return patternCacheRef.current.pattern;
@@ -64,32 +99,62 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
     return pattern;
   }, []);
 
-  // 缓存亮度计算结果
-  const brightnessCacheRef = useRef<Map<string, number>>(new Map());
-
   const getBrightness = useCallback((hexColor: string): number => {
     const cached = brightnessCacheRef.current.get(hexColor);
     if (cached !== undefined) return cached;
-
     let brightness: number;
     if (hexColor === 'transparent') {
       brightness = 255;
     } else {
-      const r = parseInt(hexColor.substr(1, 2), 16);
-      const g = parseInt(hexColor.substr(3, 2), 16);
-      const b = parseInt(hexColor.substr(5, 2), 16);
+      const r = parseInt(hexColor.slice(1, 3), 16);
+      const g = parseInt(hexColor.slice(3, 5), 16);
+      const b = parseInt(hexColor.slice(5, 7), 16);
       brightness = (r + g + b) / 3;
     }
     brightnessCacheRef.current.set(hexColor, brightness);
     return brightness;
   }, []);
 
+  // ========== 圆形 Bead 离屏缓存 ==========
+  const getCircleBeadCanvas = useCallback(
+    (size: number, color: string): HTMLCanvasElement => {
+      const key = `${size}-${color}`;
+      let canvas = beadCircleCacheRef.current.get(key);
+      if (!canvas) {
+        canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
+        const cx = size / 2;
+        const cy = size / 2;
+        const r = size / 2 - 1;
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, size, size);
+        ctx.beginPath();
+        ctx.arc(cx, cy, r + 1, 0, Math.PI * 2);
+        ctx.fillStyle = '#f3f4f6';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+
+        beadCircleCacheRef.current.set(key, canvas);
+      }
+      return canvas;
+    },
+    [],
+  );
+
+  // ========== 主绘制函数 ==========
   const drawGrid = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // 确定尺寸来源：优先 gridData（激活图层视图），否则从 layers 找第一个可见 bead 图层
-    const sizeSource = gridData || (layers.find((l) => l.type === 'bead' && l.visible) as import('../types/perler').BeadLayer | undefined)?.gridData;
+    const sizeSource =
+      gridData ||
+      (layers.find((l) => l.type === 'bead' && l.visible) as import('../types/perler').BeadLayer | undefined)?.gridData;
     if (!sizeSource) return;
 
     const ctx = canvas.getContext('2d');
@@ -105,12 +170,12 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
       canvas.width = width;
       canvas.height = height;
       canvasSizeRef.current = { width, height };
-      // 尺寸变化时清空缓存
       patternCacheRef.current = { pattern: null, ctx: null };
       brightnessCacheRef.current.clear();
     }
-    canvas.style.width = width * zoomLevel + 'px';
-    canvas.style.height = height * zoomLevel + 'px';
+    // zoomLevel 用 ref 读取，避免 zoom 变化触发重绘
+    canvas.style.width = width * zoomLevelRef.current + 'px';
+    canvas.style.height = height * zoomLevelRef.current + 'px';
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#FFFFFF';
@@ -120,7 +185,7 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = '12px Arial';
+    ctx.font = "12px 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-serif";
     ctx.fillStyle = '#6b7280';
 
     // 坐标轴标签
@@ -131,29 +196,34 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
       ctx.fillText(String(i + 1), margin / 2, margin + i * beadSize + beadSize / 2);
     }
 
-    // 棋盘格背景（bead 区域，供透明格子透出下方图层）
+    // 棋盘格背景
     ctx.fillStyle = transparentPattern;
     ctx.fillRect(margin, margin, cols * beadSize, rows * beadSize);
 
     // ========== 多图层渲染 ==========
-    const visibleLayers = [...layers].filter((l) => l.visible).sort((a, b) => a.zIndex - b.zIndex);
     for (const layer of visibleLayers) {
       ctx.save();
       ctx.globalAlpha = layer.opacity / 100;
 
       if (layer.type === 'bead' && layer.gridData) {
-        if (previewMode === '3d') {
-          draw3DBeads(ctx, layer.gridData, beadSize, margin, showCode, brand, getBrightness);
-        } else {
-          drawNormalBeads(ctx, layer.gridData, beadSize, margin, circleMode, showCode, brand, getBrightness);
-        }
+        drawNormalBeads({
+          ctx,
+          gridData: layer.gridData,
+          beadSize,
+          margin,
+          circleMode,
+          showCode,
+          brand,
+          getBrightness,
+          getCircleBeadCanvas,
+        });
       } else if (layer.type === 'image') {
         drawImageLayer(ctx, layer, margin, imageCacheRef.current);
       }
 
       ctx.restore();
 
-      // 激活图层高亮边框（仅 bead 图层）
+      // 激活图层高亮边框
       if (layer.id === activeLayerId && layer.type === 'bead' && layer.gridData) {
         const lRows = layer.gridData.length;
         const lCols = layer.gridData[0]?.length || 0;
@@ -169,10 +239,11 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
     // 网格线
     drawGridLines(ctx, rows, cols, beadSize, margin, showMarkLines, markInterval);
 
-    // 标记孤立像素
-    if (isolatedCells.length > 0) {
+    // 孤立像素标记
+    const _isolatedCells = isolatedCellsRef.current;
+    if (_isolatedCells.length > 0) {
       ctx.fillStyle = '#ef4444';
-      for (const { x, y } of isolatedCells) {
+      for (const { x, y } of _isolatedCells) {
         const cx = margin + x * beadSize + beadSize / 2;
         const cy = margin + y * beadSize + beadSize / 2;
         ctx.beginPath();
@@ -181,12 +252,13 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
       }
     }
 
-    // 标记不稳定结构
-    if (unstableCells.length > 0) {
+    // 不稳定结构标记
+    const _unstableCells = unstableCellsRef.current;
+    if (_unstableCells.length > 0) {
       ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 2;
       const marked = new Set<string>();
-      for (const { x, y } of unstableCells) {
+      for (const { x, y } of _unstableCells) {
         const key = `${x},${y}`;
         if (marked.has(key)) continue;
         marked.add(key);
@@ -196,17 +268,18 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
       }
     }
 
-    // 对称轴标识线（仅在自由绘制模式下显示）
+    // 对称轴标识线
     if (mode === 'draw' && symmetryMode !== 'none') {
       drawSymmetryLines(ctx, rows, cols, beadSize, margin, symmetryMode);
     }
 
     // 魔法棒选区高亮
-    if (selectedCells.length > 0) {
+    const _selectedCells = selectedCellsRef.current;
+    if (_selectedCells.length > 0) {
       ctx.strokeStyle = '#9ca3af';
       ctx.lineWidth = 2;
       ctx.setLineDash([3, 3]);
-      for (const { x, y } of selectedCells) {
+      for (const { x, y } of _selectedCells) {
         const px = margin + x * beadSize;
         const py = margin + y * beadSize;
         ctx.strokeRect(px + 1, py + 1, beadSize - 2, beadSize - 2);
@@ -214,7 +287,7 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
       ctx.setLineDash([]);
     }
 
-    // 绘制 Shape 预览（line/rect/circle）
+    // Shape 预览
     if (shapePreviewRef.current.enabled) {
       const { start, end, tool } = shapePreviewRef.current;
       ctx.save();
@@ -255,7 +328,7 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
       ctx.restore();
     }
 
-    // 画笔大小预览（pen/eraser/replace brush）
+    // 画笔大小预览
     if (brushPreviewRef.current.enabled) {
       const { x, y, size } = brushPreviewRef.current;
       const half = Math.floor(size / 2);
@@ -269,7 +342,7 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
       ctx.lineWidth = 1.5;
       ctx.setLineDash([3, 3]);
 
-      if (canvasConfig.circleMode) {
+      if (circleMode) {
         const cx = px + pw / 2;
         const cy = py + ph / 2;
         const r = Math.min(pw, ph) / 2;
@@ -280,7 +353,6 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
         ctx.strokeRect(px + 0.5, py + 0.5, pw - 1, ph - 1);
       }
 
-      // 中心十字
       const cx = margin + x * beadSize + beadSize / 2;
       const cy = margin + y * beadSize + beadSize / 2;
       ctx.strokeStyle = 'rgba(156, 163, 175, 0.5)';
@@ -295,7 +367,25 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
 
       ctx.restore();
     }
-  }, [gridData, layers, activeLayerId, canvasConfig, brand, isolatedCells, unstableCells, selectedCells, previewMode, mode, symmetryMode, canvasRef, getTransparentPattern, getBrightness]);
+  }, [
+    gridData,
+    layers,
+    visibleLayers,
+    activeLayerId,
+    beadSize,
+    margin,
+    showCode,
+    circleMode,
+    showMarkLines,
+    markInterval,
+    brand,
+    mode,
+    symmetryMode,
+    canvasRef,
+    getTransparentPattern,
+    getBrightness,
+    getCircleBeadCanvas,
+  ]);
 
   const scheduleDrawGrid = useCallback(() => {
     if (drawGridPendingRef.current) return;
@@ -306,46 +396,83 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
     });
   }, [drawGrid]);
 
+  // 数据变化时自动重绘
   useEffect(() => {
     drawGrid();
   }, [drawGrid]);
 
-  // 预加载 Image 图层中的图片
+  // zoomLevel 变化时只更新 CSS 尺寸，不触发重绘
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const sizeSource =
+      gridData ||
+      (layers.find((l) => l.type === 'bead' && l.visible) as import('../types/perler').BeadLayer | undefined)?.gridData;
+    if (!sizeSource) return;
+    const rows = sizeSource.length;
+    const cols = sizeSource[0]?.length || 0;
+    const width = cols * beadSize + margin * 2;
+    const height = rows * beadSize + margin * 2;
+    canvas.style.width = width * zoomLevel + 'px';
+    canvas.style.height = height * zoomLevel + 'px';
+  }, [zoomLevel, beadSize, margin, gridData, layers, canvasRef]);
+
+  // 预加载 Image 图层中的图片，并清理已删除图层的缓存
+  useEffect(() => {
+    const activeImageUrls = new Set(
+      layers.filter((l) => l.type === 'image').map((l) => l.imageUrl)
+    );
+    // 清理已不在图层中的图片缓存
+    for (const url of imageCacheRef.current.keys()) {
+      if (!activeImageUrls.has(url)) {
+        imageCacheRef.current.delete(url);
+      }
+    }
     let changed = false;
     for (const layer of layers) {
       if (layer.type === 'image' && !imageCacheRef.current.has(layer.imageUrl)) {
+        const url = layer.imageUrl;
         const img = new Image();
-        img.src = layer.imageUrl;
+        img.src = url;
         img.onload = () => {
-          imageCacheRef.current.set(layer.imageUrl, img);
-          scheduleDrawGrid();
+          // 验证该 URL 仍属于当前活跃图层，避免 stale closure 写入错误缓存
+          const stillActive = layers.some((l) => l.type === 'image' && l.imageUrl === url);
+          if (stillActive) {
+            imageCacheRef.current.set(url, img);
+            scheduleDrawGrid();
+          }
         };
         img.onerror = () => {
-          imageCacheRef.current.set(layer.imageUrl, img);
+          const stillActive = layers.some((l) => l.type === 'image' && l.imageUrl === url);
+          if (stillActive) {
+            imageCacheRef.current.set(url, img);
+          }
         };
-        imageCacheRef.current.set(layer.imageUrl, img);
+        imageCacheRef.current.set(url, img);
         changed = true;
       }
     }
     if (changed) scheduleDrawGrid();
   }, [layers, scheduleDrawGrid]);
 
-  const getGridXY = useCallback((e: React.MouseEvent | MouseEvent) => {
-    if (!gridData || !canvasRef.current) return null;
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const canvasX = (e.clientX - rect.left) * scaleX;
-    const canvasY = (e.clientY - rect.top) * scaleY;
-    const x = Math.floor((canvasX - margin) / beadSize);
-    const y = Math.floor((canvasY - margin) / beadSize);
-    if (x >= 0 && x < (gridData[0]?.length || 0) && y >= 0 && y < gridData.length) {
-      return { x, y };
-    }
-    return null;
-  }, [gridData, beadSize, margin, canvasRef]);
+  const getGridXY = useCallback(
+    (e: React.MouseEvent | MouseEvent) => {
+      if (!gridData || !canvasRef.current) return null;
+      const canvas = canvasRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const canvasX = (e.clientX - rect.left) * scaleX;
+      const canvasY = (e.clientY - rect.top) * scaleY;
+      const x = Math.floor((canvasX - margin) / beadSize);
+      const y = Math.floor((canvasY - margin) / beadSize);
+      if (x >= 0 && x < (gridData[0]?.length || 0) && y >= 0 && y < gridData.length) {
+        return { x, y };
+      }
+      return null;
+    },
+    [gridData, beadSize, margin, canvasRef],
+  );
 
   const setShapePreview = useCallback(
     (preview: { start: { x: number; y: number }; end: { x: number; y: number }; tool: string; enabled: boolean }) => {
@@ -366,149 +493,59 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
   return { scheduleDrawGrid, getGridXY, setShapePreview, setBrushPreview };
 }
 
-// --- module-level helpers (no React deps) ---
+// ========== 模块级绘制函数 ==========
 
-function draw3DBeads(
-  ctx: CanvasRenderingContext2D,
-  gridData: GridCell[][],
-  beadSize: number,
-  margin: number,
-  showCode: boolean,
-  brand: string,
-  getBrightness: (hex: string) => number,
-) {
+interface DrawNormalBeadsOptions {
+  ctx: CanvasRenderingContext2D;
+  gridData: GridCell[][];
+  beadSize: number;
+  margin: number;
+  circleMode: boolean;
+  showCode: boolean;
+  brand: string;
+  getBrightness: (hex: string) => number;
+  getCircleBeadCanvas: (size: number, color: string) => HTMLCanvasElement;
+}
+
+function drawNormalBeads(options: DrawNormalBeadsOptions) {
+  const { ctx, gridData, beadSize, margin, circleMode, showCode, brand, getBrightness, getCircleBeadCanvas } = options;
+  if (!gridData.length || !gridData[0]) return;
   const rows = gridData.length;
   const cols = gridData[0].length;
-  const holeRatio = 0.35; // 孔径占外径的比例，模拟真实拼豆空心圆柱体
 
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) {
-      const cell = gridData[y][x];
-      const px = margin + x * beadSize;
-      const py = margin + y * beadSize;
-      const cx = px + beadSize / 2;
-      const cy = py + beadSize / 2;
-      const outerR = beadSize / 2 - 1;
-      const innerR = outerR * holeRatio;
-
-      if (cell.color === 'transparent') {
-        continue; // 透明格子不绘制，透出下方图层或棋盘格背景
-      }
-
-      // 绘制外圆（bead 顶面），使用径向渐变模拟 3D 圆柱体效果
-      const grad = ctx.createRadialGradient(
-        cx - outerR * 0.25,
-        cy - outerR * 0.25,
-        innerR,
-        cx,
-        cy,
-        outerR
-      );
-      grad.addColorStop(0, lightenColor(cell.color, 30));
-      grad.addColorStop(0.6, cell.color);
-      grad.addColorStop(1, darkenColor(cell.color, 20));
-
-      ctx.beginPath();
-      ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
-      ctx.fillStyle = grad;
-      ctx.fill();
-
-      // 外圆边缘描边，增加立体感
-      ctx.beginPath();
-      ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
-      ctx.strokeStyle = darkenColor(cell.color, 30);
-      ctx.lineWidth = 0.5;
-      ctx.stroke();
-
-      // 绘制内孔（空心圆柱体的开口）
-      ctx.beginPath();
-      ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
-      ctx.fill();
-
-      // 孔的内边缘高光（模拟圆柱体内壁反光）
-      ctx.beginPath();
-      ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // 孔的左上方额外高光（模拟光源方向）
-      ctx.beginPath();
-      ctx.arc(cx - innerR * 0.15, cy - innerR * 0.15, innerR * 0.7, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
-      ctx.fill();
-
-      if (showCode && cell.codes[brand]) {
-        const code = cell.codes[brand];
-        const brightness = getBrightness(cell.color);
-        ctx.fillStyle = brightness > 128 ? '#374151' : '#FFFFFF';
-        ctx.fillText(code, cx, cy);
+  if (circleMode) {
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const cell = gridData[y][x];
+        if (cell.color === 'transparent') continue;
+        const px = margin + x * beadSize;
+        const py = margin + y * beadSize;
+        const beadCanvas = getCircleBeadCanvas(beadSize, cell.color);
+        ctx.drawImage(beadCanvas, px, py);
+        if (showCode && cell.codes[brand]) {
+          const code = cell.codes[brand];
+          const brightness = getBrightness(cell.color);
+          ctx.fillStyle = brightness > 128 ? '#374151' : '#FFFFFF';
+          ctx.fillText(code, px + beadSize / 2, py + beadSize / 2);
+        }
       }
     }
-  }
-}
-
-/** 调整 hex 颜色亮度：amount > 0 变亮，amount < 0 变暗 */
-function adjustColorChannel(channel: number, amount: number): number {
-  return Math.max(0, Math.min(255, channel + amount));
-}
-
-function lightenColor(hex: string, amount: number): string {
-  const r = parseInt(hex.substr(1, 2), 16);
-  const g = parseInt(hex.substr(3, 2), 16);
-  const b = parseInt(hex.substr(5, 2), 16);
-  return `rgb(${adjustColorChannel(r, amount)}, ${adjustColorChannel(g, amount)}, ${adjustColorChannel(b, amount)})`;
-}
-
-function darkenColor(hex: string, amount: number): string {
-  return lightenColor(hex, -amount);
-}
-
-function drawNormalBeads(
-  ctx: CanvasRenderingContext2D,
-  gridData: GridCell[][],
-  beadSize: number,
-  margin: number,
-  circleMode: boolean,
-  showCode: boolean,
-  brand: string,
-  getBrightness: (hex: string) => number,
-) {
-  const rows = gridData.length;
-  const cols = gridData[0].length;
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) {
-      const cell = gridData[y][x];
-      const px = margin + x * beadSize;
-      const py = margin + y * beadSize;
-      if (cell.color === 'transparent') {
-        continue; // 透明格子不绘制，透出下方图层或棋盘格背景
-      }
-
-      if (circleMode) {
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(px, py, beadSize, beadSize);
-        const cx = px + beadSize / 2;
-        const cy = py + beadSize / 2;
-        const r = beadSize / 2 - 1;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r + 1, 0, Math.PI * 2);
-        ctx.fillStyle = '#f3f4f6';
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fillStyle = cell.color;
-        ctx.fill();
-      } else {
+  } else {
+    // 方形模式：fillRect 已经极快，无需缓存
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const cell = gridData[y][x];
+        const px = margin + x * beadSize;
+        const py = margin + y * beadSize;
+        if (cell.color === 'transparent') continue;
         ctx.fillStyle = cell.color;
         ctx.fillRect(px, py, beadSize, beadSize);
-      }
-      if (showCode && cell.codes[brand]) {
-        const code = cell.codes[brand];
-        const brightness = getBrightness(cell.color);
-        ctx.fillStyle = brightness > 128 ? '#374151' : '#FFFFFF';
-        ctx.fillText(code, px + beadSize / 2, py + beadSize / 2);
+        if (showCode && cell.codes[brand]) {
+          const code = cell.codes[brand];
+          const brightness = getBrightness(cell.color);
+          ctx.fillStyle = brightness > 128 ? '#374151' : '#FFFFFF';
+          ctx.fillText(code, px + beadSize / 2, py + beadSize / 2);
+        }
       }
     }
   }
@@ -606,12 +643,10 @@ function drawSymmetryLines(
       break;
     }
     case 'diagonal_quad': {
-      // 主对角
       ctx.beginPath();
       ctx.moveTo(left, top);
       ctx.lineTo(right, bottom);
       ctx.stroke();
-      // 反对角
       ctx.beginPath();
       ctx.moveTo(left, bottom);
       ctx.lineTo(right, top);

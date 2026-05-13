@@ -31,9 +31,15 @@ def safe_remove(path):
         logger.warning("Failed to remove %s: %s", path, e)
 
 
+# MIME type 白名单
+ALLOWED_MIME_TYPES = {
+    'image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp'
+}
+
+
 def validate_image_file(file_storage):
     """
-    验证上传文件是否为允许的图片格式，并尝试用 PIL 校验。
+    验证上传文件是否为允许的图片格式（扩展名 + MIME type），并尝试用 PIL 校验。
     返回 (is_valid: bool, error_msg: str, file_ext: str)
     """
     if not file_storage or not file_storage.filename:
@@ -42,6 +48,11 @@ def validate_image_file(file_storage):
     file_ext = os.path.splitext(file_storage.filename.lower())[1]
     if file_ext not in ALLOWED_EXTENSIONS:
         return False, f"不支持的文件格式: {file_ext}，请上传图片文件", file_ext
+
+    # MIME type 校验
+    mime_type = getattr(file_storage, 'content_type', '') or ''
+    if mime_type and mime_type.lower() not in ALLOWED_MIME_TYPES:
+        return False, f"不支持的文件类型: {mime_type}，请上传图片文件", file_ext
 
     return True, "", file_ext
 
@@ -84,15 +95,13 @@ def parse_form_param(form, key, default, cast=int, min_val=None, max_val=None):
 
 
 def get_text_size(draw_ctx, text, font_obj):
-    """跨 Pillow 版本兼容的文本尺寸获取。"""
+    """跨 Pillow 版本兼容的文本尺寸获取。优先使用 textbbox（Pillow 10+ 推荐）。"""
     if hasattr(draw_ctx, 'textbbox'):
         bbox = draw_ctx.textbbox((0, 0), text, font=font_obj)
         return bbox[2] - bbox[0], bbox[3] - bbox[1]
     elif hasattr(font_obj, 'getbbox'):
         bbox = font_obj.getbbox(text)
         return bbox[2] - bbox[0], bbox[3] - bbox[1]
-    elif hasattr(font_obj, 'getsize'):
-        return font_obj.getsize(text)
     else:
         return len(text) * 7, 14
 

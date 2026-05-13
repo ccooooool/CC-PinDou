@@ -28,13 +28,119 @@
 }
 
 @layer base {
+  html {
+    font-family: var(--font-family, 'PingFang SC', 'Microsoft YaHei', sans-serif);
+    cursor: auto;
+  }
+  /* 覆盖 NES.css 的像素光标，恢复浏览器默认 */
+  a, button, [role='button'], .nes-pointer, .nes-btn, .nes-radio + span, .nes-checkbox + span, .nes-select select, summary, label {
+    cursor: revert !important;
+  }
   * {
     @apply border-border;
   }
   body {
-    background-color: #ffffff;
-    color: #1f2937;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--bg-page, #ffffff);
+    color: var(--text-primary, #1f2937);
     min-height: 100vh;
+  }
+}
+
+/* ─── 导航页呼吸气泡动画 ─── */
+@keyframes bubble-float {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(var(--bx, 18px), var(--by, -22px)) scale(1.05);
+  }
+  66% {
+    transform: translate(var(--bx2, -14px), var(--by2, 16px)) scale(0.96);
+  }
+}
+
+/* ─── 转场粒子炸开动画 ─── */
+@keyframes vt-particles-pop {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(3.6);
+    opacity: 0;
+  }
+}
+
+::view-transition-old(vt-particles) {
+  animation: vt-particles-pop 600ms cubic-bezier(0.16, 1, 0.3, 1) 150ms forwards;
+  z-index: 10;
+}
+::view-transition-new(vt-particles) {
+  animation: none;
+  opacity: 0;
+}
+
+/* ─── CSS View Transitions 自定义动画（NookPhone 风格转场）─── */
+
+/* 颜色扩散层：旧快照从点击点 clip-path 圆形扩散，然后淡出 */
+::view-transition-old(vt-bg) {
+  clip-path: circle(0px at var(--vt-origin-x) var(--vt-origin-y));
+  animation:
+    vt-bg-expand 700ms cubic-bezier(0.25, 1, 0.5, 1) forwards,
+    vt-bg-fade 500ms cubic-bezier(0.22, 1, 0.36, 1) 1000ms forwards;
+}
+
+::view-transition-new(vt-bg) {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes vt-bg-expand {
+  to {
+    clip-path: circle(var(--vt-radius) at var(--vt-origin-x) var(--vt-origin-y));
+  }
+}
+
+@keyframes vt-bg-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+/* 图标入场：纯 rotate 倾斜弹出（无 scale 避免卡顿）；800ms 后淡出 */
+::view-transition-old(vt-icon) {
+  animation:
+    vt-icon-entrance 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards,
+    vt-icon-fade 500ms cubic-bezier(0.22, 1, 0.36, 1) 800ms forwards;
+}
+
+::view-transition-new(vt-icon) {
+  animation: none;
+}
+
+@keyframes vt-icon-entrance {
+  0%   { transform: translateX(120px) rotate(-60deg); opacity: 0; }
+  25%  { opacity: 1; }
+  65%  { transform: translateX(-6px) rotate(4deg); }
+  100% { transform: translateX(0) rotate(0deg); opacity: 1; }
+}
+
+@keyframes vt-icon-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+/* 新页面：旧页面淡出时同步淡入 */
+::view-transition-new(root) {
+  animation: vt-fade-in 500ms cubic-bezier(0.22, 1, 0.36, 1) 1000ms both;
+}
+
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }

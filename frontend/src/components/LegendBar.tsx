@@ -1,4 +1,6 @@
-import { useEditorStore, useConfigStore, useUIStore } from '../store/usePerlerStore';
+import { useEditorStore } from '../store/useEditorStore';
+import { useConfigStore } from '../store/useConfigStore';
+import { useUIStore } from '../store/useUIStore';
 import { Palette, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { Badge } from './ui/badge';
 
@@ -11,23 +13,22 @@ export function LegendBar() {
 
   return (
     <div
-      className="dop-legend"
+      className="nook-legend"
       style={{ maxHeight: legendCollapsed ? 40 : 180, flexWrap: legendCollapsed ? 'nowrap' : 'wrap' }}
     >
       <span
-        className="flex items-center gap-1.5 cursor-pointer select-none shrink-0"
+        className="flex items-center gap-1.5 cursor-pointer select-none shrink-0 text-xs font-extrabold text-[var(--text-muted)]"
         onClick={toggleLegend}
-        style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)' }}
       >
         <Palette className="w-3.5 h-3.5" />
         图例统计
-        <small style={{ fontWeight: 600, color: 'var(--text-caption)' }}>
+        <small className="font-semibold text-[var(--text-caption)]">
           （{colorList.length} 种）
         </small>
         {legendCollapsed ? (
-          <ChevronUp className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+          <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" />
         ) : (
-          <ChevronDown className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+          <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />
         )}
       </span>
 
@@ -38,13 +39,13 @@ export function LegendBar() {
             return (
               <div
                 key={color.hex}
-                className="dop-legend-item"
+                className="nook-legend-item"
               >
                 <div
-                  className="dop-legend-dot"
+                  className="nook-legend-dot"
                   style={{ backgroundColor: color.hex }}
                 />
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)' }}>
+                <span className="text-xs font-bold text-[var(--text-main)]">
                   {code}
                 </span>
                 <Badge
@@ -58,7 +59,7 @@ export function LegendBar() {
                     e.stopPropagation();
                     removeColorFromGrid(color.hex);
                   }}
-                  className="w-4 h-4 rounded-full border-none bg-transparent text-[var(--text-muted)] text-[10px] cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-[var(--dop-danger)] hover:text-white"
+                  className="w-4 h-4 rounded-full border-none bg-transparent text-[var(--text-muted)] text-[10px] cursor-pointer flex items-center justify-center p-0 transition-colors hover:bg-[var(--color-danger)] hover:text-white"
                 >
                   <X className="w-2.5 h-2.5" />
                 </button>

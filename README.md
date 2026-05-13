@@ -24,7 +24,7 @@
 
 ### 自由绘制模式
 - **空白画板** — 自定义尺寸，从零开始创作
-- **多种绘制工具** — 画笔、直线、矩形、圆形、填充、橡皮擦
+- **8 种绘制工具** — 画笔、直线、矩形、圆形、填充、橡皮擦、魔棒选取、批量替换
 - **笔刷大小调节** — 1×1 到 11×11
 - **6 种对称模式** — 水平/垂直/四象限/对角线镜像
 - **实时预览** — 普通方块 / 圆形珠子 / 3D 热熔三种渲染模式
@@ -49,13 +49,13 @@
 
 | 层级 | 技术 |
 |------|------|
-| 后端 | Python 3.12 + Flask |
+| 后端 | Python 3.12 + Flask + waitress |
 | 图像处理 | Pillow、NumPy、scipy、rembg、onnxruntime |
 | 数据库 | SQLite（色号映射） |
-| 前端 | Vite + React 18 + TypeScript + Tailwind CSS + shadcn/ui |
-| 状态管理 | Zustand |
+| 前端 | Vite 5 + React 18 + TypeScript 5 + Tailwind CSS 3 + shadcn/ui |
+| 状态管理 | Zustand（三 Store 拆分：Editor / UI / Config） |
 | 颜色匹配 | OKLab 感知均匀空间（前端计算） |
-| UI 组件 | pindou-theme（多巴胺可爱风格） |
+| UI 设计系统 | NookUI（Animal Crossing 马卡龙风格） |
 | 测试 | Vitest（前端）+ pytest（后端） |
 
 ---
@@ -64,50 +64,61 @@
 
 ```
 CC-PinDou/
-├── run.py                      # 后端启动入口（Flask）
+├── run.py                      # 生产启动入口（waitress，端口 5678）
 ├── build.py                    # 前后端联合构建脚本
 ├── requirements.txt            # Python 依赖
 │
 ├── server/                     # Flask 后端
-│   ├── app.py                  # 路由入口
-│   ├── config.py               # 全局配置、参数边界
-│   ├── colors.py               # 色号数据库（SQLite + JSON）
-│   ├── utils.py                # 工具函数
-│   ├── image_processing.py     # 图像预处理（背景移除、线条增强）
+│   ├── app.py                  # 路由入口（背景移除、线条增强、像素检测、导出、SSE 进度）
+│   ├── config.py               # 全局配置、参数边界、模型元数据
+│   ├── colors.py               # 色号数据库（SQLite + JSON），含最近色匹配（cKDTree 加速）
+│   ├── utils.py                # 工具函数（文件校验、日志、图像验证等）
+│   ├── image_processing.py     # 图像预处理（背景移除、线条增强、颜色简化）
 │   ├── normal_processing.py    # 普通图 → 拼豆图案
-│   ├── pixel_processing.py     # 像素图 → 拼豆图案（含自动检测）
-│   ├── export_generator.py     # 高清图纸导出（PNG/JPG）
-│   ├── models_manager.py       # rembg 模型加载
+│   ├── pixel_processing.py     # 像素图处理（自动检测、网格生成、颜色量化）
+│   ├── export_generator.py     # 高清图纸导出（PNG/JPG，含图例和坐标轴）
+│   ├── models_manager.py       # rembg ONNX 模型加载与管理
 │   ├── tests/                  # pytest 测试套件
-│   └── uploads/                # 临时上传目录
+│   └── uploads/                # 临时上传目录（程序自动清理）
 │
-├── frontend/                     # 前端（Vite + React 18 + TS）
+├── frontend/                   # 前端（Vite + React 18 + TS）
 │   ├── src/
 │   │   ├── components/         # React 组件
-│   │   │   ├── CanvasEditor.tsx       # 主画板编辑器
-│   │   │   ├── PixelPanel.tsx         # 像素图参数面板
-│   │   │   ├── NormalPanel.tsx        # 普通图参数面板
+│   │   │   ├── CanvasEditor.tsx       # 主画板编辑器（Canvas 渲染 + 交互）
 │   │   │   ├── Toolbar.tsx            # 顶部工具栏
-│   │   │   ├── DrawToolbar.tsx        # 绘制模式工具栏
+│   │   │   ├── ParamPanel.tsx         # 普通图参数面板
+│   │   │   ├── PixelPanel.tsx         # 像素图参数面板
+│   │   │   ├── DrawPanel.tsx          # 绘  制模式右侧面板
+│   │   │   ├── DrawToolBar.tsx        # 绘制模式左侧工具栏
 │   │   │   ├── ColorLegend.tsx        # 颜色图例
+│   │   │   ├── ExportModal.tsx        # 导出设置弹窗
 │   │   │   ├── RemoveBgButton.tsx     # AI 背景移除按钮（SSE 进度）
-│   │   │   └── ...
+│   │   │   └── ui/                    # shadcn/ui 基础组件
 │   │   ├── hooks/              # 自定义 Hooks
-│   │   │   ├── useCanvasRenderer.ts   # Canvas 渲染逻辑
-│   │   │   ├── useDrawingTools.ts     # 绘制工具（Bresenham/FloodFill）
-│   │   │   └── usePanZoom.ts          # 滚轮缩放 + 空格拖拽
-│   │   ├── store/
-│   │   │   └── usePerlerStore.ts      # Zustand 全局状态
+│   │   │   ├── useCanvasRenderer.ts   # Canvas 渲染逻辑（方块/圆形/melted 三模式）
+│   │   │   ├── useDrawingTools.ts     # 绘制工具（Bresenham 直线、FloodFill 填充）
+│   │   │   ├── usePanZoom.ts          # 滚轮缩放 + 空格拖拽平移
+│   │   │   └── useBackendHealth.ts    # 后端健康检测
+│   │   ├── store/              # Zustand 状态管理
+│   │   │   ├── useEditorStore.ts      # 编辑状态（gridData、colorList、historyStack）
+│   │   │   ├── useUIStore.ts          # UI 状态（面板折叠、欢迎弹窗、当前模式）
+│   │   │   ├── useConfigStore.ts      # 配置状态（品牌、网格大小、颜色模式等）
+│   │   │   └── usePerlerStore.ts      # 兼容层（re-export 三个子 Store）
 │   │   ├── engine/
-│   │   │   └── PerlerEngine.ts        # OKLab 颜色匹配 + 网格生成
+│   │   │   └── PerlerEngine.ts        # OKLab 颜色匹配 + 网格生成 + BFS 连通合并
 │   │   ├── utils/
 │   │   │   ├── soundEngine.ts         # Web Audio 音效
-│   │   │   ├── colorUtils.ts          # 颜色统计工具
-│   │   │   └── colorList.test.ts      # Vitest 单元测试
+│   │   │   ├── colorList.ts           # 颜色统计工具
+│   │   │   └── autoSave.ts            # IndexedDB 自动保存
+│   │   ├── api/
+│   │   │   └── client.ts              # API 客户端（统一封装 fetch）
 │   │   ├── types/
 │   │   │   └── perler.ts              # TypeScript 类型定义
 │   │   ├── styles/
-│   │   │   └── pindou-theme.css       # 拼豆主题样式（多巴胺可爱风格）
+│   │   │   ├── pindou-theme.css       # 拼豆主题 CSS 变量
+│   │   │   └── nookui-theme.css       # NookUI 组件样式（Animal Crossing 马卡龙风格）
+│   │   ├── workers/
+│   │   │   └── perler.worker.ts       # Web Worker（重型计算卸载）
 │   │   ├── App.tsx
 │   │   └── main.tsx
 │   ├── index.html
@@ -116,13 +127,18 @@ CC-PinDou/
 │   ├── vitest.config.ts
 │   └── tailwind.config.js
 │
-├── web/                        # 旧版前端（废弃，保留参考）
+├── web_backup/                 # 旧版前端（jQuery + 原生 JS），仅保留参考
 │
 ├── data/
-│   ├── colors.db               # SQLite 色号数据库
-│   └── colorSystemMapping.json # 多品牌色号映射表
+│   ├── colors.db               # SQLite 色号数据库（运行时自动生成）
+│   └── colorSystemMapping.json # 5 品牌色号映射源数据
 │
-└── models/                     # ONNX 模型文件
+├── NookUI/                     # NookUI 组件库（独立 HTML/CSS/JS）
+│   ├── nookui.css              # 样式源文件（马卡龙设计系统）
+│   ├── nookui.js               # 交互逻辑（Vanilla JS）
+│   └── nookui.html             # 组件展示页
+│
+└── models/                     # ONNX 模型文件（rembg 使用）
     ├── u2net.onnx
     ├── isnet-anime.onnx
     ├── silueta.onnx
@@ -156,7 +172,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-> **注意**：`rembg` 首次运行时会自动下载 AI 模型（约 168MB）到 `~/.u2net/` 目录。如果下载缓慢，可手动将模型文件放入该目录。
+> **注意**：`rembg` 首次运行时会自动下载 AI 模型到 `models/` 目录（已通过 `U2NET_HOME` 环境变量配置为项目本地目录）。如果下载缓慢，可手动将模型文件放入该目录。
 
 ### 3. 前端环境
 
@@ -172,33 +188,32 @@ npm install
 ### 开发模式
 
 ```bash
-# 终端 1：启动后端
-cd server
-python app.py
+# 终端 1：启动后端（生产服务器 waitress，端口 5678）
+python run.py
 
-# 终端 2：启动前端 dev server
+# 终端 2：启动前端 dev server（端口 6789，自动代理 /api 到后端）
 cd frontend
 npm run dev
 ```
 
-前端 dev server 默认运行在 `http://localhost:5173`，后端在 `http://localhost:5001`。
+前端 dev server 默认运行在 `http://localhost:6789`，通过 `vite.config.ts` 中的代理配置将 `/api` 和 `/export` 请求转发到 `http://localhost:5678`。
 
 ### 生产构建
 
 ```bash
-# 构建前端（输出到 frontend/dist/）
-cd frontend
-npm run build
-
-# 启动后端（会自动 serve frontend/dist/）
-cd ../server
-python app.py
-```
-
-或使用联合构建脚本：
-```bash
+# 方式 1：使用联合构建脚本（推荐）
 python build.py
+
+# 方式 2：手动构建
+cd frontend
+npm run build        # 输出到 frontend/dist/
+cd ..
+python run.py        # Flask 会自动 serve frontend/dist/
 ```
+
+`build.py` 支持以下参数：
+- `--skip-tests`：跳过前后端测试，快速构建
+- `--check-only`：仅检查环境（Python/Node/模型文件），不执行构建
 
 ---
 
@@ -208,7 +223,8 @@ python build.py
 
 ```bash
 cd frontend
-npx vitest run
+npm test              # 运行一次
+npm run test:watch    # 监听模式
 ```
 
 ### 后端测试
@@ -246,7 +262,8 @@ python -m pytest tests/ -v
 2. 设置画板尺寸（如 29×29）
 3. 选择颜色，使用画笔工具在空白画板上创作
 4. 或切换直线/矩形/圆/填充工具进行几何绘制
-5. 开启对称模式可快速创建对称图案
+5. 使用魔棒工具快速选取连通区域，批量替换颜色
+6. 开启对称模式可快速创建对称图案
 
 ---
 
@@ -288,7 +305,7 @@ python -m pytest tests/ -v
 ## 注意事项
 
 1. **编码**：全项目使用 UTF-8 无 BOM 编码。
-2. **模型下载**：首次使用背景移除功能时，`rembg` 会自动从网络下载 ONNX 模型，请确保网络畅通。
+2. **模型下载**：首次使用背景移除功能时，`rembg` 会自动从网络下载 ONNX 模型到 `models/` 目录，请确保网络畅通。
 3. **大图片**：超过 2000px 的图片会被后端自动缩放处理，避免内存溢出。
 4. **临时文件**：上传的文件保存在 `server/uploads/`，程序会在处理完成后自动清理。
 5. **浏览器兼容性**：推荐使用 Chrome / Edge / Firefox 最新版。Safari 下 Web Audio 声音反馈可能不可用（不影响核心功能）。

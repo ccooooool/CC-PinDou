@@ -28,6 +28,9 @@ def remove_background(img, edge_threshold=30, model_name=None):
         intensity = edge_threshold - 50
         fg = max(1, 200 - intensity * 3)
         bg = min(239, 20 + intensity * 2)
+        # 确保 fg > bg + 1，避免 alpha_matting 参数冲突
+        if fg <= bg:
+            fg = bg + 1
         erode = max(1, intensity // 10 + 1)
         result = remove(
             img,
@@ -41,25 +44,31 @@ def remove_background(img, edge_threshold=30, model_name=None):
         result = remove(img, session=session)
 
     # 2. 连通区域后处理：填充主体内部透明孔洞
+    # 对超大图跳过此步骤，避免 ndimage.label 内存溢出
+    MAX_HOLE_FILL_SIZE = 4096
     if result.mode == 'RGBA':
         r, g, b, a = result.split()
-        mask_arr = np.array(a)
-        binary = mask_arr > 128
-        inverted = ~binary
-        labeled, num_features = ndimage.label(inverted)
-        if num_features > 0:
-            h, w = labeled.shape
-            border_mask = np.zeros_like(labeled, dtype=bool)
-            border_mask[0, :] = True
-            border_mask[-1, :] = True
-            border_mask[:, 0] = True
-            border_mask[:, -1] = True
-            for i in range(1, num_features + 1):
-                region = labeled == i
-                if not (region & border_mask).any():
-                    mask_arr[region] = 255
-            a_fixed = Image.fromarray(mask_arr)
-            result = Image.merge('RGBA', (r, g, b, a_fixed))
+        w, h = result.size
+        if max(w, h) <= MAX_HOLE_FILL_SIZE:
+            mask_arr = np.array(a)
+            binary = mask_arr > 128
+            inverted = ~binary
+            labeled, num_features = ndimage.label(inverted)
+            if num_features > 0:
+                hh, ww = labeled.shape
+                border_mask = np.zeros_like(labeled, dtype=bool)
+                border_mask[0, :] = True
+                border_mask[-1, :] = True
+                border_mask[:, 0] = True
+                border_mask[:, -1] = True
+                for i in range(1, num_features + 1):
+                    region = labeled == i
+                    if not (region & border_mask).any():
+                        mask_arr[region] = 255
+                a_fixed = Image.fromarray(mask_arr)
+                result = Image.merge('RGBA', (r, g, b, a_fixed))
+        else:
+            logger.info("Image size %dx%d exceeds MAX_HOLE_FILL_SIZE, skipping hole fill", w, h)
 
     return result
 

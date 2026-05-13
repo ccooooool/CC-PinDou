@@ -7,6 +7,8 @@ setAutoFreeze(false);
 import type { GridCell, ColorInfo, HistoryAction, PerlerLayer, BeadLayer, ImageLayer } from '../types/perler';
 import { recalculateColorList } from '../utils/colorList';
 
+const MAX_HISTORY_SIZE = 50;
+
 function genId(): string {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
@@ -23,7 +25,7 @@ function createEmptyGrid(size: number): GridCell[][] {
   return grid;
 }
 
-interface EditorState {
+export interface EditorState {
   // ========== 图层系统（新增）==========
   layers: PerlerLayer[];
   activeLayerId: string | null;
@@ -163,6 +165,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set(produce((draft: EditorState) => {
       draft.gridData![y][x].color = color;
       draft.gridData![y][x].codes = codes;
+      if (draft.historyStack.length >= MAX_HISTORY_SIZE) draft.historyStack.shift();
       draft.historyStack.push(action);
       draft.redoStack = [];
 
@@ -177,8 +180,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   pushHistory: (action) => {
-    const { historyStack } = get();
-    set({ historyStack: [...historyStack, action], redoStack: [] });
+    set(produce((draft: EditorState) => {
+      if (draft.historyStack.length >= MAX_HISTORY_SIZE) draft.historyStack.shift();
+      draft.historyStack.push(action);
+      draft.redoStack = [];
+    }));
   },
 
   undo: () => {
@@ -474,8 +480,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       }
       if (bestColor !== 'transparent') {
         positions.push({ x, y, oldColor, oldCodes, newColor: bestColor, newCodes: bestCodes });
-        gridData[y][x].color = bestColor;
-        gridData[y][x].codes = bestCodes;
+        // 注意：不直接修改 gridData，所有修改在 produce 内统一应用
       }
     }
 
@@ -511,8 +516,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const region: Array<{ x: number; y: number }> = [];
         const queue = [{ x, y }];
         visited.add(key);
-        while (queue.length > 0) {
-          const { x: cx, y: cy } = queue.shift()!;
+        let head = 0;
+        while (head < queue.length) {
+          const { x: cx, y: cy } = queue[head++];
           region.push({ x: cx, y: cy });
           for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
             const nx = cx + dx, ny = cy + dy;
@@ -558,8 +564,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const queue = [{ x, y }];
     visited.add(`${x},${y}`);
 
-    while (queue.length > 0) {
-      const { x: cx, y: cy } = queue.shift()!;
+    let head = 0;
+    while (head < queue.length) {
+      const { x: cx, y: cy } = queue[head++];
       region.push({ x: cx, y: cy });
       for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
         const nx = cx + dx, ny = cy + dy;
