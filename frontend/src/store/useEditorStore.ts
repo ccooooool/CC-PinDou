@@ -85,13 +85,16 @@ export interface EditorState {
   // ========== 图层系统 Actions（新增）==========
   setActiveLayer: (id: string | null) => void;
   addBeadLayer: (name: string, size: number) => void;
-  addImageLayer: (name: string, imageUrl: string) => void;
+  addImageLayer: (name: string, imageUrl: string, initialTransform?: Partial<ImageLayer['transform']>) => string;
   toggleLayerVisible: (id: string) => void;
   toggleLayerLock: (id: string) => void;
   reorderLayer: (id: string, direction: 'up' | 'down') => void;
   deleteLayer: (id: string) => void;
   updateLayerOpacity: (id: string, opacity: number) => void;
+  renameLayer: (id: string, name: string) => void;
   updateImageTransform: (id: string, patch: Partial<ImageLayer['transform']>) => void;
+  updateBeadLayerTransform: (id: string, patch: Partial<BeadLayer['transform']>) => void;
+  toggleScaleLocked: (id: string) => void;
   moveLayerContent: (id: string, dx: number, dy: number) => void;
   flipLayerContent: (id: string, direction: 'h' | 'v') => void;
   mergeLayerDown: (id: string) => void;
@@ -124,14 +127,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         zIndex: 0,
         gridData: grid,
         colorList: colors,
+        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
       };
       set({ layers: [layer], activeLayerId: id, gridData: grid, colorList: colors, historyStack: [], redoStack: [], selectedCells: [] });
-    } else if (state.activeLayerId) {
+    } else {
       set(produce((draft: EditorState) => {
-        const layer = draft.layers.find((l) => l.id === draft.activeLayerId);
-        if (layer && layer.type === 'bead') {
-          layer.gridData = grid;
-          layer.colorList = colors;
+        // 优先更新 activeLayer（如果是 bead），否则更新第一个 bead 图层
+        const targetLayer =
+          draft.layers.find((l) => l.id === draft.activeLayerId && l.type === 'bead') ||
+          draft.layers.find((l) => l.type === 'bead');
+        if (targetLayer) {
+          targetLayer.gridData = grid;
+          targetLayer.colorList = colors;
         }
         draft.gridData = grid;
         draft.colorList = colors;
@@ -139,8 +146,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         draft.redoStack = [];
         draft.selectedCells = [];
       }));
-    } else {
-      set({ gridData: grid, colorList: colors, historyStack: [], redoStack: [], selectedCells: [] });
     }
   },
 
@@ -645,6 +650,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       zIndex: 0,
       gridData: grid,
       colorList: [],
+      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
     };
     set({ layers: [layer], activeLayerId: id, gridData: grid, colorList: [], historyStack: [], redoStack: [], selectedCells: [] });
   },
@@ -704,6 +710,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         zIndex: 0,
         gridData: grid,
         colorList: colors,
+        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
       };
       set({
         layers: [layer],
@@ -729,7 +736,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (layer && layer.type === 'bead') {
       set({ activeLayerId: id, gridData: layer.gridData, colorList: layer.colorList, historyStack: [], redoStack: [], selectedCells: [] });
     } else if (layer && layer.type === 'image') {
-      set({ activeLayerId: id, gridData: null, colorList: [], historyStack: [], redoStack: [], selectedCells: [] });
+      // 切换到 image 图层时保留当前可见的 bead 图层数据，避免画布消失
+      const visibleBead = state.layers.find((l) => l.type === 'bead' && l.visible) as import('../types/perler').BeadLayer | undefined;
+      set({ activeLayerId: id, gridData: visibleBead?.gridData ?? state.gridData, colorList: visibleBead?.colorList ?? state.colorList, historyStack: [], redoStack: [], selectedCells: [] });
     } else {
       set({ activeLayerId: null, gridData: null, colorList: [], historyStack: [], redoStack: [], selectedCells: [] });
     }
@@ -750,11 +759,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       zIndex: maxZ + 1,
       gridData: grid,
       colorList: [],
+      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
     };
     set({ layers: [...state.layers, layer], activeLayerId: id, gridData: grid, colorList: [], historyStack: [], redoStack: [], selectedCells: [] });
   },
 
-  addImageLayer: (name, imageUrl) => {
+  addImageLayer: (name, imageUrl, initialTransform) => {
     const state = get();
     const id = genId();
     const maxZ = state.layers.reduce((m, l) => Math.max(m, l.zIndex), -1);
@@ -767,9 +777,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       opacity: 100,
       zIndex: maxZ + 1,
       imageUrl,
-      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
+      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0, ...initialTransform },
+      scaleLocked: true,
     };
-    set({ layers: [...state.layers, layer], activeLayerId: id, gridData: null, colorList: [], historyStack: [], redoStack: [], selectedCells: [] });
+    set({ layers: [...state.layers, layer], activeLayerId: id });
+    return id;
   },
 
   toggleLayerVisible: (id) => {
@@ -825,11 +837,36 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }));
   },
 
+  renameLayer: (id, name) => {
+    set(produce((draft: EditorState) => {
+      const layer = draft.layers.find((l) => l.id === id);
+      if (layer) layer.name = name.trim() || layer.name;
+    }));
+  },
+
   updateImageTransform: (id, patch) => {
     set(produce((draft: EditorState) => {
       const layer = draft.layers.find((l) => l.id === id);
       if (layer && layer.type === 'image') {
         layer.transform = { ...layer.transform, ...patch };
+      }
+    }));
+  },
+
+  updateBeadLayerTransform: (id, patch) => {
+    set(produce((draft: EditorState) => {
+      const layer = draft.layers.find((l) => l.id === id);
+      if (layer && layer.type === 'bead') {
+        layer.transform = { ...layer.transform, ...patch };
+      }
+    }));
+  },
+
+  toggleScaleLocked: (id) => {
+    set(produce((draft: EditorState) => {
+      const layer = draft.layers.find((l) => l.id === id);
+      if (layer && layer.type === 'image') {
+        layer.scaleLocked = !layer.scaleLocked;
       }
     }));
   },
@@ -843,10 +880,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const newGrid = createEmptyGrid(rows);
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
+          const cell = layer.gridData[y][x];
+          if (cell.color === 'transparent') continue; // 透明块不移动
           const nx = x + dx;
           const ny = y + dy;
           if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
-            newGrid[ny][nx] = { ...layer.gridData[y][x], x: nx, y: ny };
+            newGrid[ny][nx] = { ...cell, x: nx, y: ny };
           }
         }
       }

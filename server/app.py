@@ -18,6 +18,7 @@ from export_generator import generate_export_image
 from image_processing import enhance_lines, remove_background
 from models_manager import AVAILABLE_MODELS, DEFAULT_MODEL
 from pixel_processing import detect_pixel_size_and_alignment
+from normal_processing import generate_perler_bead_data
 from utils import (
     logger, parse_form_param, safe_remove, validate_image_file, verify_image_bytes
 )
@@ -240,6 +241,69 @@ def api_enhance_lines():
 
     except Exception as e:
         return _error_response('线条增强处理失败，请稍后重试', 500, log_exception=True)
+    finally:
+        try:
+            _cleanup(file_path)
+        except Exception:
+            pass
+
+
+@app.route('/api/generate', methods=['POST'])
+def api_generate():
+    """
+    普通图片模式图案生成接口（后端算法）。
+    接收图片和参数，返回拼豆网格数据和颜色列表。
+    """
+    if 'image' not in request.files:
+        return jsonify({"error": "No image file provided"}), 400
+
+    file = request.files['image']
+    is_valid, error_msg, file_ext = validate_image_file(file)
+    if not is_valid:
+        return jsonify({"error": error_msg}), 400
+
+    file_path = None
+    try:
+        file_path = _save_upload(file)
+        with open(file_path, 'rb') as f:
+            is_valid_img, verify_msg = verify_image_bytes(f.read(65536))
+        if not is_valid_img:
+            return jsonify({"error": verify_msg}), 400
+
+        grid_size = parse_form_param(
+            request.form, 'grid_size', 50, int,
+            *PARAM_LIMITS['grid_size'][:2]
+        )
+        color_simplify = parse_form_param(
+            request.form, 'color_simplify', 0, int,
+            *PARAM_LIMITS['color_simplify'][:2]
+        )
+        enhance_lines_strength = parse_form_param(
+            request.form, 'enhance_lines', 0, int,
+            *PARAM_LIMITS['enhance_lines_strength'][:2]
+        )
+        color_mode = request.form.get('color_mode', 'full')
+        if color_mode not in ('full', '221'):
+            color_mode = 'full'
+
+        result = generate_perler_bead_data(
+            file_path,
+            grid_size=grid_size,
+            remove_bg=False,
+            color_simplify=color_simplify,
+            enhance_lines_strength=enhance_lines_strength,
+            color_mode=color_mode
+        )
+
+        return jsonify({
+            "success": True,
+            "grid_data": result["grid_data"],
+            "color_list": result["color_list"],
+            "grid_size": result["grid_size"]
+        })
+
+    except Exception as e:
+        return _error_response('图案生成失败，请稍后重试', 500, log_exception=True)
     finally:
         try:
             _cleanup(file_path)

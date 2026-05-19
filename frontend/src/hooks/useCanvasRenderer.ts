@@ -36,11 +36,12 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
 
   // 圆形 bead 离屏缓存：key = `${beadSize}-${color}`
   const beadCircleCacheRef = useRef<Map<string, HTMLCanvasElement>>(new Map());
-  // 透明 pattern 缓存
+  // 透明 pattern 缓存（A: 白/浅灰，B: 白/另一种灰，交替使用）
   const patternCacheRef = useRef<{
-    pattern: CanvasPattern | null;
+    patternA: CanvasPattern | null;
+    patternB: CanvasPattern | null;
     ctx: CanvasRenderingContext2D | null;
-  }>({ pattern: null, ctx: null });
+  }>({ patternA: null, patternB: null, ctx: null });
   // 亮度缓存
   const brightnessCacheRef = useRef<Map<string, number>>(new Map());
   // 图片缓存
@@ -81,22 +82,27 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
   );
 
   // ========== 辅助函数 ==========
-  const getTransparentPattern = useCallback((context: CanvasRenderingContext2D) => {
-    if (patternCacheRef.current.pattern && patternCacheRef.current.ctx === context) {
-      return patternCacheRef.current.pattern;
+  const getTransparentPatterns = useCallback((context: CanvasRenderingContext2D) => {
+    const cache = patternCacheRef.current;
+    if (cache.patternA && cache.patternB && cache.ctx === context) {
+      return { patternA: cache.patternA, patternB: cache.patternB };
     }
-    const pCanvas = document.createElement('canvas');
-    pCanvas.width = 8;
-    pCanvas.height = 8;
-    const pCtx = pCanvas.getContext('2d')!;
-    pCtx.fillStyle = '#FFFFFF';
-    pCtx.fillRect(0, 0, 8, 8);
-    pCtx.fillStyle = '#f3f4f6';
-    pCtx.fillRect(0, 0, 4, 4);
-    pCtx.fillRect(4, 4, 4, 4);
-    const pattern = context.createPattern(pCanvas, 'repeat')!;
-    patternCacheRef.current = { pattern, ctx: context };
-    return pattern;
+    const makePattern = (light: string, dark: string) => {
+      const pCanvas = document.createElement('canvas');
+      pCanvas.width = 8;
+      pCanvas.height = 8;
+      const pCtx = pCanvas.getContext('2d')!;
+      pCtx.fillStyle = light;
+      pCtx.fillRect(0, 0, 8, 8);
+      pCtx.fillStyle = dark;
+      pCtx.fillRect(0, 0, 4, 4);
+      pCtx.fillRect(4, 4, 4, 4);
+      return context.createPattern(pCanvas, 'repeat')!;
+    };
+    const patternA = makePattern('#FFFFFF', '#f3f4f6');
+    const patternB = makePattern('#FFFFFF', '#e0e0da');
+    patternCacheRef.current = { patternA, patternB, ctx: context };
+    return { patternA, patternB };
   }, []);
 
   const getBrightness = useCallback((hexColor: string): number => {
@@ -165,12 +171,16 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
     const width = cols * beadSize + margin * 2;
     const height = rows * beadSize + margin * 2;
 
-    const sizeChanged = canvasSizeRef.current.width !== width || canvasSizeRef.current.height !== height;
+    const sizeChanged =
+      canvasSizeRef.current.width !== width ||
+      canvasSizeRef.current.height !== height ||
+      canvas.width !== width ||
+      canvas.height !== height;
     if (sizeChanged) {
       canvas.width = width;
       canvas.height = height;
       canvasSizeRef.current = { width, height };
-      patternCacheRef.current = { pattern: null, ctx: null };
+      patternCacheRef.current = { patternA: null, patternB: null, ctx: null };
       brightnessCacheRef.current.clear();
     }
     // zoomLevel 用 ref 读取，避免 zoom 变化触发重绘
@@ -181,7 +191,7 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const transparentPattern = getTransparentPattern(ctx);
+    const { patternA, patternB } = getTransparentPatterns(ctx);
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -196,43 +206,126 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
       ctx.fillText(String(i + 1), margin / 2, margin + i * beadSize + beadSize / 2);
     }
 
-    // 棋盘格背景
-    ctx.fillStyle = transparentPattern;
-    ctx.fillRect(margin, margin, cols * beadSize, rows * beadSize);
-
     // ========== 多图层渲染 ==========
-    for (const layer of visibleLayers) {
+    // image 图层作为背景，始终绘制在 bead 图层之下
+    const imageLayers = visibleLayers.filter((l) => l.type === 'image');
+    const beadLayers = visibleLayers.filter((l) => l.type === 'bead');
+
+    for (const layer of imageLayers) {
       ctx.save();
       ctx.globalAlpha = layer.opacity / 100;
-
-      if (layer.type === 'bead' && layer.gridData) {
-        drawNormalBeads({
-          ctx,
-          gridData: layer.gridData,
-          beadSize,
-          margin,
-          circleMode,
-          showCode,
-          brand,
-          getBrightness,
-          getCircleBeadCanvas,
-        });
-      } else if (layer.type === 'image') {
-        drawImageLayer(ctx, layer, margin, imageCacheRef.current);
-      }
-
+      drawImageLayer(ctx, layer, margin, imageCacheRef.current);
       ctx.restore();
 
-      // 激活图层高亮边框
-      if (layer.id === activeLayerId && layer.type === 'bead' && layer.gridData) {
-        const lRows = layer.gridData.length;
-        const lCols = layer.gridData[0]?.length || 0;
+      // 选中图片图层的虚线边界指示
+      if (layer.id === activeLayerId) {
+        const img = imageCacheRef.current.get(layer.imageUrl);
+        if (img && img.complete && img.naturalWidth > 0) {
+          ctx.save();
+          const x = margin + layer.transform.x;
+          const y = margin + layer.transform.y;
+          ctx.translate(x, y);
+          ctx.rotate((layer.transform.rotation * Math.PI) / 180);
+          ctx.scale(layer.transform.scaleX ?? layer.transform.scale ?? 1, layer.transform.scaleY ?? layer.transform.scale ?? 1);
+          ctx.strokeStyle = 'rgba(255, 180, 60, 0.85)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 4]);
+          ctx.strokeRect(0, 0, img.width, img.height);
+          ctx.restore();
+        }
+      }
+    }
+
+    for (const layer of beadLayers) {
+      const t = (layer as any).transform;
+      const isMoving = t && (t.x !== 0 || t.y !== 0);
+
+      // 计算有颜色格子的外接矩形
+      let bbox: { minX: number; minY: number; maxX: number; maxY: number } | null = null;
+      if (layer.gridData) {
+        const rows = layer.gridData.length;
+        const cols = layer.gridData[0].length;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            if (layer.gridData[y][x].color === 'transparent') continue;
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+          }
+        }
+        if (minX !== Infinity) {
+          bbox = { minX, minY, maxX, maxY };
+        }
+      }
+
+      if (isMoving && layer.gridData && bbox) {
+        const bx = margin + bbox.minX * beadSize;
+        const by = margin + bbox.minY * beadSize;
+        const bw = (bbox.maxX - bbox.minX + 1) * beadSize;
+        const bh = (bbox.maxY - bbox.minY + 1) * beadSize;
+
+        // 1. 原始位置：虚影填充 + 外接矩形虚线框
         ctx.save();
-        ctx.strokeStyle = '#9ca3af';
+        ctx.globalAlpha = 0.45;
+        drawNormalBeads({
+          ctx, gridData: layer.gridData, beadSize, margin,
+          circleMode, showCode: false, brand, getBrightness, getCircleBeadCanvas,
+          patternA, patternB,
+        });
+        ctx.strokeStyle = 'rgba(43, 180, 171, 0.8)';
         ctx.lineWidth = 2;
-        ctx.setLineDash([5, 3]);
-        ctx.strokeRect(margin - 1, margin - 1, lCols * beadSize + 2, lRows * beadSize + 2);
+        ctx.setLineDash([4, 3]);
+        ctx.strokeRect(bx - 0.5, by - 0.5, bw + 1, bh + 1);
         ctx.restore();
+
+        // 2. 偏移位置：虚影填充 + 外接矩形虚线框
+        ctx.save();
+        ctx.globalAlpha = 0.9;
+        ctx.translate(t.x, t.y);
+        drawNormalBeads({
+          ctx, gridData: layer.gridData, beadSize, margin,
+          circleMode, showCode: false, brand, getBrightness, getCircleBeadCanvas,
+          patternA, patternB,
+        });
+        ctx.strokeStyle = 'rgba(43, 180, 171, 0.95)';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([4, 3]);
+        ctx.strokeRect(bx - 0.5, by - 0.5, bw + 1, bh + 1);
+        ctx.restore();
+      } else {
+        // 正常绘制（无偏移时）
+        ctx.save();
+        ctx.globalAlpha = layer.opacity / 100;
+        if (t) {
+          ctx.translate(t.x, t.y);
+        }
+        if (layer.gridData) {
+          drawNormalBeads({
+            ctx, gridData: layer.gridData, beadSize, margin,
+            circleMode, showCode, brand, getBrightness, getCircleBeadCanvas,
+            patternA, patternB,
+          });
+        }
+        ctx.restore();
+
+        // 激活图层外接矩形虚线框（非移动时）
+        if (layer.id === activeLayerId && bbox) {
+          const bx = margin + bbox.minX * beadSize;
+          const by = margin + bbox.minY * beadSize;
+          const bw = (bbox.maxX - bbox.minX + 1) * beadSize;
+          const bh = (bbox.maxY - bbox.minY + 1) * beadSize;
+          ctx.save();
+          if (t) {
+            ctx.translate(t.x, t.y);
+          }
+          ctx.strokeStyle = 'rgba(43, 180, 171, 0.7)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 3]);
+          ctx.strokeRect(bx - 0.5, by - 0.5, bw + 1, bh + 1);
+          ctx.restore();
+        }
       }
     }
 
@@ -287,19 +380,28 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
       ctx.setLineDash([]);
     }
 
-    // Shape 预览
+    // Shape 预览（高对比度：主题色填充 + 白边）
     if (shapePreviewRef.current.enabled) {
       const { start, end, tool } = shapePreviewRef.current;
       ctx.save();
-      ctx.strokeStyle = 'rgba(156, 163, 175, 0.9)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([4, 4]);
 
       if (tool === 'line') {
         const x1 = margin + start.x * beadSize + beadSize / 2;
         const y1 = margin + start.y * beadSize + beadSize / 2;
         const x2 = margin + end.x * beadSize + beadSize / 2;
         const y2 = margin + end.y * beadSize + beadSize / 2;
+        // 发光底
+        ctx.strokeStyle = 'rgba(43, 180, 171, 0.35)';
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        // 白实线
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([5, 4]);
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
@@ -313,13 +415,30 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
         const py = margin + y0 * beadSize;
         const pw = (x1 - x0 + 1) * beadSize;
         const ph = (y1 - y0 + 1) * beadSize;
-        ctx.strokeRect(px - 0.5, py - 0.5, pw + 1, ph + 1);
+        // 半透明填充
+        ctx.fillStyle = 'rgba(43, 180, 171, 0.22)';
+        ctx.fillRect(px, py, pw, ph);
+        // 白实线外框
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([5, 4]);
+        ctx.strokeRect(px + 0.5, py + 0.5, pw - 1, ph - 1);
       } else if (tool === 'circle') {
+        // 第一点是圆周上的角，拉开距离为直径
         const dx = end.x - start.x;
         const dy = end.y - start.y;
-        const rPx = Math.round(Math.sqrt(dx * dx + dy * dy)) * beadSize;
-        const cx = margin + start.x * beadSize + beadSize / 2;
-        const cy = margin + start.y * beadSize + beadSize / 2;
+        const rPx = Math.round(Math.sqrt(dx * dx + dy * dy) / 2) * beadSize;
+        const cx = margin + ((start.x + end.x) / 2) * beadSize + beadSize / 2;
+        const cy = margin + ((start.y + end.y) / 2) * beadSize + beadSize / 2;
+        // 半透明填充
+        ctx.fillStyle = 'rgba(43, 180, 171, 0.22)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, rPx, 0, Math.PI * 2);
+        ctx.fill();
+        // 白实线外框
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([5, 4]);
         ctx.beginPath();
         ctx.arc(cx, cy, rPx, 0, Math.PI * 2);
         ctx.stroke();
@@ -328,7 +447,7 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
       ctx.restore();
     }
 
-    // 画笔大小预览
+    // 画笔大小预览（高对比度：主题色填充 + 白边 + 大十字）
     if (brushPreviewRef.current.enabled) {
       const { x, y, size } = brushPreviewRef.current;
       const half = Math.floor(size / 2);
@@ -338,31 +457,52 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
       const ph = size * beadSize;
 
       ctx.save();
-      ctx.strokeStyle = 'rgba(156, 163, 175, 0.8)';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([3, 3]);
 
       if (circleMode) {
         const cx = px + pw / 2;
         const cy = py + ph / 2;
         const r = Math.min(pw, ph) / 2;
+        // 半透明填充
+        ctx.fillStyle = 'rgba(43, 180, 171, 0.2)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+        // 白实线外框
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([4, 3]);
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.stroke();
       } else {
+        // 半透明填充
+        ctx.fillStyle = 'rgba(43, 180, 171, 0.2)';
+        ctx.fillRect(px, py, pw, ph);
+        // 白实线外框
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([4, 3]);
         ctx.strokeRect(px + 0.5, py + 0.5, pw - 1, ph - 1);
       }
 
+      // 中心十字准星（更大更明显）
       const cx = margin + x * beadSize + beadSize / 2;
       const cy = margin + y * beadSize + beadSize / 2;
-      ctx.strokeStyle = 'rgba(156, 163, 175, 0.5)';
-      ctx.lineWidth = 1;
+      // 十字阴影/发光底
+      ctx.strokeStyle = 'rgba(43, 180, 171, 0.45)';
+      ctx.lineWidth = 4;
       ctx.setLineDash([]);
+      ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(cx - 4, cy);
-      ctx.lineTo(cx + 4, cy);
-      ctx.moveTo(cx, cy - 4);
-      ctx.lineTo(cx, cy + 4);
+      ctx.moveTo(cx - 7, cy); ctx.lineTo(cx + 7, cy);
+      ctx.moveTo(cx, cy - 7); ctx.lineTo(cx, cy + 7);
+      ctx.stroke();
+      // 十字白线
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - 7, cy); ctx.lineTo(cx + 7, cy);
+      ctx.moveTo(cx, cy - 7); ctx.lineTo(cx, cy + 7);
       ctx.stroke();
 
       ctx.restore();
@@ -382,7 +522,7 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
     mode,
     symmetryMode,
     canvasRef,
-    getTransparentPattern,
+    getTransparentPatterns,
     getBrightness,
     getCircleBeadCanvas,
   ]);
@@ -505,10 +645,12 @@ interface DrawNormalBeadsOptions {
   brand: string;
   getBrightness: (hex: string) => number;
   getCircleBeadCanvas: (size: number, color: string) => HTMLCanvasElement;
+  patternA?: CanvasPattern | null;
+  patternB?: CanvasPattern | null;
 }
 
 function drawNormalBeads(options: DrawNormalBeadsOptions) {
-  const { ctx, gridData, beadSize, margin, circleMode, showCode, brand, getBrightness, getCircleBeadCanvas } = options;
+  const { ctx, gridData, beadSize, margin, circleMode, showCode, brand, getBrightness, getCircleBeadCanvas, patternA, patternB } = options;
   if (!gridData.length || !gridData[0]) return;
   const rows = gridData.length;
   const cols = gridData[0].length;
@@ -517,9 +659,14 @@ function drawNormalBeads(options: DrawNormalBeadsOptions) {
     for (let y = 0; y < rows; y++) {
       for (let x = 0; x < cols; x++) {
         const cell = gridData[y][x];
-        if (cell.color === 'transparent') continue;
         const px = margin + x * beadSize;
         const py = margin + y * beadSize;
+        if (cell.color === 'transparent') {
+          // 透明格子：交替棋盘格底色
+          ctx.fillStyle = ((x + y) % 2 === 0 ? patternA : patternB) ?? '#FFFFFF';
+          ctx.fillRect(px, py, beadSize, beadSize);
+          continue;
+        }
         const beadCanvas = getCircleBeadCanvas(beadSize, cell.color);
         ctx.drawImage(beadCanvas, px, py);
         if (showCode && cell.codes[brand]) {
@@ -537,7 +684,12 @@ function drawNormalBeads(options: DrawNormalBeadsOptions) {
         const cell = gridData[y][x];
         const px = margin + x * beadSize;
         const py = margin + y * beadSize;
-        if (cell.color === 'transparent') continue;
+        if (cell.color === 'transparent') {
+          // 透明格子：交替棋盘格底色
+          ctx.fillStyle = ((x + y) % 2 === 0 ? patternA : patternB) ?? '#FFFFFF';
+          ctx.fillRect(px, py, beadSize, beadSize);
+          continue;
+        }
         ctx.fillStyle = cell.color;
         ctx.fillRect(px, py, beadSize, beadSize);
         if (showCode && cell.codes[brand]) {
@@ -589,9 +741,11 @@ function drawSymmetryLines(
   symmetryMode: string,
 ) {
   ctx.save();
-  ctx.strokeStyle = 'rgba(156, 163, 175, 0.6)';
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([6, 4]);
+  ctx.strokeStyle = 'rgba(43, 180, 171, 0.9)';
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([10, 6]);
+  ctx.shadowColor = 'rgba(43, 180, 171, 0.4)';
+  ctx.shadowBlur = 6;
 
   const left = margin;
   const top = margin;
@@ -668,11 +822,11 @@ function drawImageLayer(
   if (!img || !img.complete || img.naturalWidth === 0) return;
 
   ctx.save();
-  const centerX = margin + layer.transform.x;
-  const centerY = margin + layer.transform.y;
-  ctx.translate(centerX, centerY);
+  const x = margin + layer.transform.x;
+  const y = margin + layer.transform.y;
+  ctx.translate(x, y);
   ctx.rotate((layer.transform.rotation * Math.PI) / 180);
-  ctx.scale(layer.transform.scale, layer.transform.scale);
-  ctx.drawImage(img, -img.width / 2, -img.height / 2);
+  ctx.scale(layer.transform.scaleX ?? layer.transform.scale ?? 1, layer.transform.scaleY ?? layer.transform.scale ?? 1);
+  ctx.drawImage(img, 0, 0);
   ctx.restore();
 }

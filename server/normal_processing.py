@@ -26,14 +26,15 @@ def generate_perler_bead_data(
     if remove_bg:
         img = remove_background(img, edge_threshold=remove_bg_threshold, model_name=bg_model)
 
-    if color_simplify > 0:
-        img = simplify_colors(img, color_simplify)
-
+    # 先缩放到目标尺寸，再在小图上做颜色简化（避免在大图上做无意义的精细计算）
     img_w, img_h = img.size
     scale = min(grid_size / img_w, grid_size / img_h)
     new_w = max(1, int(img_w * scale))
     new_h = max(1, int(img_h * scale))
     img_small = img.resize((new_w, new_h), Image.NEAREST)
+
+    if color_simplify > 0:
+        img_small = simplify_colors(img_small, color_simplify)
 
     offset_x = (grid_size - new_w) // 2
     offset_y = (grid_size - new_h) // 2

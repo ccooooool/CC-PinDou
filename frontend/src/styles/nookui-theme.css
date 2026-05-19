@@ -1,5 +1,5 @@
-
-/* ========== 字体定义 ========== */
+﻿
+/* ========== 瀛椾綋瀹氫箟 ========== */
 @font-face {
   font-family: 'WenYuanRounded';
   src: url('/fonts/WenYuanRoundedSC-VF.otf') format('opentype');
@@ -8,9 +8,9 @@
   font-display: swap;
 }
 
-/* ========== 设计令牌（Day 主题�?========== */
+/* ========== 璁捐浠ょ墝锛圖ay 涓婚锟?========== */
 :root {
-  /* === 动物森友会马卡龙色系 === */
+  /* === 鍔ㄧ墿妫弸浼氶┈鍗￠緳鑹茬郴 === */
   --nook-cream: #f8f8f0;
   --nook-paper: #f0e8d8;
   --nook-brown: #5D4037;
@@ -47,7 +47,7 @@
   --shadow-inset-toggle: inset 0 2px 4px rgba(93, 64, 55, 0.1);
   --shadow-inset-toggle-off: inset 0 2px 4px rgba(93, 64, 55, 0.05);
   --color-overlay: rgba(0, 0, 0, 0.4);
-  /* 精确 shadow token（逐组件还�?legacy�?*/
+  /* 绮剧‘ shadow token锛堥€愮粍浠惰繕锟?legacy锟?*/
   --shadow-btn-green: 0 2px 8px rgba(43, 180, 171, 0.25);
   --shadow-btn-green-hover: 0 4px 12px rgba(43, 180, 171, 0.3);
   --shadow-btn-blue: 0 2px 8px rgba(87, 131, 247, 0.25);
@@ -67,7 +67,7 @@
   --shadow-toggle3d-active: 0 3px 0 0 #5a9e1e;
   --shadow-progress-shimmer: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
 
-  /* 3D 按键阴影系统 */
+  /* 3D 鎸夐敭闃村奖绯荤粺 */
   --nook-shadow-btn: #bdaea0;
   --nook-shadow-btn-hover: #bdaea0;
   --nook-shadow-btn-active: #bdaea0;
@@ -81,14 +81,14 @@
   --radius-button-rect: 18px;
   --radius-game: 20px;
 
-  /* 字体�?*/
+  /* 瀛椾綋锟?*/
   --font-family: 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 
-  /* === 语义层（Semantic Tokens�?=== */
-  /* 主题色：Nook 薄荷�?*/
+  /* === 璇箟灞傦紙Semantic Tokens锟?=== */
+  /* 涓婚鑹诧細Nook 钖勮嵎锟?*/
   --color-primary: var(--ac-green);
   --color-primary-dark: var(--ac-green-dark);
-  /* 辅助色体�?*/
+  /* 杈呭姪鑹蹭綋锟?*/
   --color-success: var(--ac-green);
   --color-success-dark: var(--ac-green-dark);
   --color-info: var(--ac-blue);
@@ -97,7 +97,7 @@
   --color-warning-dark: var(--ac-yellow-dark);
   --color-danger: var(--ac-coral);
   --color-danger-dark: var(--ac-coral-dark);
-  /* 次要/强调 */
+  /* 娆¤/寮鸿皟 */
   --color-secondary: var(--ac-blue);
   --color-secondary-dark: var(--ac-blue-dark);
   --color-accent: var(--ac-yellow);
@@ -129,7 +129,7 @@
   --shadow-3d-btn-active: 0 1px 0 0 var(--nook-shadow-btn-active);
   --shadow-3d-input: 0 3px 0 0 var(--nook-shadow-input);
 
-  /* === 自然主题拓展色（Nature Tokens�?=== */
+  /* === 鑷劧涓婚鎷撳睍鑹诧紙Nature Tokens锟?=== */
   --ac-sky-bright: #6ABFFD;
   --ac-dodo: #1590CF;
   --ac-nintendo: #E60012;
@@ -141,42 +141,42 @@
   --ac-starry: #006898;
   --ac-ocean: #5AA5E8;
 
-  /* === 按钮浅色环（HSL: S=80%, L=87%�?=== */
+  /* === 鎸夐挳娴呰壊鐜紙HSL: S=80%, L=87%锟?=== */
   --btn-ring-green: #ACF5F0;
   --btn-ring-blue: #ACC0F5;
   --btn-ring-yellow: #F5E7AC;
   --btn-ring-coral: #F5ACAD;
 
-  /* 圆角语义 */
+  /* 鍦嗚璇箟 */
   --radius-button: var(--radius-full);
   --radius-card: var(--radius-xl);
   --radius-input: var(--radius-lg);
   --radius-panel: var(--radius-md);
   --radius-chip: var(--radius-sm);
 
-  /* === 模式主题色（Element Plus tint/shade 变体） === */
-  /* 普通模式 — 天蓝 #5783F7 */
+  /* === 妯″紡涓婚鑹诧紙Element Plus tint/shade 鍙樹綋锛?=== */
+  /* 鏅€氭ā寮?鈥?澶╄摑 #5783F7 */
   --theme-normal:        #5783F7;
   --theme-normal-light-1:#688FF8; --theme-normal-light-2:#799CF9; --theme-normal-light-3:#89A8F9;
   --theme-normal-light-4:#9AB5FA; --theme-normal-light-5:#ABC1FB; --theme-normal-light-6:#BCCDFC;
   --theme-normal-light-7:#CDDAFD; --theme-normal-light-8:#DDE6FD; --theme-normal-light-9:#EEF3FE;
   --theme-normal-dark-1: #4E76DE; --theme-normal-dark-2: #4669C6; --theme-normal-dark-3: #3D5CAD;
 
-  /* 像素模式 — 暖黄 #FFCF01 */
+  /* 鍍忕礌妯″紡 鈥?鏆栭粍 #FFCF01 */
   --theme-pixel:         #FFCF01;
   --theme-pixel-light-1: #FFD41A; --theme-pixel-light-2:#FFD934; --theme-pixel-light-3:#FFDD4D;
   --theme-pixel-light-4: #FFE267; --theme-pixel-light-5:#FFE780; --theme-pixel-light-6:#FFEC99;
   --theme-pixel-light-7: #FFF1B3; --theme-pixel-light-8:#FFF5CC; --theme-pixel-light-9:#FFFAE6;
   --theme-pixel-dark-1:  #E6BA01; --theme-pixel-dark-2: #CCA601; --theme-pixel-dark-3: #B29101;
 
-  /* 绘制模式 — 动森绿 #2BB4AB */
+  /* 缁樺埗妯″紡 鈥?鍔ㄦ．缁?#2BB4AB */
   --theme-draw:          #2BB4AB;
   --theme-draw-light-1:  #40BCB3; --theme-draw-light-2:#55C3BC; --theme-draw-light-3:#6BCAC4;
   --theme-draw-light-4:  #80D2CD; --theme-draw-light-5:#95DAD5; --theme-draw-light-6:#AAE1DD;
   --theme-draw-light-7:  #BFE8E6; --theme-draw-light-8:#D5F0EE; --theme-draw-light-9:#EAF8F7;
   --theme-draw-dark-1:   #27A29A; --theme-draw-dark-2: #229089; --theme-draw-dark-3: #1E7E78;
 
-  /* 危险色 — 珊瑚红 #FC4D50 */
+  /* 鍗遍櫓鑹?鈥?鐝婄憵绾?#FC4D50 */
   --theme-danger:        #FC4D50;
   --theme-danger-light-1:#FC5F62; --theme-danger-light-2:#FD7173; --theme-danger-light-3:#FD8284;
   --theme-danger-light-4:#FD9496; --theme-danger-light-5:#FEA6A8; --theme-danger-light-6:#FEB8B9;
@@ -184,9 +184,9 @@
   --theme-danger-dark-1: #E34548; --theme-danger-dark-2: #CA3E40; --theme-danger-dark-3: #B03638;
 }
 
-/* ========== Night 主题（精确复刻） ========== */
+/* ========== Night 涓婚锛堢簿纭鍒伙級 ========== */
 [data-theme="night"] {
-  /* === 基础色（降低明度 + 提高饱和度） === */
+  /* === 鍩虹鑹诧紙闄嶄綆鏄庡害 + 鎻愰珮楗卞拰搴︼級 === */
   --nook-cream: #1A1828;
   --nook-paper: #252240;
   --nook-wood: #3A3560;
@@ -202,7 +202,7 @@
   --ac-sky: #6BBEE8;
   --ac-sky-dark: #5AA8D0;
 
-  /* === 文字色（紫调灰） === */
+  /* === 鏂囧瓧鑹诧紙绱皟鐏帮級 === */
   --text-primary: #F0ECF8;
   --text-secondary: #C0B8D8;
   --text-muted: #988FB0;
@@ -222,7 +222,7 @@
   --shadow-inset-toggle: inset 0 2px 4px rgba(0, 0, 0, 0.2);
   --shadow-inset-toggle-off: inset 0 2px 4px rgba(0, 0, 0, 0.1);
   --color-overlay: rgba(0, 0, 0, 0.5);
-  /* Night 精确 shadow token */
+  /* Night 绮剧‘ shadow token */
   --shadow-btn-green: 0 2px 8px rgba(93, 233, 200, 0.2);
   --shadow-btn-green-hover: 0 4px 12px rgba(93, 233, 200, 0.25);
   --shadow-btn-blue: 0 2px 8px rgba(142, 205, 232, 0.2);
@@ -242,13 +242,13 @@
   --shadow-toggle3d-active: 0 3px 0 0 #4a8a1e;
   --shadow-progress-shimmer: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
 
-  /* 3D 按键阴影系统 */
+  /* 3D 鎸夐敭闃村奖绯荤粺 */
   --nook-shadow-btn: #3A3560;
   --nook-shadow-btn-hover: #4A4570;
   --nook-shadow-btn-active: #2A2548;
   --nook-shadow-input: #3A3560;
 
-  /* === 语义�?=== */
+  /* === 璇箟锟?=== */
   --color-primary: var(--ac-green);
   --color-primary-dark: var(--ac-green-dark);
   --color-success: var(--ac-green);
@@ -290,7 +290,7 @@
   --shadow-3d-btn-active: 0 1px 0 0 #2A2548;
   --shadow-3d-input: 0 3px 0 0 #3A3560;
 
-  /* === 模式主题色 Night 变体 === */
+  /* === 妯″紡涓婚鑹?Night 鍙樹綋 === */
   --theme-normal:        #8ECDE8;
   --theme-normal-light-1:#99D2EA; --theme-normal-light-2:#A5D7ED; --theme-normal-light-3:#B0DCEF;
   --theme-normal-light-4:#BBE1F1; --theme-normal-light-5:#C6E6F4; --theme-normal-light-6:#D2EBF6;
@@ -316,7 +316,7 @@
   --theme-danger-dark-1: #D88282; --theme-danger-dark-2: #C07373; --theme-danger-dark-3: #A86565;
 }
 
-/* === Night 模式组件适配（精确复刻） === */
+/* === Night 妯″紡缁勪欢閫傞厤锛堢簿纭鍒伙級 === */
 [data-theme="night"] .card,
 [data-theme="night"] .modal,
 [data-theme="night"] .alert,
@@ -395,7 +395,7 @@
     border-color: rgba(255, 255, 255, 0.12);
 }
 
-/* 主题切换时的过渡动画 */
+/* 涓婚鍒囨崲鏃剁殑杩囨浮鍔ㄧ敾 */
 [data-theme="night"] body {
     transition: background-color 0.6s ease, color 0.6s ease;
 }
@@ -420,7 +420,7 @@ body {
   transition: background-color 0.4s, color 0.4s;
 }
 
-  /* === 滚动条美化 === */
+  /* === 婊氬姩鏉＄編鍖?=== */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -432,20 +432,20 @@ body {
     background: var(--ac-green);
     border-radius: 4px;
   }
-  /* Firefox 兼容 */
+  /* Firefox 鍏煎 */
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--ac-green) var(--nook-paper);
   }
 
-  /* === 无障碍支�?=== */
+  /* === 鏃犻殰纰嶆敮锟?=== */
   :focus-visible {
     outline: 3px solid var(--color-focus);
     outline-offset: 2px;
     border-radius: var(--radius-sm);
   }
 
-/* === 动画关键帧（精确复刻�?=== */
+/* === 鍔ㄧ敾鍏抽敭甯э紙绮剧‘澶嶅埢锟?=== */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-8px); }
@@ -551,7 +551,7 @@ body {
   100% { opacity: 1; }
 }
 
-/* === 动画工具类（精确复刻�?=== */
+/* === 鍔ㄧ敾宸ュ叿绫伙紙绮剧‘澶嶅埢锟?=== */
 .animate-float { animation: float 4s ease-in-out infinite; }
 .animate-wiggle:hover { animation: wiggle 0.5s ease-in-out; }
 .animate-pop { animation: popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
@@ -573,7 +573,7 @@ body {
 .animate-spin-fast { animation: spin 0.8s linear infinite; }
 .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
 
-/* === 斜条纹选中 === */
+/* === 鏂滄潯绾归€変腑 === */
 .stripe-active {
   background-image: repeating-linear-gradient(
     -45deg,
@@ -584,7 +584,7 @@ body {
   animation: stripeFlow 0.6s linear infinite;
 }
 
-/* === 喷溅反馈�?=== */
+/* === 鍠锋簠鍙嶉锟?=== */
 .splash-ring {
   position: absolute;
   inset: -4px;
@@ -595,7 +595,7 @@ body {
   z-index: 10;
 }
 
-/* === 按钮水波�?=== */
+/* === 鎸夐挳姘存尝锟?=== */
 .btn-ripple {
   position: absolute;
   left: 0;
@@ -608,7 +608,7 @@ body {
   animation: ripple-splash 0.5s ease-out forwards;
 }
 
-/* === 导航�?=== */
+/* === 瀵艰埅锟?=== */
 .nav-header {
   position: sticky;
   top: 0;
@@ -620,14 +620,14 @@ body {
   padding: 1rem 2rem;
 }
 
-/* === 容器 === */
+/* === 瀹瑰櫒 === */
 .container-nook {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
 }
 
-/* === 主题切换器控�?=== */
+/* === 涓婚鍒囨崲鍣ㄦ帶锟?=== */
 .theme-switcher {
   display: inline-flex;
   align-items: center;
@@ -660,7 +660,7 @@ body {
   background: rgba(255, 204, 0, 0.15);
 }
 
-/* === 代码�?=== */
+/* === 浠ｇ爜锟?=== */
 .code-block {
   background: #2C2416;
   border-radius: var(--radius-lg);
@@ -740,7 +740,7 @@ body {
 .code-block-body pre .tok-comment { color: #8B8B8B; font-style: italic; }
 .code-block-body pre .tok-entity { color: #FF9EB0; }
 
-/* === 装饰性圆�?=== */
+/* === 瑁呴グ鎬у渾锟?=== */
 .deco-circle {
   position: fixed;
   z-index: -1;
@@ -771,7 +771,7 @@ body {
   left: 60%;
 }
 
-/* === 分割�?=== */
+/* === 鍒嗗壊锟?=== */
 .divider-wave {
   height: 12px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z' fill='%23C4986A' opacity='.2'/%3E%3C/svg%3E");
@@ -794,7 +794,7 @@ body {
   opacity: 0.8;
 }
 
-/* === 页脚装饰 === */
+/* === 椤佃剼瑁呴グ === */
 .footer-wave {
   height: 80px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%232BB4AB' fill-opacity='0.15' d='M0,192L48,197.3C96,203,192,213,288,229.3C384,245,480,267,576,250.7C672,235,768,181,864,181.3C960,181,1056,235,1152,234.7C1248,235,1344,181,1392,154.7L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E");
@@ -806,7 +806,7 @@ body {
   background-size: 1440px 100%;
 }
 
-/* === 纹理系统 === */
+/* === 绾圭悊绯荤粺 === */
 .texture-paper {
   background-color: var(--nook-paper);
   background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.06'/%3E%3C/svg%3E");
@@ -837,7 +837,7 @@ body {
     repeating-linear-gradient(90deg, transparent, transparent 5px, rgba(160,130,90,0.04) 5px, rgba(160,130,90,0.04) 6px);
 }
 
-/* === 减少动画偏好 === */
+/* === 鍑忓皯鍔ㄧ敾鍋忓ソ === */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -849,11 +849,10 @@ body {
 }
 
 /* ============================================
-   ƴ����Ŀ���ݱ������䣨NookUI δ���嵫���������
-   ============================================ */
+   拼锟斤拷锟斤拷目锟斤拷锟捷憋拷锟斤拷锟斤拷锟戒（NookUI 未锟斤拷锟藉但锟斤拷锟斤拷锟斤拷锟斤拷锟?   ============================================ */
 
 :root {
-  /* ��������չɫ */
+  /* 锟斤拷锟斤拷锟斤拷锟斤拷展色 */
   --ac-pink:        #FFB7C5;
   --ac-pink-dark:   #E89AA8;
   --ac-lavender:    #C7B8E6;
@@ -861,17 +860,17 @@ body {
   --ac-mint:        #B5EAD7;
   --ac-peach:       #FFDAC1;
 
-  /* ������� */
+  /* 锟斤拷锟斤拷锟斤拷锟?*/
   --text-main:      var(--text-primary);
   --text-caption:   var(--text-muted);
 
-  /* ����� */
+  /* 锟斤拷锟斤拷锟?*/
   --bg-base:        var(--nook-cream);
   --surface:        rgba(255, 255, 255, 0.92);
   --surface-solid:  #ffffff;
   --surface-hover:  rgba(93, 64, 55, 0.06);
 
-  /* ͸����ɫ�� */
+  /* 透锟斤拷锟斤拷色锟斤拷 */
   --nook-pink-5:   rgba(43, 180, 171, 0.02);
   --nook-pink-15:  rgba(43, 180, 171, 0.06);
   --nook-mint-8:   rgba(43, 180, 171, 0.03);
@@ -881,18 +880,18 @@ body {
   --nook-lemon-8:  rgba(255, 207, 1, 0.03);
   --nook-lemon-20: rgba(255, 207, 1, 0.08);
 
-  /* ���� */
+  /* 锟斤拷锟斤拷 */
   --grad-pink-coral:    linear-gradient(135deg, #FFB7C5, #FC4D50);
   --grad-sky-mint:      linear-gradient(135deg, #1591D1, #2BB4AB);
   --grad-lemon-peach:   linear-gradient(135deg, #FFCF01, #FFDAC1);
   --grad-lavender-pink: linear-gradient(135deg, #C7B8E6, #FFB7C5);
   --grad-mint-sky:      linear-gradient(135deg, #2BB4AB, #1591D1);
 
-  /* ������Ӱ */
+  /* 锟斤拷锟斤拷锟斤拷影 */
   --shadow-glow:    0 0 20px rgba(43, 180, 171, 0.15);
   --shadow-inset:   inset 0 2px 4px rgba(93, 64, 55, 0.06);
 
-  /* �����ݱ�����ƴ���������ʹ�ã� */
+  /* 锟斤拷锟斤拷锟捷憋拷锟斤拷锟斤拷拼锟斤拷锟斤拷锟斤拷锟斤拷锟绞癸拷茫锟?*/
   --dop-pink:      var(--ac-pink);
   --dop-coral:     var(--ac-coral);
   --dop-lemon:     var(--ac-yellow);
@@ -913,7 +912,7 @@ body {
   --nook-coral:    var(--ac-coral);
   --nook-warning:  var(--ac-yellow-dark);
 }
-/* 基础容器 */
+/* 鍩虹瀹瑰櫒 */
 .nookui {
   font-family: var(--font-family);
   color: var(--text-main);
@@ -921,14 +920,14 @@ body {
   min-height: 100vh;
 }
 
-/* ─── 面板骨架 ─── */
+/* 鈹€鈹€鈹€ 闈㈡澘楠ㄦ灦 鈹€鈹€鈹€ */
 .nook-panel {
   background: var(--surface-solid);
   border-radius: var(--radius-md);
   border: 1px solid var(--nook-wood-light);
 }
 
-/* ─── 按钮骨架 ─── */
+/* 鈹€鈹€鈹€ 鎸夐挳楠ㄦ灦 鈹€鈹€鈹€ */
 .nook-btn {
   padding: 6px 16px;
   border-radius: var(--radius-sm);
@@ -974,7 +973,7 @@ body {
   color: var(--text-primary);
 }
 
-/* ─── 输入框骨�?─── */
+/* 鈹€鈹€鈹€ 杈撳叆妗嗛锟?鈹€鈹€鈹€ */
 .nook-input {
   background: var(--surface-solid);
   border: 1px solid var(--nook-wood);
@@ -1011,24 +1010,98 @@ body {
   width: 100%;
 }
 
-/* ─── dop 下拉选择�?─── */
+/* 鈹€鈹€鈹€ dop 涓嬫媺閫夋嫨锟?鈹€鈹€鈹€ */
 
-/* ─── 滑块骨架 ─── */
+/* 鈹€鈹€鈹€ 婊戝潡楠ㄦ灦 鈹€鈹€鈹€ */
 .nook-slider {
   width: 100%;
-  accent-color: var(--text-secondary);
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--nook-wood-light);
+  outline: none;
+  cursor: pointer;
+}
+.nook-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  border: 2px solid var(--theme-draw);
+  box-shadow: 0 1px 4px rgba(43, 180, 171, 0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.nook-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(43, 180, 171, 0.4);
+}
+.nook-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  border: 2px solid var(--theme-draw);
+  box-shadow: 0 1px 4px rgba(43, 180, 171, 0.3);
+  cursor: pointer;
 }
 
-/* ─── 标签骨架 ─── */
+/* 鈹€鈹€鈹€ 鏍囩楠ㄦ灦 鈹€鈹€鈹€ */
 .nook-label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--text-muted);
   display: block;
   margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
-/* ─── 图层骨架 ─── */
+/* 鈹€鈹€鈹€ 缁樺埗妯″紡闈㈡澘楠ㄦ灦 鈹€鈹€鈹€ */
+.nook-draw-panel {
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--theme-draw-light-5);
+  box-shadow: 0 1px 4px rgba(43, 180, 171, 0.08);
+  overflow: hidden;
+}
+.nook-draw-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--theme-draw-light-5);
+  background: var(--theme-draw-light-9);
+  cursor: pointer;
+  user-select: none;
+}
+.nook-draw-panel-header-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--theme-draw-dark-2);
+}
+
+/* 鈹€鈹€鈹€ 閫夐」琛岄鏋?鈹€鈹€鈹€ */
+.nook-option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s;
+}
+.nook-option-row:hover {
+  background: var(--bg-surface-alt);
+}
+.nook-option-row-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+/* 鈹€鈹€鈹€ 鍥惧眰楠ㄦ灦 鈹€鈹€鈹€ */
 .nook-layer {
   padding: 8px 12px;
   border-radius: var(--radius-sm);
@@ -1056,7 +1129,7 @@ body {
   background: var(--nook-wood);
 }
 
-/* ─── 色板骨架 ─── */
+/* 鈹€鈹€鈹€ 鑹叉澘楠ㄦ灦 鈹€鈹€鈹€ */
 .nook-swatch {
   width: 28px; height: 28px;
   border-radius: var(--radius-full);
@@ -1064,7 +1137,7 @@ body {
   border: 2px solid var(--nook-wood);
 }
 
-/* ─── 浮动缩放控件 ─── */
+/* 鈹€鈹€鈹€ 娴姩缂╂斁鎺т欢 鈹€鈹€鈹€ */
 .nook-float-zoom {
   position: fixed;
   display: flex;
@@ -1074,28 +1147,28 @@ body {
   z-index: 50;
 }
 
-/* ─── 工具�?─── */
+/* 鈹€鈹€鈹€ 宸ュ叿锟?鈹€鈹€鈹€ */
 .nook-flex-center { display: flex; align-items: center; justify-content: center; }
 .nook-flex-between { display: flex; align-items: center; justify-content: space-between; }
 .nook-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ============================================
-   补充：dop-* / nook-* 缺失类名的基本骨架样�?
-   确保所有组件元素能正常显示层级和结�?
+   琛ュ厖锛歞op-* / nook-* 缂哄け绫诲悕鐨勫熀鏈鏋舵牱锟?
+   纭繚鎵€鏈夌粍浠跺厓绱犺兘姝ｅ父鏄剧ず灞傜骇鍜岀粨锟?
    ============================================ */
 
-/* ─── dop 布局工具 ─── */
+/* 鈹€鈹€鈹€ dop 甯冨眬宸ュ叿 鈹€鈹€鈹€ */
 
-/* ─── dop 面板 ─── */
+/* 鈹€鈹€鈹€ dop 闈㈡澘 鈹€鈹€鈹€ */
 
-/* ─── dop 卡片 ─── */
+/* 鈹€鈹€鈹€ dop 鍗＄墖 鈹€鈹€鈹€ */
 .dop-card {
   background: var(--surface-solid);
   border: 1px solid var(--nook-wood-light);
   border-radius: var(--radius-md);
 }
 
-/* ─── dop 面板卡片 ─── */
+/* 鈹€鈹€鈹€ dop 闈㈡澘鍗＄墖 鈹€鈹€鈹€ */
 .dop-panel-card {
   background: var(--surface-solid);
   border: 1px solid var(--nook-wood-light);
@@ -1125,13 +1198,13 @@ body {
   padding: 12px;
 }
 
-/* ─── dop 按钮 ─── */
+/* 鈹€鈹€鈹€ dop 鎸夐挳 鈹€鈹€鈹€ */
 
-/* ─── dop 输入�?─── */
+/* 鈹€鈹€鈹€ dop 杈撳叆锟?鈹€鈹€鈹€ */
 
-/* ─── dop 滑块 ─── */
+/* 鈹€鈹€鈹€ dop 婊戝潡 鈹€鈹€鈹€ */
 
-/* ─── dop 开�?─── */
+/* 鈹€鈹€鈹€ dop 寮€锟?鈹€鈹€鈹€ */
 .dop-switch {
   appearance: none;
   width: 40px; height: 22px;
@@ -1157,11 +1230,11 @@ body {
   left: 20px;
 }
 
-/* ─── dop 工具按钮 ─── */
+/* 鈹€鈹€鈹€ dop 宸ュ叿鎸夐挳 鈹€鈹€鈹€ */
 
-/* ─── dop 颜色方块 ─── */
+/* 鈹€鈹€鈹€ dop 棰滆壊鏂瑰潡 鈹€鈹€鈹€ */
 
-/* ─── dop 进度�?─── */
+/* 鈹€鈹€鈹€ dop 杩涘害锟?鈹€鈹€鈹€ */
 .dop-progress {
   width: 100%;
   height: 8px;
@@ -1176,7 +1249,7 @@ body {
   transition: width 0.3s;
 }
 
-/* ─── dop 徽章 ─── */
+/* 鈹€鈹€鈹€ dop 寰界珷 鈹€鈹€鈹€ */
 .dop-badge {
   display: inline-flex;
   align-items: center;
@@ -1189,7 +1262,7 @@ body {
   color: var(--text-secondary);
 }
 
-/* ─── dop 警告�?─── */
+/* 鈹€鈹€鈹€ dop 璀﹀憡锟?鈹€鈹€鈹€ */
 .dop-alert {
   display: flex;
   align-items: center;
@@ -1204,7 +1277,7 @@ body {
 .dop-alert-warning { background: var(--nook-paper); color: var(--text-secondary); }
 .dop-alert-danger  { background: var(--nook-paper); color: var(--text-secondary); }
 
-/* ─── nook 图例 ─── */
+/* 鈹€鈹€鈹€ nook 鍥句緥 鈹€鈹€鈹€ */
 .nook-legend {
   display: flex;
   flex-wrap: wrap;
@@ -1230,15 +1303,15 @@ body {
   flex-shrink: 0;
 }
 
-/* ─── dop 图层�?─── */
+/* 鈹€鈹€鈹€ dop 鍥惧眰锟?鈹€鈹€鈹€ */
 
-/* ─── dop 图层缩略�?─── */
+/* 鈹€鈹€鈹€ dop 鍥惧眰缂╃暐锟?鈹€鈹€鈹€ */
 
-/* ─── dop 浮动缩放 ─── */
+/* 鈹€鈹€鈹€ dop 娴姩缂╂斁 鈹€鈹€鈹€ */
 
-/* ─── dop 上传�?─── */
+/* 鈹€鈹€鈹€ dop 涓婁紶锟?鈹€鈹€鈹€ */
 
-/* ─── PS 画布区域 ─── */
+/* 鈹€鈹€鈹€ PS 鐢诲竷鍖哄煙 鈹€鈹€鈹€ */
 .nook-ps-canvas-area {
   flex: 1;
   display: flex;
@@ -1250,7 +1323,7 @@ body {
     radial-gradient(circle at 80% 70%, rgba(0, 0, 0, 0.015) 0%, transparent 40%);
 }
 
-/* ─── dop 画布 ─── */
+/* 鈹€鈹€鈹€ dop 鐢诲竷 鈹€鈹€鈹€ */
 .dop-canvas {
   background: var(--surface-solid);
   border: 1px solid var(--nook-wood-light);
@@ -1262,7 +1335,7 @@ body {
   min-height: min-content;
 }
 
-/* ─── dop 弹窗 ─── */
+/* 鈹€鈹€鈹€ dop 寮圭獥 鈹€鈹€鈹€ */
 .dop-modal-overlay {
   position: fixed;
   inset: 0;
@@ -1323,10 +1396,10 @@ body {
   border-top: 1px solid var(--nook-wood-light);
 }
 
-/* ─── dop 动画占位 ─── */
+/* 鈹€鈹€鈹€ dop 鍔ㄧ敾鍗犱綅 鈹€鈹€鈹€ */
 .dop-anim-float { }
 
-/* ─── nook PS 状态栏 ─── */
+/* 鈹€鈹€鈹€ nook PS 鐘舵€佹爮 鈹€鈹€鈹€ */
 .nook-ps-statusbar {
   display: flex;
   align-items: center;
@@ -1354,7 +1427,7 @@ body {
   background: var(--nook-wood-light);
 }
 
-/* ─── nook PS 缩放控件 ─── */
+/* 鈹€鈹€鈹€ nook PS 缂╂斁鎺т欢 鈹€鈹€鈹€ */
 .nook-ps-zoom-control {
   display: flex;
   align-items: center;
@@ -1373,7 +1446,7 @@ body {
   color: var(--text-muted);
 }
 
-/* ─── nook Toast ─── */
+/* 鈹€鈹€鈹€ nook Toast 鈹€鈹€鈹€ */
 .nook-toast-content {
   display: flex;
   align-items: flex-start;
@@ -1439,4 +1512,24 @@ body {
   justify-content: center;
   margin: 0 auto 8px;
   color: var(--text-muted);
+}
+
+/* ─── nook Tooltip (Radix UI) ─── */
+.dop-tooltip-content {
+  z-index: 9999;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--nook-brown);
+  color: var(--nook-cream);
+  font-family: var(--font-family);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  box-shadow: 0 4px 12px rgba(93, 64, 55, 0.25);
+  animation: nook-tooltip-in 0.15s var(--ease-bounce) forwards;
+}
+
+@keyframes nook-tooltip-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
 }

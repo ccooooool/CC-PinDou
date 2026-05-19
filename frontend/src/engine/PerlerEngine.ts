@@ -367,17 +367,49 @@ export class PerlerEngine {
   ): { grid: GridCell[][]; colorMap: Map<string, ColorInfo> } {
     const { width, height } = imageData;
 
+    // 计算保持原比例的绘制区域（横幅水平铺满垂直居中，竖条垂直铺满水平居中）
+    let drawW: number;
+    let drawH: number;
+    let offsetX: number;
+    let offsetY: number;
+
+    if (width >= height) {
+      drawW = gridSize;
+      drawH = Math.round((gridSize * height) / width);
+      offsetX = 0;
+      offsetY = Math.floor((gridSize - drawH) / 2);
+    } else {
+      drawH = gridSize;
+      drawW = Math.round((gridSize * width) / height);
+      offsetX = Math.floor((gridSize - drawW) / 2);
+      offsetY = 0;
+    }
+
     const grid: GridCell[][] = [];
     const colorMap = new Map<string, ColorInfo>();
 
     for (let gy = 0; gy < gridSize; gy++) {
       const row: GridCell[] = [];
       for (let gx = 0; gx < gridSize; gx++) {
-        // 使用 Math.round 精确划分像素边界，避免浮点数累积误差导致采样偏移
-        const sx = Math.round(gx * width / gridSize);
-        const sy = Math.round(gy * height / gridSize);
-        const sxNext = Math.round((gx + 1) * width / gridSize);
-        const syNext = Math.round((gy + 1) * height / gridSize);
+        // 有效绘制区域外的格子设为透明
+        if (gx < offsetX || gx >= offsetX + drawW || gy < offsetY || gy >= offsetY + drawH) {
+          row.push({
+            x: gx,
+            y: gy,
+            color: 'transparent',
+            codes: {},
+          });
+          continue;
+        }
+
+        // 在有效区域内，从图片对应位置采样
+        const localX = gx - offsetX;
+        const localY = gy - offsetY;
+
+        const sx = Math.round((localX * width) / drawW);
+        const sy = Math.round((localY * height) / drawH);
+        const sxNext = Math.round(((localX + 1) * width) / drawW);
+        const syNext = Math.round(((localY + 1) * height) / drawH);
         const sw = Math.max(1, sxNext - sx);
         const sh = Math.max(1, syNext - sy);
 

@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useEditorStore } from '../store/useEditorStore';
 import { useConfigStore } from '../store/useConfigStore';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import colorMappingJson from '../data/colorSystemMapping.json';
 import type { ColorMapping } from '../types/perler';
 
@@ -72,34 +73,60 @@ export function ColorPickerPopover() {
   return (
     <div className="relative">
       {/* 颜色方块 */}
-      <button
-        ref={buttonRef}
-        onClick={handleToggle}
-        title="选择颜色"
-        className="relative flex-shrink-0 overflow-hidden cursor-pointer"
-        style={{
-          width: 28,
-          height: 28,
-          borderRadius: 'var(--radius-sm)',
-          border: '1px solid var(--nook-wood)',
-          backgroundColor: isTransparent ? '#fff' : selectedColor?.hex || '#E8E8F0',
-          transition: 'transform 0.1s, box-shadow 0.15s',
-          boxShadow: open ? '0 0 0 2px var(--text-secondary)' : undefined,
-        }}
-      >
-        {isTransparent && (
-          <div
-            className="w-full h-full"
-            style={{
-              backgroundImage: 'repeating-conic-gradient(#ddd 0% 25%, #fff 0% 50%)',
-              backgroundSize: '8px 8px',
+      <Tooltip delayDuration={400}>
+        <TooltipTrigger asChild>
+          <button
+            ref={buttonRef}
+            onClick={handleToggle}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              handleToggle();
             }}
-          />
-        )}
-      </button>
+            className="relative flex-shrink-0 overflow-hidden cursor-pointer"
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--nook-wood)',
+              backgroundColor: isTransparent ? '#fff' : selectedColor?.hex || '#fff',
+              transition: 'transform 0.1s, box-shadow 0.15s',
+              boxShadow: open ? '0 0 0 2px var(--text-secondary)' : undefined,
+            }}
+          >
+            {(isTransparent || !selectedColor) && (
+              <div
+                className="w-full h-full"
+                style={{
+                  backgroundImage: 'repeating-conic-gradient(#ddd 0% 25%, #fff 0% 50%)',
+                  backgroundSize: '8px 8px',
+                }}
+              />
+            )}
+            <svg
+              className="absolute opacity-60 pointer-events-none"
+              width="5"
+              height="5"
+              viewBox="0 0 5 5"
+              style={{
+                bottom: 2,
+                right: 2,
+                filter: isTransparent || !selectedColor ? 'none' : 'drop-shadow(0 0.5px 0.5px rgba(0,0,0,0.5))',
+              }}
+            >
+              <polygon
+                points="0,5 5,5 5,0"
+                fill={isTransparent || !selectedColor ? 'var(--text-muted)' : '#fff'}
+              />
+            </svg>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" sideOffset={8}>
+          选择颜色工具
+        </TooltipContent>
+      </Tooltip>
       {/* 当前色号 */}
       <div className="text-[10px] font-medium text-[var(--text-muted)] text-center mt-1 max-w-[28px] overflow-hidden text-ellipsis whitespace-nowrap">
-        {selectedColor?.codes?.[brand] || (selectedColor?.hex === 'transparent' ? '透明' : '')}
+        {selectedColor?.codes?.[brand] || (selectedColor?.hex === 'transparent' ? '透明' : '无')}
       </div>
 
       {/* Popover 面板 */}
@@ -114,19 +141,28 @@ export function ColorPickerPopover() {
             maxHeight: 420,
           }}
         >
-          {/* 顶部全色/221色切换*/}
+          {/* 顶部全色/221色切换 */}
           <div className="flex gap-1 px-3 py-2.5 border-b border-[var(--border-subtle)]">
             <button
               onClick={() => setColorMode('full')}
-              className={`nook-btn flex-1 ${colorMode === 'full' ? 'nook-btn-primary' : 'nook-btn-secondary'}`}
+              className={`nook-btn flex-1 text-xs py-1.5 transition-all duration-150 ${
+                colorMode === 'full'
+                  ? 'nook-btn-primary shadow-[0_1px_6px_rgba(43,180,171,0.25)]'
+                  : 'nook-btn-secondary'
+              }`}
             >
               全色
             </button>
             <button
               onClick={() => setColorMode('221')}
-              className={`nook-btn flex-1 ${colorMode === '221' ? 'nook-btn-primary' : 'nook-btn-secondary'}`}
+              className={`nook-btn flex-1 text-xs py-1.5 transition-all duration-150 ${
+                colorMode === '221'
+                  ? 'nook-btn-primary shadow-[0_1px_6px_rgba(43,180,171,0.25)]'
+                  : 'nook-btn-secondary'
+              }`}
             >
-              221色            </button>
+              221色
+            </button>
           </div>
 
           {/* 颜色网格 */}
@@ -149,10 +185,11 @@ export function ColorPickerPopover() {
                       width: 28,
                       height: 28,
                       borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--nook-wood)',
+                      border: isSelected ? '2px solid var(--theme-draw)' : '1px solid var(--nook-wood)',
                       background: color.hex,
-                      transition: 'transform 0.1s, box-shadow 0.15s',
-                      boxShadow: isSelected ? '0 0 0 2px var(--text-secondary)' : undefined,
+                      transition: 'transform 0.1s, box-shadow 0.15s, border-color 0.15s',
+                      boxShadow: isSelected ? '0 0 0 3px var(--theme-draw-light-7), 0 2px 6px rgba(43,180,171,0.2)' : undefined,
+                      transform: isSelected ? 'scale(1.08)' : undefined,
                     }}
                   />
                   <span

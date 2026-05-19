@@ -6,7 +6,8 @@ import { ParamPanel } from './components/ParamPanel';
 import { PixelPanel } from './components/PixelPanel';
 
 import { DrawToolBar } from './components/DrawToolBar';
-import { LayerPanel } from './components/LayerPanel';
+import { BeadLayerPanel } from './components/BeadLayerPanel';
+import { ImageLayerPanel } from './components/ImageLayerPanel';
 import { ModeTabs } from './components/ModeTabs';
 import { CanvasEditor } from './components/CanvasEditor';
 import { Toolbar } from './components/Toolbar';
@@ -23,10 +24,11 @@ import { useConfigStore } from './store/useConfigStore';
 import { useImageUpload } from './hooks/useImageUpload';
 import { usePatternGenerator } from './hooks/usePatternGenerator';
 import { TooltipProvider } from './components/ui/tooltip';
-import { Loader2, Wand2, Trash2, Image, ClipboardPenLine } from 'lucide-react';
+import { Loader2, Wand2, Trash2, Image, ClipboardPenLine, X } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { useBackendHealth } from './hooks/useBackendHealth';
 import { getModeTheme } from './utils/theme';
+import { cn } from '@/lib/utils';
 import { Skeleton } from './components/ui/skeleton';
 import ModeBackground from './components/ModeBackground';
 import { triggerViewTransition, DEFAULT_COLORS } from './utils/viewTransition';
@@ -51,7 +53,7 @@ function App({ variant = 'full' }: AppProps) {
     handleBgRemoved: onBgRemovedRaw,
     clearImages,
   } = useImageUpload();
-  const { gridSize, colorSimplify, enhanceLines, colorMode } = useConfigStore();
+  const { gridSize, colorSimplify, enhanceLines, colorMode, generateAlgorithm } = useConfigStore();
   const { setGridData } = useEditorStore();
 
   const {
@@ -66,10 +68,12 @@ function App({ variant = 'full' }: AppProps) {
     colorSimplify,
     enhanceLines,
     colorMode,
+    generateAlgorithm,
     onSuccess: useCallback((grid, colors) => setGridData(grid, colors), [setGridData]),
   });
   const [activeTab, setActiveTab] = useState<'removeBg' | 'generate'>('generate');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showEditTip, setShowEditTip] = useState(true);
   const navigate = useNavigate();
   const { mode: urlMode } = useParams<{ mode: string }>();
   const mode = (urlMode as 'normal' | 'pixel' | 'draw') || 'normal';
@@ -165,6 +169,7 @@ function App({ variant = 'full' }: AppProps) {
     triggerViewTransition(() => {
       setGridData([], []);
       clearImages();
+      useEditorStore.setState({ layers: [], activeLayerId: null });
       useConfigStore.setState({ pixelImageUrl: null });
       navigate(`/${basePath}/${targetMode}`, { replace: true });
       setModeSwitchConfirm({ open: false, targetMode: '' });
@@ -198,6 +203,7 @@ function App({ variant = 'full' }: AppProps) {
   const handleClearImage = useCallback(() => {
     clearImages();
     setGridData([], []);
+    useEditorStore.setState({ layers: [], activeLayerId: null });
     setShowClearConfirm(false);
   }, [clearImages, setGridData]);
 
@@ -212,8 +218,9 @@ function App({ variant = 'full' }: AppProps) {
       {/* 主体内容 */}
       <div className="flex flex-1 overflow-hidden relative">
         {/* 左侧栏 */}
+        {(mode !== 'draw' || gridData) && (
         <aside
-          className="bg-[var(--bg-surface)] border-r border-[var(--border-subtle)] overflow-x-hidden z-20 shrink-0"
+          className="bg-[var(--bg-surface)] border-r border-[var(--border-subtle)] overflow-x-hidden z-[40] shrink-0"
           style={{
             width: mode === 'draw' ? 48 : 320,
             minWidth: mode === 'draw' ? 48 : 320,
@@ -346,6 +353,7 @@ function App({ variant = 'full' }: AppProps) {
             </div>
           )}
         </aside>
+        )}
 
 
 
@@ -389,50 +397,71 @@ function App({ variant = 'full' }: AppProps) {
               <ModeBackground mode={mode} />
             </div>
             <CanvasEditor onImageSelect={handleImageSelect} />
+            {/* 绘制模式下缩放条放在画板区域内 */}
+            {gridData && mode === 'draw' && (
+              <FloatingZoom className="!absolute bottom-4 right-4 z-50" />
+            )}
           </div>
 
-          {/* 悬浮缩放 */}
+          {/* 悬浮缩放（normal / pixel 模式） */}
           {gridData && mode !== 'draw' && <FloatingZoom />}
 
           {/* 图例区（draw 模式下隐藏） */}
           {mode !== 'draw' && <LegendBar />}
-        </main>
 
-        {/* 右侧栏 */}
-        {mode === 'draw' ? (
-          <aside
-            className="p-3 gap-3 flex flex-col w-[280px] min-w-[280px] overflow-y-auto overflow-x-hidden flex-shrink-0 z-20 bg-[var(--bg-surface)] border-l border-[var(--border-subtle)]"
-          >
-            {gridData && <div className="nook-panel"><EditPanel colorMapping={colorMappingData} /></div>}
-            <div className="nook-panel"><LayerPanel /></div>
-          </aside>
-        ) : gridData ? (
-          <aside
-            className="p-3 flex flex-col w-[200px] min-w-[200px] overflow-y-auto overflow-x-hidden flex-shrink-0 z-20 bg-[var(--bg-surface)] border-l border-[var(--border-subtle)]"
-          >
-            <div className="nook-panel">
-              <div className="px-4 py-3 flex flex-col gap-3">
-                <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide flex items-center gap-1.5">
-                  <span className="w-1 h-3 rounded-full" style={{ background: theme.main }} />
-                  自由绘制
-                </div>
-                <p className="text-xs text-[var(--text-body)] leading-relaxed">
-                  进入自由绘制模式，可对图案进行手动编辑、颜色填充、魔法棒选区等操作。
-                </p>
+          {/* 浮动提示：进入自由绘制 */}
+          {gridData && mode !== 'draw' && showEditTip && (
+            <div className="absolute top-16 right-4 z-20 w-[220px]">
+              <div className="nook-panel relative">
                 <button
-                  className="nook-btn nook-btn-primary text-xs justify-center"
-                  style={{ background: theme.main, borderColor: theme.light5 }}
-                  onClick={() => {
-                    const basePath = isSimple ? '/simple' : '/full';
-                    navigate(`${basePath}/draw`);
-                  }}
+                  className="absolute top-2 right-2 p-1 rounded-full hover:bg-black/5 transition-colors"
+                  onClick={() => setShowEditTip(false)}
                 >
-                  进入编辑
+                  <X className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                 </button>
+                <div className="px-4 py-3 flex flex-col gap-2.5 pr-8">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1 h-3 rounded-full" style={{ background: theme.main }} />
+                    <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">
+                      自由绘制
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--text-body)] leading-relaxed">
+                    进入自由绘制模式，可对图案进行手动编辑、颜色填充、魔法棒选区等操作。
+                  </p>
+                  <button
+                    className="nook-btn nook-btn-primary text-xs justify-center"
+                    style={{ background: theme.main, borderColor: theme.light5 }}
+                    onClick={() => {
+                      const basePath = isSimple ? '/simple' : '/full';
+                      navigate(`${basePath}/draw`);
+                    }}
+                  >
+                    进入编辑
+                  </button>
+                </div>
               </div>
             </div>
+          )}
+        </main>
+
+        {/* 右侧栏 — 仅绘制模式且存在画板数据时显示 */}
+        {mode === 'draw' && gridData && (
+          <aside
+            className={cn(
+              'flex flex-col w-[280px] min-w-[280px] overflow-y-auto overflow-x-hidden flex-shrink-0 z-20 border-l-[3px]',
+              mode === 'normal' && 'bg-[var(--theme-normal-light-9)] border-l-[var(--theme-normal)]',
+              mode === 'pixel' && 'bg-[var(--theme-pixel-light-9)] border-l-[var(--theme-pixel)]',
+              mode === 'draw' && 'bg-[var(--theme-draw-light-9)] border-l-[var(--theme-draw)]',
+            )}
+          >
+            {gridData && <EditPanel colorMapping={colorMappingData} />}
+            {gridData && <div className="h-[2px] bg-[var(--border-strong)] mx-4 rounded-full my-1" />}
+            <BeadLayerPanel />
+            <div className="h-[2px] bg-[var(--border-strong)] mx-4 rounded-full my-1" />
+            <ImageLayerPanel />
           </aside>
-        ) : null}
+        )}
       </div>
 
       {/* 模式切换确认弹窗 */}

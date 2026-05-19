@@ -1,6 +1,13 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 import { useEditorStore } from '../store/useEditorStore';
 import { useUIStore } from '../store/useUIStore';
+import { useConfigStore } from '../store/useConfigStore';
+import { PerlerEngine } from '../engine/PerlerEngine';
+import colorMappingJson from '../data/colorSystemMapping.json';
+import type { ColorMapping, ColorInfo } from '../types/perler';
+import { toast } from '@/components/ui/toast';
+
+const colorMappingData = colorMappingJson as ColorMapping;
 
 export function useCanvasInteractions(
   getGridXY: (e: MouseEvent | React.MouseEvent) => { x: number; y: number } | null,
@@ -32,6 +39,13 @@ export function useCanvasInteractions(
   const drawTool = useUIStore((s) => s.drawTool);
   const shapeFilled = useUIStore((s) => s.shapeFilled);
   const brushSize = useUIStore((s) => s.brushSize);
+  const colorMode = useConfigStore((s) => s.colorMode);
+  const setSelectedColor = useEditorStore((s) => s.setSelectedColor);
+
+  const engineRef = useRef<PerlerEngine | null>(null);
+  useEffect(() => {
+    engineRef.current = new PerlerEngine(colorMappingData, colorMode);
+  }, [colorMode]);
 
   const [isBatchPainting, setIsBatchPainting] = useState(false);
   const batchPositionsRef = useRef<Array<{ x: number; y: number; oldColor: string; oldCodes: Record<string, string>; newColor: string; newCodes: Record<string, string> }>>([]);
@@ -49,6 +63,11 @@ export function useCanvasInteractions(
   const drawStartRef = useRef<{ x: number; y: number } | null>(null);
   const lastPosRef = useRef<{ x: number; y: number } | null>(null);
   const imageDragStartRef = useRef<{ x: number; y: number; transformX: number; transformY: number } | null>(null);
+  const beadDragStartRef = useRef<{ x: number; y: number; transformX: number; transformY: number } | null>(null);
+
+  // 吸管工具：图片图层按住预览，松开吸色
+  const eyedropperPreviewRef = useRef<{ active: boolean; startX: number; startY: number } | null>(null);
+  const lastPixelPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // ─── 各工具鼠标按下处理子函数 ───
 
@@ -120,6 +139,15 @@ export function useCanvasInteractions(
     }
   };
 
+  const handleBeadLayerDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    beadDragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      transformX: 0,
+      transformY: 0,
+    };
+  };
+
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const gd = gridDataRef.current;
@@ -133,9 +161,17 @@ export function useCanvasInteractions(
 
       if (e.button !== 0) return;
 
-      if (isImageLayer && !spacePressed) {
+      if (isImageLayer && !spacePressed && !activeLayerLocked && drawTool !== 'eyedropper') {
         handleImageLayerDown(e);
         e.preventDefault();
+        return;
+      }
+
+      if (drawTool === 'move' && !isImageLayer && !spacePressed) {
+        if (!activeLayerLocked) {
+          handleBeadLayerDown(e);
+          e.preventDefault();
+        }
         return;
       }
 
@@ -145,6 +181,52 @@ export function useCanvasInteractions(
       if (!pos) return;
 
       if (!isDrawMode) return;
+
+      if (drawTool === 'eyedropper') {
+        const state = useEditorStore.getState();
+        const layer = state.layers.find((l) => l.id === state.activeLayerId);
+        if (!layer) return;
+
+        if (layer.type === 'bead') {
+          const gd = state.gridData;
+          if (!gd) return;
+          const cell = gd[pos.y]?.[pos.x];
+          if (!cell || cell.color === 'transparent') {
+            toast.info('该位置为透明色');
+            return;
+          }
+          const colorInfo: ColorInfo = {
+            hex: cell.color,
+            count: 0,
+            codes: cell.codes,
+          };
+          setSelectedColor(colorInfo);
+          const brand = useConfigStore.getState().brand;
+          toast.success(`已吸取色号 ${cell.codes[brand] || cell.color}`);
+        } else if (layer.type === 'image') {
+          const canvas = e.target as HTMLCanvasElement;
+          const rect = canvas.getBoundingClientRect();
+          const scaleX = canvas.width / rect.width;
+          const scaleY = canvas.height / rect.height;
+          const px = Math.floor((e.clientX - rect.left) * scaleX);
+          const py = Math.floor((e.clientY - rect.top) * scaleY);
+          // 按住预览，等 mouseup 时才吸色
+          eyedropperPreviewRef.current = { active: true, startX: px, startY: py };
+          lastPixelPosRef.current = { x: px, y: py };
+        }
+        e.preventDefault();
+        return;
+      }
+
+      // 画笔类工具禁止无颜色/透明绘制（透明操作只属于橡皮擦）
+      if (
+        (drawTool === 'pen' || drawTool === 'line' || drawTool === 'rect' || drawTool === 'circle' || drawTool === 'fill' || drawTool === 'replace') &&
+        (!selectedColorRef.current || selectedColorRef.current.hex === 'transparent')
+      ) {
+        toast.error('请先选择一个颜色，透明绘制请使用橡皮擦');
+        e.preventDefault();
+        return;
+      }
 
       switch (drawTool) {
         case 'wand':
@@ -181,6 +263,71 @@ export function useCanvasInteractions(
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
+      // Image layer drag
+      if (imageDragStartRef.current && e.buttons === 1) {
+        const state = useEditorStore.getState();
+        const layer = state.layers.find((l) => l.id === state.activeLayerId);
+        if (layer && layer.type === 'image') {
+          const dx = e.clientX - imageDragStartRef.current.x;
+          const dy = e.clientY - imageDragStartRef.current.y;
+          state.updateImageTransform(layer.id, {
+            x: imageDragStartRef.current.transformX + dx,
+            y: imageDragStartRef.current.transformY + dy,
+          });
+          scheduleDrawGrid();
+        }
+        return;
+      }
+
+      // Bead layer drag (move tool) — 吸附网格 + 边界限制
+      if (beadDragStartRef.current && e.buttons === 1) {
+        const state = useEditorStore.getState();
+        const layer = state.layers.find((l) => l.id === state.activeLayerId);
+        if (layer && layer.type === 'bead' && layer.gridData) {
+          const beadSize = useConfigStore.getState().canvasConfig.beadSize;
+          const pixelDx = e.clientX - beadDragStartRef.current.x;
+          const pixelDy = e.clientY - beadDragStartRef.current.y;
+          let gridDx = Math.round(pixelDx / beadSize);
+          let gridDy = Math.round(pixelDy / beadSize);
+
+          // 边界限制：确保所有有颜色的格子不越界
+          const rows = layer.gridData.length;
+          const cols = layer.gridData[0].length;
+          let minDx = -Infinity, maxDx = Infinity, minDy = -Infinity, maxDy = Infinity;
+          for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+              if (layer.gridData[y][x].color === 'transparent') continue;
+              minDx = Math.max(minDx, -x);
+              maxDx = Math.min(maxDx, cols - 1 - x);
+              minDy = Math.max(minDy, -y);
+              maxDy = Math.min(maxDy, rows - 1 - y);
+            }
+          }
+          gridDx = Math.max(minDx, Math.min(gridDx, maxDx));
+          gridDy = Math.max(minDy, Math.min(gridDy, maxDy));
+
+          state.updateBeadLayerTransform(layer.id, {
+            x: gridDx * beadSize,
+            y: gridDy * beadSize,
+          });
+          scheduleDrawGrid();
+        }
+        return;
+      }
+
+      // Eyedropper 预览：跟踪鼠标像素位置（图片图层按住时）
+      if (eyedropperPreviewRef.current?.active && e.buttons === 1) {
+        const canvas = e.target as HTMLCanvasElement;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        lastPixelPosRef.current = {
+          x: Math.floor((e.clientX - rect.left) * scaleX),
+          y: Math.floor((e.clientY - rect.top) * scaleY),
+        };
+        return;
+      }
+
       if (isDragging && spacePressed) {
         onDragMove(e.clientX, e.clientY);
         return;
@@ -258,8 +405,56 @@ export function useCanvasInteractions(
   const handleMouseUp = useCallback(() => {
     stopDrag();
 
+    // Eyedropper：图片图层松开时执行吸色
+    if (eyedropperPreviewRef.current?.active) {
+      eyedropperPreviewRef.current.active = false;
+      const px = lastPixelPosRef.current?.x ?? eyedropperPreviewRef.current.startX;
+      const py = lastPixelPosRef.current?.y ?? eyedropperPreviewRef.current.startY;
+      lastPixelPosRef.current = null;
+
+      const canvasEl = document.querySelector('canvas');
+      if (canvasEl) {
+        const ctx2d = canvasEl.getContext('2d');
+        if (ctx2d) {
+          const imageData = ctx2d.getImageData(px, py, 1, 1);
+          const [r, g, b, a] = imageData.data;
+          if (a < 128) {
+            toast.info('该位置为透明色');
+          } else if (engineRef.current) {
+            const matchedHex = engineRef.current.nearestColor([r, g, b]);
+            const codes = colorMappingData[matchedHex] || {};
+            const colorInfo: ColorInfo = {
+              hex: matchedHex,
+              count: 0,
+              codes,
+            };
+            setSelectedColor(colorInfo);
+            const brand = useConfigStore.getState().brand;
+            toast.success(`已吸取色号 ${codes[brand] || matchedHex}`);
+          }
+        }
+      }
+      return;
+    }
+
     if (imageDragStartRef.current) {
       imageDragStartRef.current = null;
+      return;
+    }
+
+    if (beadDragStartRef.current) {
+      const state = useEditorStore.getState();
+      const layer = state.layers.find((l) => l.id === state.activeLayerId);
+      if (layer && layer.type === 'bead') {
+        const beadSize = useConfigStore.getState().canvasConfig.beadSize;
+        const gridDx = Math.round(layer.transform.x / beadSize);
+        const gridDy = Math.round(layer.transform.y / beadSize);
+        if (gridDx !== 0 || gridDy !== 0) {
+          state.moveLayerContent(layer.id, gridDx, gridDy);
+        }
+        state.updateBeadLayerTransform(layer.id, { x: 0, y: 0 });
+      }
+      beadDragStartRef.current = null;
       return;
     }
 
@@ -270,7 +465,11 @@ export function useCanvasInteractions(
       drawStartRef.current = null;
 
       const gd = gridDataRef.current;
-      if (!end || !gd || !selectedColorRef.current) return;
+      if (!end || !gd || !selectedColorRef.current) {
+        setShapePreview({ start: { x: 0, y: 0 }, end: { x: 0, y: 0 }, tool: 'line', enabled: false });
+        scheduleDrawGrid();
+        return;
+      }
       const rows = gd.length;
       const cols = gd[0].length;
       let points: Array<{ x: number; y: number }> = [];
@@ -296,24 +495,29 @@ export function useCanvasInteractions(
           }
         }
       } else if (drawTool === 'circle') {
+        // 第一点是圆周上的角，拉开距离为直径
         const dx = end.x - start.x;
         const dy = end.y - start.y;
-        const r = Math.round(Math.sqrt(dx * dx + dy * dy));
+        const centerX = (start.x + end.x) / 2;
+        const centerY = (start.y + end.y) / 2;
+        const r = Math.sqrt(dx * dx + dy * dy) / 2;
         if (r > 0) {
           if (shapeFilled) {
-            for (let y = -r; y <= r; y++) {
-              for (let x = -r; x <= r; x++) {
-                if (x * x + y * y <= r * r) {
-                  const px = start.x + x;
-                  const py = start.y + y;
-                  if (px >= 0 && px < cols && py >= 0 && py < rows) {
-                    points.push({ x: px, y: py });
-                  }
+            const minX = Math.max(0, Math.floor(centerX - r));
+            const maxX = Math.min(cols - 1, Math.ceil(centerX + r));
+            const minY = Math.max(0, Math.floor(centerY - r));
+            const maxY = Math.min(rows - 1, Math.ceil(centerY + r));
+            for (let y = minY; y <= maxY; y++) {
+              for (let x = minX; x <= maxX; x++) {
+                const distX = x - centerX;
+                const distY = y - centerY;
+                if (distX * distX + distY * distY <= r * r) {
+                  points.push({ x, y });
                 }
               }
             }
           } else {
-            const circlePoints = midPointCircle(start.x, start.y, r);
+            const circlePoints = midPointCircle(Math.round(centerX), Math.round(centerY), Math.round(r));
             const visited = new Set<string>();
             for (const p of circlePoints) {
               const key = `${p.x},${p.y}`;
@@ -342,9 +546,11 @@ export function useCanvasInteractions(
         }
         if (records.length > 0) {
           pushHistory({ type: 'batch_paint', layerId: activeLayerId || 'default', positions: records });
-          scheduleDrawGrid();
         }
       }
+      // 主动清除 shape preview，避免虚线残留
+      setShapePreview({ start: { x: 0, y: 0 }, end: { x: 0, y: 0 }, tool: 'line', enabled: false });
+      scheduleDrawGrid();
       return;
     }
 
@@ -382,8 +588,55 @@ export function useCanvasInteractions(
     };
 
     const handleGlobalMouseUp = () => {
+      // Eyedropper：在 canvas 外松开时也执行吸色
+      if (eyedropperPreviewRef.current?.active) {
+        eyedropperPreviewRef.current.active = false;
+        const px = lastPixelPosRef.current?.x ?? eyedropperPreviewRef.current.startX;
+        const py = lastPixelPosRef.current?.y ?? eyedropperPreviewRef.current.startY;
+        lastPixelPosRef.current = null;
+
+        const canvasEl = document.querySelector('canvas');
+        if (canvasEl) {
+          const ctx2d = canvasEl.getContext('2d');
+          if (ctx2d) {
+            const imageData = ctx2d.getImageData(px, py, 1, 1);
+            const [r, g, b, a] = imageData.data;
+            if (a < 128) {
+              toast.info('该位置为透明色');
+            } else if (engineRef.current) {
+              const matchedHex = engineRef.current.nearestColor([r, g, b]);
+              const codes = colorMappingData[matchedHex] || {};
+              const colorInfo: ColorInfo = {
+                hex: matchedHex,
+                count: 0,
+                codes,
+              };
+              setSelectedColor(colorInfo);
+              const brand = useConfigStore.getState().brand;
+              toast.success(`已吸取色号 ${codes[brand] || matchedHex}`);
+            }
+          }
+        }
+        return;
+      }
+
       if (imageDragStartRef.current) {
         imageDragStartRef.current = null;
+        return;
+      }
+      if (beadDragStartRef.current) {
+        const state = useEditorStore.getState();
+        const layer = state.layers.find((l) => l.id === state.activeLayerId);
+        if (layer && layer.type === 'bead') {
+          const beadSize = useConfigStore.getState().canvasConfig.beadSize;
+          const gridDx = Math.round(layer.transform.x / beadSize);
+          const gridDy = Math.round(layer.transform.y / beadSize);
+          if (gridDx !== 0 || gridDy !== 0) {
+            state.moveLayerContent(layer.id, gridDx, gridDy);
+          }
+          state.updateBeadLayerTransform(layer.id, { x: 0, y: 0 });
+        }
+        beadDragStartRef.current = null;
         return;
       }
       if (isBatchPaintingRef.current || isDrawingRef.current) {
@@ -418,5 +671,6 @@ export function useCanvasInteractions(
     handleMouseUp,
     handleMouseLeave,
     imageDragStartRef,
+    beadDragStartRef,
   };
 }

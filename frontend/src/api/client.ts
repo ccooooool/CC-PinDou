@@ -67,6 +67,13 @@ export interface ExportRequest {
   format?: 'png' | 'jpg';
 }
 
+export interface GenerateResponse {
+  success: boolean;
+  grid_data: GridCell[][];
+  color_list: ColorInfo[];
+  grid_size: number;
+}
+
 // =============================================================================
 // API 方法
 // =============================================================================
@@ -124,6 +131,31 @@ export async function detectPixel(file: File): Promise<DetectPixelResponse> {
  */
 export async function getModels(): Promise<ModelsResponse> {
   const res = await fetch('/api/models');
+  throwIfError(res);
+  return res.json();
+}
+
+/**
+ * 普通图片模式图案生成（后端算法）
+ */
+export async function generatePattern(
+  file: File,
+  options: {
+    gridSize?: number;
+    colorSimplify?: number;
+    enhanceLines?: number;
+    colorMode?: 'full' | '221';
+  } = {}
+): Promise<GenerateResponse> {
+  const { gridSize = 50, colorSimplify = 0, enhanceLines = 0, colorMode = 'full' } = options;
+  const formData = new FormData();
+  formData.append('image', file);
+  formData.append('grid_size', String(gridSize));
+  formData.append('color_simplify', String(colorSimplify));
+  formData.append('enhance_lines', String(enhanceLines));
+  formData.append('color_mode', colorMode);
+
+  const res = await fetch('/api/generate', { method: 'POST', body: formData });
   throwIfError(res);
   return res.json();
 }

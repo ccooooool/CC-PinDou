@@ -96,6 +96,12 @@ export interface BeadLayer extends LayerBase {
   type: 'bead';
   gridData: GridCell[][];
   colorList: ColorInfo[];
+  transform: {
+    x: number;
+    y: number;
+    scale: number;
+    rotation: number;
+  };
 }
 
 /** 背景图片图层 */
@@ -105,9 +111,11 @@ export interface ImageLayer extends LayerBase {
   transform: {
     x: number;
     y: number;
-    scale: number;
+    scaleX: number;
+    scaleY: number;
     rotation: number;
   };
+  scaleLocked: boolean;
 }
 
 /** 图层联合类型 */

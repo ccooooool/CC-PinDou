@@ -42,14 +42,17 @@ export function ToolPropertiesPopover({ open, onClose, anchorEl, targetTool }: T
 
   const {
     drawTool,
-    brushSize,
-    shapeFilled,
+    brushSizes,
+    shapeFillMap,
     setBrushSize,
     setShapeFilled,
   } = useUIStore();
 
   const effectiveTool = targetTool || drawTool;
   const hasProps = effectiveTool === 'pen' || effectiveTool === 'eraser' || effectiveTool === 'line' || effectiveTool === 'rect' || effectiveTool === 'circle' || effectiveTool === 'replace';
+
+  const brushSize = brushSizes[effectiveTool] || 1;
+  const shapeFilled = shapeFillMap[effectiveTool] ?? (effectiveTool === 'rect' || effectiveTool === 'circle');
 
   useEffect(() => {
     if (!open) return;
@@ -68,6 +71,15 @@ export function ToolPropertiesPopover({ open, onClose, anchorEl, targetTool }: T
     }
   }, [hasProps, open, onClose]);
 
+  const TOOL_NAMES: Record<string, string> = {
+    pen: '笔刷',
+    line: '直线',
+    rect: '矩形',
+    circle: '圆形',
+    eraser: '橡皮',
+    replace: '替换',
+  };
+
   if (!open || !anchorEl || !hasProps) return null;
 
   const rect = anchorEl.getBoundingClientRect();
@@ -77,20 +89,28 @@ export function ToolPropertiesPopover({ open, onClose, anchorEl, targetTool }: T
   return (
     <div
       ref={popoverRef}
-      className="nook-panel fixed flex flex-col z-[100] p-3.5 gap-3"
+      className="nook-panel fixed flex flex-col z-[200] p-3.5 gap-3"
       style={{
         left,
         top,
         width: 220,
       }}
     >
+      {/* 工具名称标题 */}
+      <div className="flex items-center gap-2 text-sm font-bold text-[var(--theme-draw)] pb-2 border-b border-[var(--theme-draw-light-5)]">
+        <span className="w-5 h-5 rounded-md bg-[var(--theme-draw-light-9)] flex items-center justify-center text-[10px]">
+          {TOOL_NAMES[effectiveTool]?.charAt(0) || '?'}
+        </span>
+        {TOOL_NAMES[effectiveTool] || '工具'}设置
+      </div>
+
       {/* 笔刷粗细 */}
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-xs font-semibold text-[var(--text-main)]">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="nook-label mb-0">
             {effectiveTool === 'line' || effectiveTool === 'rect' || effectiveTool === 'circle' ? '线条粗细' : '笔刷大小'}
           </span>
-          <span className="text-xs font-semibold text-[var(--text-secondary)] min-w-[20px]">
+          <span className="text-xs font-bold text-[var(--theme-draw)] min-w-[20px] text-right">
             {brushSize}
           </span>
         </div>
@@ -101,20 +121,37 @@ export function ToolPropertiesPopover({ open, onClose, anchorEl, targetTool }: T
           max={5}
           step={1}
           value={brushSize}
-          onChange={(e) => setBrushSize(Number(e.target.value))}
+          onChange={(e) => setBrushSize(Number(e.target.value), effectiveTool)}
         />
+        {/* 大小预览点 */}
+        <div className="flex items-center justify-center gap-1 py-1">
+          {[1, 2, 3, 4, 5].map((s) => (
+            <div
+              key={s}
+              className="rounded-full transition-all"
+              style={{
+                width: 4 + s * 3,
+                height: 4 + s * 3,
+                background: s === brushSize ? 'var(--theme-draw)' : 'var(--nook-wood-light)',
+                transform: s === brushSize ? 'scale(1.2)' : 'scale(1)',
+              }}
+            />
+          ))}
+        </div>
       </div>
 
-      {/* 填充（仅 rect / circle）?*/}
+      {/* 填充（仅 rect / circle） */}
       {(effectiveTool === 'rect' || effectiveTool === 'circle') && (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between px-2 py-2 rounded-lg bg-[var(--bg-surface-alt)]">
           <span className="text-xs font-semibold text-[var(--text-main)]">内部填充</span>
           <button
-            onClick={() => setShapeFilled(!shapeFilled)}
-            className={`nook-btn w-10 h-[22px] rounded-full border-none cursor-pointer relative transition-colors p-0 ${shapeFilled ? 'nook-btn-primary' : 'nook-btn-secondary'}`}
+            onClick={() => setShapeFilled(!shapeFilled, effectiveTool)}
+            className={`relative w-10 h-[22px] rounded-full cursor-pointer transition-colors duration-200 ${
+              shapeFilled ? 'bg-[var(--theme-draw)]' : 'bg-[var(--nook-wood-light)]'
+            }`}
           >
             <div
-              className="w-[18px] h-[18px] rounded-full bg-[var(--bg-surface)] absolute top-0.5 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
+              className="w-[18px] h-[18px] rounded-full bg-[var(--bg-surface)] absolute top-[2px] transition-all duration-200 shadow-[0_1px_3px_rgba(0,0,0,0.2)]"
               style={{
                 left: shapeFilled ? 20 : 2,
               }}

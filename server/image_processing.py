@@ -125,17 +125,22 @@ def simplify_colors(img, simplify_level=0):
     else:
         analysis_img = rgb_img
 
+    # 转为 numpy 数组并做 4-bit 量化（与前端保持一致，使参数调整更敏感）
+    analysis_arr = np.array(analysis_img)
+    analysis_arr = (analysis_arr // 16) * 16
+
     # 排除透明像素后再分析主色
     if has_alpha:
         analysis_alpha = np.array(a.resize(analysis_img.size, Image.LANCZOS))
-        analysis_arr = np.array(analysis_img)
         opaque_pixels = analysis_arr[analysis_alpha >= 128]
         if opaque_pixels.size == 0:
             return img
         unique, counts = np.unique(opaque_pixels.reshape(-1, 3), axis=0, return_counts=True)
         colors = list(zip(counts.tolist(), [tuple(c) for c in unique]))
     else:
-        colors = analysis_img.getcolors(maxcolors=200000)
+        pixels = analysis_arr.reshape(-1, 3)
+        unique, counts = np.unique(pixels, axis=0, return_counts=True)
+        colors = list(zip(counts.tolist(), [tuple(c) for c in unique]))
 
     if not colors:
         return img
@@ -144,7 +149,7 @@ def simplify_colors(img, simplify_level=0):
     total_colors = len(color_freq)
 
     keep_ratio = (100 - simplify_level) / 100.0
-    keep_count = max(1, int(total_colors * keep_ratio))
+    keep_count = max(2, int(total_colors * keep_ratio))
     MAX_PALETTE_SIZE = 256
     keep_count = min(keep_count, MAX_PALETTE_SIZE, total_colors)
 

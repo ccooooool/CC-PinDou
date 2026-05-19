@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useEditorStore } from '../store/useEditorStore';
+import { useConfigStore } from '../store/useConfigStore';
+import { useUIStore } from '../store/useUIStore';
 import { useAutoSave } from '../hooks/useAutoSave';
-
 import { SaveModal } from './SaveModal';
-import { SettingsPanel } from './SettingsPanel';
+import { SettingsPanel, type SettingsConfig } from './SettingsPanel';
+import { Modal } from './ui/modal';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import {
   Save,
@@ -11,6 +13,8 @@ import {
   Clock,
   CloudOff,
   Cloud,
+  Check,
+  X,
 } from 'lucide-react';
 
 interface ToolbarProps {
@@ -23,11 +27,48 @@ export function Toolbar({ backendAvailable, variant = 'full', onSwitchMode }: To
   const [saveOpen, setSaveOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const {
-    gridData,
-  } = useEditorStore();
-
+  const { gridData } = useEditorStore();
   const { lastSavedAt, handleRestore, formatTime } = useAutoSave();
+
+  // 配置 store
+  const { brand, setBrand, canvasConfig, updateCanvasConfig } = useConfigStore();
+  const { mode } = useUIStore();
+
+  // 设置弹窗的临时状态
+  const [draftConfig, setDraftConfig] = useState<SettingsConfig>({
+    brand,
+    showCode: canvasConfig.showCode,
+    showMarkLines: canvasConfig.showMarkLines,
+    markInterval: canvasConfig.markInterval,
+    circleMode: canvasConfig.circleMode,
+  });
+
+  const openSettings = useCallback(() => {
+    // 打开时从 store 同步最新值
+    setDraftConfig({
+      brand,
+      showCode: canvasConfig.showCode,
+      showMarkLines: canvasConfig.showMarkLines,
+      markInterval: canvasConfig.markInterval,
+      circleMode: canvasConfig.circleMode,
+    });
+    setSettingsOpen(true);
+  }, [brand, canvasConfig]);
+
+  const handleConfirmSettings = useCallback(() => {
+    if (draftConfig.brand !== brand) setBrand(draftConfig.brand as typeof brand);
+    updateCanvasConfig({
+      showCode: draftConfig.showCode,
+      showMarkLines: draftConfig.showMarkLines,
+      markInterval: draftConfig.markInterval,
+      circleMode: draftConfig.circleMode,
+    });
+    setSettingsOpen(false);
+  }, [draftConfig, brand, setBrand, updateCanvasConfig]);
+
+  const handleCancelSettings = useCallback(() => {
+    setSettingsOpen(false);
+  }, []);
 
   return (
     <>
@@ -78,7 +119,7 @@ export function Toolbar({ backendAvailable, variant = 'full', onSwitchMode }: To
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button className="nook-btn nook-btn-icon nook-btn-secondary" onClick={() => setSettingsOpen(true)}>
+                  <button className="nook-btn nook-btn-icon nook-btn-secondary" onClick={openSettings}>
                     <Settings className="w-4 h-4" />
                   </button>
                 </TooltipTrigger>
@@ -110,17 +151,30 @@ export function Toolbar({ backendAvailable, variant = 'full', onSwitchMode }: To
 
       <SaveModal isOpen={saveOpen} onClose={() => setSaveOpen(false)} backendAvailable={backendAvailable} />
 
-      {settingsOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          onClick={() => setSettingsOpen(false)}
-        >
-          <div className="absolute inset-0 bg-[var(--color-overlay)] backdrop-blur-sm" />
-          <div className="relative z-10" onClick={(e) => e.stopPropagation()}>
-            <SettingsPanel />
-          </div>
-        </div>
-      )}
+      <Modal
+        open={settingsOpen}
+        title="设置"
+        onClose={handleCancelSettings}
+        width={360}
+        footer={
+          <>
+            <button className="nook-btn nook-btn-secondary" onClick={handleCancelSettings}>
+              <X className="w-3.5 h-3.5" />
+              取消
+            </button>
+            <button className="nook-btn nook-btn-primary" onClick={handleConfirmSettings}>
+              <Check className="w-3.5 h-3.5" />
+              确认
+            </button>
+          </>
+        }
+      >
+        <SettingsPanel
+          mode={mode}
+          config={draftConfig}
+          onChange={(patch) => setDraftConfig((prev) => ({ ...prev, ...patch }))}
+        />
+      </Modal>
     </>
   );
 }

@@ -188,17 +188,18 @@ export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps)
       width={420}
     >
       {/* Tab 切换 */}
-      <div className="flex border-b border-[var(--border-subtle)] mb-4">
+      <div className="flex gap-1 mb-4 p-1 bg-[var(--bg-surface-alt)] rounded-xl">
         {tabs.map((t) => {
           const Icon = t.icon;
+          const active = activeTab === t.key;
           return (
             <button
               key={t.key}
               onClick={() => { setActiveTab(t.key); setExportError(null); }}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-colors border-b-2 ${
-                activeTab === t.key
-                  ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
-                  : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold transition-all duration-200 rounded-lg ${
+                active
+                  ? 'bg-[var(--bg-surface)] text-[var(--theme-draw)] shadow-[0_1px_4px_rgba(43,180,171,0.15)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -223,16 +224,29 @@ export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps)
                 <button className={`nook-btn flex-1 ${format === 'jpg' ? 'nook-btn-primary' : 'nook-btn-secondary'}`} onClick={() => setFormat('jpg')}>JPG</button>
               </div>
             </div>
-            <div className="flex flex-col gap-2.5">
-              <label className="text-xs font-bold text-[var(--text-muted)]">选项</label>
-              <div className="flex items-center justify-between"><span className="text-[13px] text-[var(--text-main)]">显示色号</span><Switch checked={showCode} onChange={(v) => setShowCode(v)} /></div>
-              <div className="flex items-center justify-between"><span className="text-[13px] text-[var(--text-main)]">显示图例</span><Switch checked={showLegend} onChange={(v) => setShowLegend(v)} /></div>
-              <div className="flex items-center justify-between"><span className="text-[13px] text-[var(--text-main)]">圆形珠子</span><Switch checked={circleMode} onChange={(v) => setCircleMode(v)} /></div>
-              <div className="flex items-center justify-between"><span className="text-[13px] text-[var(--text-main)]">标识线</span><Switch checked={showMarkLines} onChange={(v) => setShowMarkLines(v)} /></div>
+            <div className="flex flex-col gap-2">
+              <label className="nook-label">选项</label>
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
+                <span className="text-[13px] font-medium text-[var(--text-main)]">显示色号</span>
+                <Switch checked={showCode} onChange={(v) => setShowCode(v)} />
+              </div>
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
+                <span className="text-[13px] font-medium text-[var(--text-main)]">显示图例</span>
+                <Switch checked={showLegend} onChange={(v) => setShowLegend(v)} />
+              </div>
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
+                <span className="text-[13px] font-medium text-[var(--text-main)]">圆形珠子</span>
+                <Switch checked={circleMode} onChange={(v) => setCircleMode(v)} />
+              </div>
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
+                <span className="text-[13px] font-medium text-[var(--text-main)]">标识线</span>
+                <Switch checked={showMarkLines} onChange={(v) => setShowMarkLines(v)} />
+              </div>
               {showMarkLines && (
-                <div className="pl-4">
-                  <label className="text-xs text-[var(--text-caption)]">间隔</label>
-                  <input type="text" className="nook-input w-[60px] ml-2 text-center" value={String(markInterval)} onChange={(e) => setMarkInterval(Number(e.target.value))} />
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--theme-draw-light-9)]">
+                  <span className="text-xs font-medium text-[var(--theme-draw)]">间隔</span>
+                  <input type="number" className="nook-input w-[60px] text-center text-xs py-1" value={String(markInterval)} onChange={(e) => setMarkInterval(Number(e.target.value))} min={1} />
+                  <span className="text-[10px] text-[var(--text-muted)]">格</span>
                 </div>
               )}
             </div>

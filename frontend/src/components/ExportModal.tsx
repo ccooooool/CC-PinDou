@@ -139,33 +139,35 @@ export function ExportModal({ isOpen, onClose, backendAvailable }: ExportModalPr
           </div>
         </div>
 
-        <div className="flex flex-col gap-2.5">
-          <label className="text-xs font-bold text-[var(--text-muted)]">选项</label>
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] text-[var(--text-main)]">显示色号</span>
+        <div className="flex flex-col gap-2">
+          <label className="nook-label">选项</label>
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
+            <span className="text-[13px] font-medium text-[var(--text-main)]">显示色号</span>
             <Switch checked={showCode} onChange={(v) => setShowCode(v)} />
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] text-[var(--text-main)]">显示图例</span>
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
+            <span className="text-[13px] font-medium text-[var(--text-main)]">显示图例</span>
             <Switch checked={showLegend} onChange={(v) => setShowLegend(v)} />
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] text-[var(--text-main)]">圆形珠子</span>
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
+            <span className="text-[13px] font-medium text-[var(--text-main)]">圆形珠子</span>
             <Switch checked={circleMode} onChange={(v) => setCircleMode(v)} />
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[13px] text-[var(--text-main)]">标识线</span>
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
+            <span className="text-[13px] font-medium text-[var(--text-main)]">标识线</span>
             <Switch checked={showMarkLines} onChange={(v) => setShowMarkLines(v)} />
           </div>
           {showMarkLines && (
-            <div className="pl-4">
-              <label className="text-xs text-[var(--text-caption)]">间隔</label>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--theme-draw-light-9)]">
+              <span className="text-xs font-medium text-[var(--theme-draw)]">间隔</span>
               <input
-                type="text"
-                className="nook-input w-[60px] ml-2 text-center"
+                type="number"
+                className="nook-input w-[60px] text-center text-xs py-1"
                 value={String(markInterval)}
                 onChange={(e) => setMarkInterval(Math.max(1, Number(e.target.value) || 1))}
+                min={1}
               />
+              <span className="text-[10px] text-[var(--text-muted)]">格</span>
             </div>
           )}
         </div>

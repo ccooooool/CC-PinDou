@@ -60,16 +60,16 @@ CC-PinDou/
 ├── frontend/                   # 前端（Vite + React + TypeScript）
 │   ├── package.json            # npm 依赖与脚本（版本 2.0.0）
 │   ├── vite.config.ts          # Vite 配置（dev 端口 6789，代理 /api 和 /export 到 localhost:5678）
-│   ├── vitest.config.ts        # Vitest 配置（jsdom 环境，setupFiles: src/test/setup.ts）
+│   ├── vitest.config.ts        # Vitest 配置（jsdom 环境，globals: true，setupFiles: src/test/setup.ts）
 │   ├── tailwind.config.js      # Tailwind 配置（NookUI 设计令牌扩展）
 │   ├── postcss.config.js
-│   ├── components.json         # shadcn/ui 配置
+│   ├── components.json         # shadcn/ui 初始化配置
 │   ├── tsconfig.json           # 项目引用 tsconfig.app.json + tsconfig.node.json
 │   └── src/
 │       ├── main.tsx            # React 入口（挂载到 #root，添加 .nookui 类）
 │       ├── App.tsx             # 主应用组件（三模式路由/状态协调）
 │       ├── Router.tsx          # react-router-dom 路由（/ → EntryPage, /simple/:mode, /full/:mode）
-│       ├── pages/              # 页面组件（EntryPage / SimplePage / FullPage）
+│       ├── pages/              # 页面组件（EntryPage / SimplePage / FullPage / design-system/）
 │       ├── components/         # React 组件
 │       │   ├── CanvasEditor.tsx       # 主画板编辑器（Canvas 渲染 + 交互）
 │       │   ├── Toolbar.tsx            # 顶部工具栏
@@ -77,8 +77,10 @@ CC-PinDou/
 │       │   ├── PixelPanel.tsx         # 像素图参数面板
 │       │   ├── EditPanel.tsx          # 绘制模式右侧面板
 │       │   ├── DrawToolBar.tsx        # 绘制模式左侧工具栏
-│       │   ├── LayerPanel.tsx         # 图层面板
-│       │   ├── ColorLegend.tsx        # 颜色图例（底部用量统计条）
+│       │   ├── LayerPanel.tsx         # 图层面板（图层列表管理）
+│       │   ├── BeadLayerPanel.tsx     # 拼豆图层专属控制面板
+│       │   ├── ImageLayerPanel.tsx    # 图片图层专属控制面板
+│       │   ├── LegendBar.tsx          # 颜色图例（底部用量统计条）
 │       │   ├── ExportModal.tsx        # 导出设置弹窗
 │       │   ├── SaveModal.tsx          # 保存工程弹窗
 │       │   ├── RemoveBgButton.tsx     # AI 背景移除按钮（SSE 进度）
@@ -87,19 +89,23 @@ CC-PinDou/
 │       │   ├── ImageCropModal.tsx     # 图片裁剪弹窗
 │       │   ├── BgRemovePanel.tsx      # 背景移除参数面板
 │       │   ├── SettingsPanel.tsx      # 设置面板
+│       │   ├── FloatingZoom.tsx       # 悬浮缩放控制器
+│       │   ├── ModeBackground.tsx     # 模式切换背景动效
+│       │   ├── ColorPickerPopover.tsx # 颜色选择浮层
+│       │   ├── ToolPropertiesPopover.tsx # 工具属性浮层
 │       │   └── ui/                    # shadcn/ui 基础组件（Button、Slider、Select 等）
 │       ├── hooks/              # 自定义 Hooks
-│       │   ├── useCanvasRenderer.ts   # Canvas 渲染逻辑（方块/圆形/bead 三模式，离屏缓存优化）
-│       │   ├── useCanvasInteractions.ts # 画布交互（点击/拖拽/空格平移）
-│       │   ├── useDrawingTools.ts     # 绘制工具（Bresenham 直线、FloodFill 填充）
-│       │   ├── usePanZoom.ts          # 滚轮缩放 + 空格拖拽平移
-│       │   ├── usePatternGenerator.ts # 图纸生成逻辑（Web Worker + fallback）
-│       │   ├── usePixelProcessor.ts   # 像素图处理逻辑
-│       │   ├── usePerlerEngine.ts     # PerlerEngine 封装
-│       │   ├── useAutoSave.ts         # IndexedDB 自动保存
-│       │   ├── useBackendHealth.ts    # 后端健康检测
-│       │   ├── useProjectExport.ts    # 工程导出
-│       │   └── useImageUpload.ts      # 图片上传逻辑
+│       │   ├── useCanvasRenderer.ts      # Canvas 渲染逻辑（方块/圆形/bead 三模式，离屏缓存优化）
+│       │   ├── useCanvasInteractions.ts  # 画布交互（点击/拖拽/空格平移）
+│       │   ├── useDrawingTools.ts        # 绘制工具（Bresenham 直线、FloodFill 填充）
+│       │   ├── usePanZoom.ts             # 滚轮缩放 + 空格拖拽平移
+│       │   ├── usePatternGenerator.ts    # 图纸生成逻辑（Web Worker + fallback）
+│       │   ├── usePixelProcessor.ts      # 像素图处理逻辑
+│       │   ├── usePerlerEngine.ts        # PerlerEngine 封装
+│       │   ├── useAutoSave.ts            # IndexedDB 自动保存
+│       │   ├── useBackendHealth.ts       # 后端健康检测
+│       │   ├── useProjectExport.ts       # 工程导出逻辑
+│       │   └── useImageUpload.ts         # 图片上传逻辑
 │       ├── store/              # Zustand 状态管理
 │       │   ├── useEditorStore.ts      # 编辑状态（gridData、colorList、historyStack、图层系统）
 │       │   ├── useUIStore.ts          # UI 状态（mode、drawTool、symmetryMode、面板状态）
@@ -108,11 +114,10 @@ CC-PinDou/
 │       ├── engine/             # 前端计算引擎
 │       │   ├── PerlerEngine.ts        # OKLab 颜色匹配、网格生成、BFS 连通合并
 │       │   ├── PerlerEngine.test.ts   # Vitest 单元测试
-│       │   └── frontendAlgorithms.ts  # 前端降级算法（颜色简化、线条增强）
+│       │   └── frontendAlgorithms.ts  # 前端降级算法（颜色简化、线条增强、背景移除、像素检测、导出）
 │       ├── workers/            # Web Worker
 │       │   └── perler.worker.ts       # 重型计算卸载（generateGrid + bfsMerge）
 │       ├── utils/              # 工具函数
-│       │   ├── soundEngine.ts         # Web Audio 音效
 │       │   ├── colorList.ts           # 颜色统计工具
 │       │   ├── colorList.test.ts      # Vitest 单元测试
 │       │   ├── autoSave.ts            # IndexedDB 自动保存底层
@@ -126,7 +131,7 @@ CC-PinDou/
 │       │   └── perler.ts              # 核心类型（GridCell、ColorInfo、HistoryAction、Layer 等）
 │       ├── styles/             # 样式文件
 │       │   ├── pindou-theme.css       # 基础全局样式
-│       │   └── nookui-theme.css       # NookUI 设计令牌 + 组件类（~1400 行）
+│       │   └── nookui-theme.css       # NookUI 设计令牌 + 组件类（~1500 行）
 │       ├── data/
 │       │   └── colorSystemMapping.json # 5 品牌色号映射 JSON 数据
 │       └── test/
@@ -146,10 +151,12 @@ CC-PinDou/
 │   └── colorSystemMapping.json # 5 品牌色号映射源数据
 │
 ├── models/                     # ONNX 模型文件（rembg 使用，被 .gitignore 忽略）
-│   ├── u2net.onnx
-│   ├── isnet-anime.onnx
-│   ├── silueta.onnx
-│   └── u2net_human_seg.onnx
+│   ├── u2net.onnx              # 默认通用模型（~168MB）
+│   ├── u2net_human_seg.onnx    # 人像模型（~168MB）
+│   ├── isnet-anime.onnx        # 动漫/插画模型（~168MB）
+│   ├── silueta.onnx            # 轻量模型（~42MB）
+│   ├── isnet-general-use.onnx  # 高精度通用模型（~168MB）
+│   └── u2netp.onnx             # 超轻量便携模型（~4MB）
 │
 ├── scripts/                    # 调试与工具脚本
 │   ├── test_api.py
@@ -169,7 +176,7 @@ CC-PinDou/
 | `requirements.txt` | Python 依赖：Flask、flask-cors、Pillow、numpy、scipy、rembg、waitress |
 | `frontend/package.json` | 前端依赖与 npm 脚本（版本 2.0.0） |
 | `frontend/vite.config.ts` | Vite 构建配置、dev server 端口 6789、代理规则、manualChunks 拆包策略 |
-| `frontend/vitest.config.ts` | Vitest 测试配置（jsdom、globals、setupFiles） |
+| `frontend/vitest.config.ts` | Vitest 测试配置（jsdom、globals: true、setupFiles: src/test/setup.ts） |
 | `frontend/tailwind.config.js` | Tailwind CSS 配置，扩展了 NookUI 设计令牌和动画 keyframes |
 | `frontend/tsconfig.json` | TypeScript 项目引用配置（引用 tsconfig.app.json + tsconfig.node.json） |
 | `frontend/components.json` | shadcn/ui 初始化配置 |
@@ -256,6 +263,11 @@ npm run test:watch    # 监听模式
 - `globals: true`
 - setup 文件：`src/test/setup.ts`（含 `ImageData` polyfill）
 
+测试文件：
+- `src/engine/PerlerEngine.test.ts`
+- `src/utils/colorList.test.ts`
+- `src/store/usePerlerStore.test.ts`
+
 ### 后端测试（pytest）
 
 ```bash
@@ -264,6 +276,14 @@ python -m pytest tests/ -v
 ```
 
 `conftest.py` 会将 `server/` 加入 `sys.path`，确保模块可导入。
+
+测试覆盖：
+- `test_colors.py` — 最近色匹配、full/221 模式、批量一致性
+- `test_image_processing.py` — 颜色简化、线条增强、RGBA 透明处理、大图缩放
+- `test_pixel_processing.py` — 网格生成、颜色量化、自动检测、背景移除
+- `test_utils.py` — Hex/RGB 转换、参数解析、文件清理
+
+**未覆盖**：`app.py` 路由/集成测试、`export_generator.py`、`models_manager.py`、`normal_processing.py`。
 
 ---
 
@@ -274,6 +294,7 @@ python -m pytest tests/ -v
 - **编码**：UTF-8 无 BOM
 - **缩进**：前端 2 空格，Python 4 空格（`.prettierrc.json` 已配置）
 - **换行符**：LF（`.prettierrc.json` 配置 `endOfLine: lf`）
+- **printWidth**: 120（前端）
 
 ### TypeScript / React
 
@@ -283,12 +304,13 @@ python -m pytest tests/ -v
 - Store 选择器优先使用精确字段订阅，避免解构整个 Store（防止不必要的重渲染）
 - Canvas 渲染逻辑集中在 `useCanvasRenderer.ts`，避免在组件中直接操作 Canvas context
 - 路径别名 `@/` 指向 `frontend/src/`
+- `noUnusedLocals` / `noUnusedParameters` 已启用，未使用变量会报错
 
 ### Python
 
 - 模块级常量使用全大写 + 下划线
 - 图像处理函数优先接收 `PIL.Image` 对象而非文件路径，便于测试
-- 避免在模块导入时执行副作用（`colors.py` 的数据库初始化已改为惰性加载）
+- 避免在模块导入时执行副作用（`colors.py` 的数据库初始化、`models_manager.py` 的 session 缓存、`uploads/` 目录创建均采用惰性加载）
 - 所有后端 API 错误响应使用 `_error_response()` 统一包装，禁止将内部异常详情（如文件路径）暴露给客户端
 
 ---
@@ -308,7 +330,11 @@ NookUI 在 `NookUI/` 目录下包含两个版本：
 
 ### 前端 React 项目中的使用
 
-React 前端通过 `frontend/src/styles/nookui-theme.css` 引入 NookUI 设计令牌和组件类。`main.tsx` 在 `#root` 元素上挂载 `.nookui` 类以激活全局基础样式。
+**重要**：主前端**未以 npm 包形式引入 NookUI**。NookUI 的 React 组件在前端中**零引用**。前端通过以下方式使用 NookUI 的设计系统：
+
+1. **`frontend/src/styles/nookui-theme.css`**（~1500 行）：从 NookUI `globals.css` 复制/移植的设计令牌和组件类
+2. **`frontend/src/main.tsx`** 在 `#root` 元素上挂载 `.nookui` 类以激活全局基础样式
+3. 前端实际 UI 组件基于 **shadcn/ui + Radix UI 基础组件** 自行封装，视觉风格通过 `nook-*` 类名和 Tailwind 工具类实现
 
 **组件类名规范**：前端所有 UI 组件使用 `nook-*` 前缀类名（如 `.nook-btn`、`.nook-panel`、`.nook-card`）。这些类定义在 `nookui-theme.css` 中，与 Tailwind 工具类可混用。
 
@@ -375,6 +401,19 @@ font-family: 'Nunito', 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-
 | 高清导出（PNG/JPG） | 前端有降级（Canvas toBlob） | ✅ `export_generator.py` |
 | 像素大小自动检测 | ❌ | ✅ `pixel_processing.py` |
 
+### 后端 API 端点
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/remove-bg` | POST | AI 背景移除。支持 `task_id` SSE 进度、`edge_threshold`  alpha matting、`model` 模型选择 |
+| `/api/progress/<task_id>` | GET | SSE 进度流，200ms 轮询，最长 60 秒，最大 16 并发 |
+| `/api/enhance-lines` | POST | 线条增强，MinFilter 形态学操作 |
+| `/api/generate` | POST | 普通图 → 拼豆网格（后端备用路径）|
+| `/api/detect-pixel` | POST | 像素图自动检测像素大小和偏移 |
+| `/api/models` | GET | 返回可用 rembg 模型列表 |
+| `/export` | POST | 高清导出 PNG/JPG，限制 200×200 网格 |
+| `/` / `/<path:path>` | GET | SPA 静态文件服务与 fallback |
+
 ### 颜色匹配算法
 
 项目使用 **OKLab 感知均匀颜色空间** 进行最近色匹配，位于 `frontend/src/engine/PerlerEngine.ts`。OKLab 比 RGB 欧氏距离更符合人眼感知，对近似色的区分更精确。
@@ -435,8 +474,20 @@ font-family: 'Nunito', 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-
 3. **导出尺寸限制**：`MAX_EXPORT_GRID_SIZE = 200`，超大 `grid_data` 会被拒绝（防止 DoS）。
 4. **错误信息脱敏**：生产环境禁止将 `str(e)` 直接返回客户端，统一使用 `_error_response()` 包装为通用提示，异常详情记入服务器日志。
 5. **临时文件清理**：使用 `tempfile.mkstemp()` + `safe_remove()` 确保异常时也能清理上传文件。
-6. **生产服务器**：`run.py` 使用 `waitress`（多线程 WSGI），不再使用 Flask 开发服务器。
+6. **生产服务器**：`run.py` 使用 `waitress`（多线程 WSGI，8 线程），不再使用 Flask 开发服务器。
 7. **SSE 连接限制**：最大并发 SSE 连接数限制为 16，防止连接耗尽。
+
+---
+
+## 部署模型
+
+本项目采用**单节点自托管部署**，无 CI/CD、无容器化、无云平台配置：
+
+1. 在目标机器运行 `python build.py`（或手动 `npm run build` + `pip install`）
+2. 运行 `python run.py` 启动 waitress，监听 `0.0.0.0:5678`
+3. 进程同时提供 API 和 React SPA 静态文件服务
+
+如需部署在 nginx 等反向代理之后，需手动编写代理配置。静态文件由 Flask 直接 serve，无需额外 Web 服务器。
 
 ---
 
@@ -444,13 +495,14 @@ font-family: 'Nunito', 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-
 
 1. **Canvas 渲染性能**：当前为单层全量重绘，修改一个 cell 会重绘整个画布。`melted`（3D 热熔）模式下每 cell 都创建 `createRadialGradient`，大图帧率很低。如需优化，考虑分层渲染或脏矩形策略。
 2. **inline style 泛滥**：大量组件使用内联 `style` 而非 Tailwind class，修改主题时需注意 CSS 变量和内联样式的优先级。
-3. **字体跨平台**：`export_generator.py` 使用 `arial.ttf`，在 Linux/macOS 下可能缺失，会自动 fallback 到默认字体，但中文显示效果不佳。
+3. **字体跨平台**：`export_generator.py` 优先搜索 `WenYuanRoundedSC-VF.otf`，次选 `arial.ttf`，在 Linux/macOS 下可能缺失，会自动 fallback 到默认字体，但中文显示效果不佳。
 4. **ImageData polyfill**：`src/test/setup.ts` 为 jsdom 环境提供了 `ImageData` polyfill，但在 Worker 中使用时需确认环境支持。
 5. **Blob URL 泄漏**：`RemoveBgButton.tsx` 等组件在使用 `URL.createObjectURL()` 后，需在组件卸载或重新上传时调用 `URL.revokeObjectURL()`。
 6. **自动保存限制**：IndexedDB 自动保存不恢复图片文件状态（blob URL 无法持久化），仅保存 gridData、colorList 和图层结构。
 7. **大图片处理**：超过 2000px 的图片会被后端自动缩放处理，避免内存溢出。
 8. **ONNX 模型**：`models/*.onnx` 文件被 `.gitignore` 忽略，新克隆的仓库需要首次运行时自动下载或手动放置模型文件。
 9. **NookUI 子项目隔离**：`NookUI/` 被主项目 `.gitignore` 忽略，修改其代码不会影响主项目 Git 状态，需单独在其内部提交。
+10. **前端/后端双实现**：每个主要后端功能（颜色简化、线条增强、背景移除、像素检测、导出）在前端都有降级实现（`frontendAlgorithms.ts`），`generateAlgorithm` 配置可在前后端算法间切换。
 
 ---
 
