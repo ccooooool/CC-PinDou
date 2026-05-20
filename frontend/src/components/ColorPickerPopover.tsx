@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useEditorStore } from '../store/useEditorStore';
 import { useConfigStore } from '../store/useConfigStore';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui';
 import colorMappingJson from '../data/colorSystemMapping.json';
 import type { ColorMapping } from '../types/perler';
 
@@ -133,7 +134,7 @@ export function ColorPickerPopover() {
       {open && (
         <div
           ref={popoverRef}
-          className="nook-panel fixed flex flex-col overflow-hidden z-[100]"
+          className="fixed flex flex-col overflow-hidden z-[100] rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden"
           style={{
             left: panelPos.left,
             top: panelPos.top,
@@ -143,26 +144,32 @@ export function ColorPickerPopover() {
         >
           {/* 顶部全色/221色切换 */}
           <div className="flex gap-1 px-3 py-2.5 border-b border-[var(--border-subtle)]">
-            <button
+            <Button
+              size="xs"
               onClick={() => setColorMode('full')}
-              className={`nook-btn flex-1 text-xs py-1.5 transition-all duration-150 ${
+              variant={colorMode === 'full' ? 'primary' : 'secondary'}
+              color="green"
+              className={`flex-1 transition-all duration-150 ${
                 colorMode === 'full'
-                  ? 'nook-btn-primary shadow-[0_1px_6px_rgba(43,180,171,0.25)]'
-                  : 'nook-btn-secondary'
+                  ? 'shadow-[0_1px_6px_rgba(43,180,171,0.25)]'
+                  : ''
               }`}
             >
               全色
-            </button>
-            <button
+            </Button>
+            <Button
+              size="xs"
               onClick={() => setColorMode('221')}
-              className={`nook-btn flex-1 text-xs py-1.5 transition-all duration-150 ${
+              variant={colorMode === '221' ? 'primary' : 'secondary'}
+              color="green"
+              className={`flex-1 transition-all duration-150 ${
                 colorMode === '221'
-                  ? 'nook-btn-primary shadow-[0_1px_6px_rgba(43,180,171,0.25)]'
-                  : 'nook-btn-secondary'
+                  ? 'shadow-[0_1px_6px_rgba(43,180,171,0.25)]'
+                  : ''
               }`}
             >
               221色
-            </button>
+            </Button>
           </div>
 
           {/* 颜色网格 */}

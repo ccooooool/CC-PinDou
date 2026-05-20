@@ -7,6 +7,7 @@ import { ToolPropertiesPopover } from './ToolPropertiesPopover';
 import { Modal } from './ui/modal';
 import { toast } from '@/components/ui/toast';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui';
 import {
   Pencil, Minus, Square, Circle, PaintBucket, Eraser, Wand2, Replace, Move, Pipette,
   RotateCw, FlipHorizontal, FlipVertical, RotateCcw,
@@ -100,11 +101,16 @@ export function DrawToolBar() {
   }, []);
 
   const handleTransformAction = useCallback((action: string) => {
+    const activeLayer = layers.find((l) => l.id === activeLayerId);
+    if (activeLayer?.type === 'image' && activeLayer.locked) {
+      toast.error('图层已锁定，无法变换');
+      return;
+    }
     if (action === 'flipHorizontal') { flipHorizontal(); toast.success('已水平翻转'); }
     else if (action === 'flipVertical') { flipVertical(); toast.success('已垂直翻转'); }
     else if (action === 'rotateCW') { rotateCW(); toast.success('已顺时针旋转 90°'); }
     else if (action === 'rotateCCW') { rotateCCW(); toast.success('已逆时针旋转 90°'); }
-  }, [flipHorizontal, flipVertical, rotateCW, rotateCCW]);
+  }, [flipHorizontal, flipVertical, rotateCW, rotateCCW, layers, activeLayerId]);
 
   // 点击外部关闭变换菜单
   useEffect(() => {
@@ -151,23 +157,29 @@ export function DrawToolBar() {
   const currentSymmetry = SYMMETRIES.find((s) => s.key === symmetryMode) || SYMMETRIES[0];
   const SymmetryIcon = currentSymmetry.icon;
 
+  const activeLayer = layers.find((l) => l.id === activeLayerId);
+  const isImageLayerActive = activeLayer?.type === 'image';
+  // 图片图层下只允许 move 工具
+  const isToolDisabled = (toolKey: string) => isImageLayerActive && toolKey !== 'move';
+
   return (
     <div className="flex flex-col items-center gap-3 p-3 w-12 h-full">
       {TOOLS.map((t) => {
         const Icon = t.icon;
         const active = drawTool === t.key;
+        const disabled = isToolDisabled(t.key);
         return (
           <Tooltip key={t.key} delayDuration={400}>
             <TooltipTrigger asChild>
               <button
                 ref={(el) => { buttonRefs.current[t.key] = el; }}
-                onClick={() => setDrawTool(t.key)}
-                onContextMenu={(e) => handleContextMenu(e, t.key)}
-                className={'nook-tool relative' + (active ? ' active' : '')}
-                style={active ? { background: theme.light8, borderColor: theme.main, color: theme.dark1 } : undefined}
+                onClick={() => { if (!disabled) setDrawTool(t.key); }}
+                onContextMenu={(e) => { if (!disabled) handleContextMenu(e, t.key); }}
+                className={'nook-tool relative' + (active && !disabled ? ' active' : '') + (disabled ? ' opacity-30 pointer-events-none' : '')}
+                style={active && !disabled ? { background: theme.light8, borderColor: theme.main, color: theme.dark1 } : undefined}
               >
                 <Icon className="w-[18px] h-[18px]" />
-                {t.hasProps && (
+                {t.hasProps && !disabled && (
                   <svg className="absolute bottom-[3px] right-[3px] opacity-60" width="5" height="5" viewBox="0 0 5 5">
                     <polygon points="0,5 5,5 5,0" fill="var(--text-muted)" />
                   </svg>
@@ -175,7 +187,7 @@ export function DrawToolBar() {
               </button>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={8}>
-              {t.label + '工具'}
+              {disabled ? `${t.label}工具（图片图层不可用）` : `${t.label}工具`}
             </TooltipContent>
           </Tooltip>
         );
@@ -187,13 +199,14 @@ export function DrawToolBar() {
       {(() => {
         const tDef = TRANSFORMS.find((t) => t.key === currentTransform) || TRANSFORMS[0];
         const TIcon = tDef.icon;
+        const isTransformDisabled = isImageLayerActive && (activeLayer?.locked ?? false);
         return (
           <Tooltip delayDuration={400}>
             <TooltipTrigger asChild>
               <button
                 ref={transformBtnRef}
-                className="nook-tool relative"
-                onClick={() => handleTransformAction(tDef.action)}
+                className={'nook-tool relative' + (isTransformDisabled ? ' opacity-30 pointer-events-none' : '')}
+                onClick={() => !isTransformDisabled && handleTransformAction(tDef.action)}
                 onContextMenu={handleTransformContextMenu}
               >
                 <TIcon className="w-[18px] h-[18px]" />
@@ -203,7 +216,7 @@ export function DrawToolBar() {
               </button>
             </TooltipTrigger>
             <TooltipContent side="right" sideOffset={8}>
-              变换工具
+              {isTransformDisabled ? '变换工具（图层已锁定）' : '变换工具'}
             </TooltipContent>
           </Tooltip>
         );
@@ -214,9 +227,10 @@ export function DrawToolBar() {
         <TooltipTrigger asChild>
           <button
             ref={symmetryBtnRef}
-            className={'nook-tool relative' + (symmetryMode !== 'none' ? ' active' : '')}
-            style={symmetryMode !== 'none' ? { background: theme.light8, borderColor: theme.main, color: theme.dark1 } : undefined}
+            className={'nook-tool relative' + (symmetryMode !== 'none' && !isImageLayerActive ? ' active' : '') + (isImageLayerActive ? ' opacity-30 pointer-events-none' : '')}
+            style={symmetryMode !== 'none' && !isImageLayerActive ? { background: theme.light8, borderColor: theme.main, color: theme.dark1 } : undefined}
             onClick={() => {
+              if (isImageLayerActive) return;
               const next = symmetryMode === 'none' ? 'horizontal' : 'none';
               setSymmetryMode(next);
               if (next === 'none') {
@@ -226,16 +240,18 @@ export function DrawToolBar() {
                 toast.info('已开启' + label);
               }
             }}
-            onContextMenu={(e) => { e.preventDefault(); setSymmetryOpen(true); }}
+            onContextMenu={(e) => { if (!isImageLayerActive) { e.preventDefault(); setSymmetryOpen(true); } }}
           >
             <SymmetryIcon className={`w-[18px] h-[18px] ${(currentSymmetry as any).iconClassName || ''}`} />
-            <svg className="absolute bottom-[3px] right-[3px] opacity-60" width="5" height="5" viewBox="0 0 5 5">
-              <polygon points="0,5 5,5 5,0" fill="var(--text-muted)" />
-            </svg>
+            {!isImageLayerActive && (
+              <svg className="absolute bottom-[3px] right-[3px] opacity-60" width="5" height="5" viewBox="0 0 5 5">
+                <polygon points="0,5 5,5 5,0" fill="var(--text-muted)" />
+              </svg>
+            )}
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={8}>
-          对称工具
+          {isImageLayerActive ? '对称工具（图片图层不可用）' : '对称工具'}
         </TooltipContent>
       </Tooltip>
 
@@ -304,7 +320,7 @@ export function DrawToolBar() {
       {transformOpen && (
         <div
           ref={transformPopoverRef}
-          className="nook-panel fixed flex flex-col z-[200] py-1.5 gap-0.5"
+          className="fixed flex flex-col z-[200] py-1.5 gap-0.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden"
           style={{ left: transformPos.left, top: transformPos.top, width: 170 }}
         >
           {TRANSFORMS.map((t) => {
@@ -336,7 +352,7 @@ export function DrawToolBar() {
       {symmetryOpen && (
         <div
           ref={symmetryPopoverRef}
-          className="nook-panel fixed flex flex-col z-[200] py-1.5 gap-0.5"
+          className="fixed flex flex-col z-[200] py-1.5 gap-0.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden"
           style={{ left: symmetryPos.left, top: symmetryPos.top, width: 170 }}
         >
           {SYMMETRIES.map((s) => {
@@ -365,17 +381,19 @@ export function DrawToolBar() {
         open={deleteConfirmOpen}
         title="确认删除图层"
         onClose={() => setDeleteConfirmOpen(false)}
+        themeColor={theme.main}
         footer={
           <div className="flex items-center gap-2 justify-end">
-            <button className="nook-btn nook-btn-secondary" onClick={() => setDeleteConfirmOpen(false)}>
+            <Button variant="secondary" color="green" onClick={() => setDeleteConfirmOpen(false)}>
               取消
-            </button>
-            <button
-              className="nook-btn nook-btn-primary"
+            </Button>
+            <Button
+              variant="primary"
+              color="green"
               style={{ background: 'var(--theme-danger)', borderColor: 'var(--theme-danger-light-1)' }}
               onClick={() => {
                 useEditorStore.setState({
-                  gridData: [],
+                  gridData: null,
                   colorList: [],
                   layers: [],
                   activeLayerId: null,
@@ -387,7 +405,7 @@ export function DrawToolBar() {
               }}
             >
               确认删除
-            </button>
+            </Button>
           </div>
         }
       >
@@ -401,13 +419,15 @@ export function DrawToolBar() {
         open={clearConfirmOpen}
         title="确认清空画板"
         onClose={() => setClearConfirmOpen(false)}
+        themeColor={theme.main}
         footer={
           <div className="flex items-center gap-2 justify-end">
-            <button className="nook-btn nook-btn-secondary" onClick={() => setClearConfirmOpen(false)}>
+            <Button variant="secondary" color="green" onClick={() => setClearConfirmOpen(false)}>
               取消
-            </button>
-            <button
-              className="nook-btn nook-btn-primary"
+            </Button>
+            <Button
+              variant="primary"
+              color="green"
               onClick={() => {
                 if (gridData) {
                   const newGrid = gridData.map((row) =>
@@ -419,7 +439,7 @@ export function DrawToolBar() {
               }}
             >
               确认清空
-            </button>
+            </Button>
           </div>
         }
       >

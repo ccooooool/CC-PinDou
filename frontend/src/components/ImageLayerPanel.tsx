@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Pencil,
 } from 'lucide-react';
+import { Button, Input } from '@/components/ui';
 import { ImageCropModal } from './ImageCropModal';
 
 export function ImageLayerPanel() {
@@ -91,15 +92,16 @@ export function ImageLayerPanel() {
 
     const rows = gridData.length;
     const cols = gridData[0]?.length || 0;
-    const boardWidth = cols * beadSize + margin * 2;
-    const boardHeight = rows * beadSize + margin * 2;
 
-    // cover 模式：保持比例，铺满画板
-    const scale = Math.max(boardWidth / imgW, boardHeight / imgH);
-    const x = (boardWidth - imgW * scale) / 2;
-    const y = (boardHeight - imgH * scale) / 2;
+    // 放大倍率：画板网格宽度 / 图片像素宽度
+    // 让图片的每个像素对应一个拼豆格子
+    const scaleX = (cols * beadSize) / imgW;
+    const scaleY = (rows * beadSize) / imgH;
 
-    return { x, y, scaleX: scale, scaleY: scale, rotation: 0 };
+    // 左上角对齐网格起点（变换原点为图片中心，推导得到存储值）
+    const x = (imgW / 2) * (scaleX - 1);
+    const y = (imgH / 2) * (scaleY - 1);
+    return { x, y, scaleX, scaleY, rotation: 0 };
   }, [beadSize, margin]);
 
   const handleCrop = useCallback((_: File, dataUrl: string) => {
@@ -110,7 +112,7 @@ export function ImageLayerPanel() {
     const img = new window.Image();
     img.onload = () => {
       const transform = computeAutoFitTransform(img.naturalWidth, img.naturalHeight);
-      addImageLayer('', dataUrl, transform ?? undefined);
+      addImageLayer('', dataUrl, transform ?? undefined, { width: img.naturalWidth, height: img.naturalHeight });
     };
     img.src = dataUrl;
   }, [addImageLayer, computeAutoFitTransform]);
@@ -123,7 +125,7 @@ export function ImageLayerPanel() {
     const img = new window.Image();
     img.onload = () => {
       const transform = computeAutoFitTransform(img.naturalWidth, img.naturalHeight);
-      addImageLayer('', dataUrl, transform ?? undefined);
+      addImageLayer('', dataUrl, transform ?? undefined, { width: img.naturalWidth, height: img.naturalHeight });
     };
     img.src = dataUrl;
   }, [addImageLayer, computeAutoFitTransform]);
@@ -256,30 +258,41 @@ export function ImageLayerPanel() {
                       max={100}
                       step={5}
                       disabled={activeLayer.locked}
+                      style={{ '--slider-fill': `${activeLayer.opacity}%` } as React.CSSProperties}
                     />
                   </div>
 
                   {/* 位置 */}
                   <div className='flex flex-col gap-2'>
-                    <span className='nook-label'>位置</span>
+                    <span className='text-xs font-medium text-[var(--text-main)]'>位置</span>
                     <div className='flex gap-2'>
                       <div className='flex items-center gap-1.5 flex-1'>
                         <span className='text-[10px] font-bold text-[var(--theme-draw)] w-4 h-4 rounded bg-[var(--theme-draw-light-9)] flex items-center justify-center'>X</span>
-                        <input
+                        <Input
                           type='number'
-                          className='nook-input flex-1 text-xs py-1 px-2'
-                          value={Math.round(activeLayer.transform.x)}
-                          onChange={(e) => updateImageTransform(activeLayer.id, { x: Number(e.target.value) })}
+                          size='xs'
+                          className='flex-1'
+                          value={String(Math.round(activeLayer.transform.x - (activeLayer.width / 2) * (activeLayer.transform.scaleX - 1)))}
+                          onChange={(e) => {
+                            const displayX = Number(e.target.value);
+                            const actualX = displayX + (activeLayer.width / 2) * (activeLayer.transform.scaleX - 1);
+                            updateImageTransform(activeLayer.id, { x: actualX });
+                          }}
                           disabled={activeLayer.locked}
                         />
                       </div>
                       <div className='flex items-center gap-1.5 flex-1'>
                         <span className='text-[10px] font-bold text-[var(--theme-draw)] w-4 h-4 rounded bg-[var(--theme-draw-light-9)] flex items-center justify-center'>Y</span>
-                        <input
+                        <Input
                           type='number'
-                          className='nook-input flex-1 text-xs py-1 px-2'
-                          value={Math.round(activeLayer.transform.y)}
-                          onChange={(e) => updateImageTransform(activeLayer.id, { y: Number(e.target.value) })}
+                          size='xs'
+                          className='flex-1'
+                          value={String(Math.round(activeLayer.transform.y - (activeLayer.height / 2) * (activeLayer.transform.scaleY - 1)))}
+                          onChange={(e) => {
+                            const displayY = Number(e.target.value);
+                            const actualY = displayY + (activeLayer.height / 2) * (activeLayer.transform.scaleY - 1);
+                            updateImageTransform(activeLayer.id, { y: actualY });
+                          }}
                           disabled={activeLayer.locked}
                         />
                       </div>
@@ -289,7 +302,7 @@ export function ImageLayerPanel() {
                   {/* 缩放 */}
                   <div className='flex flex-col gap-2'>
                     <div className='flex items-center gap-2'>
-                      <span className='nook-label mb-0'>
+                      <span className='text-xs font-medium text-[var(--text-main)]'>
                         {activeLayer.scaleLocked !== false ? '缩放' : '缩放 X'}
                       </span>
                       <span className='text-xs font-bold text-[var(--theme-draw)] min-w-[40px] text-right'>
@@ -306,64 +319,81 @@ export function ImageLayerPanel() {
                         {activeLayer.scaleLocked !== false ? <Lock className='w-3 h-3' /> : <Unlock className='w-3 h-3' />}
                       </button>
                     </div>
-                    <input
-                      type='range'
-                      className='nook-slider'
-                      value={activeLayer.transform.scaleX ?? (activeLayer.transform as any).scale ?? 1}
-                      onChange={(e) => {
-                        const v = Number(e.target.value);
-                        if (activeLayer.scaleLocked !== false) {
-                          updateImageTransform(activeLayer.id, { scaleX: v, scaleY: v });
-                        } else {
-                          updateImageTransform(activeLayer.id, { scaleX: v });
-                        }
-                      }}
-                      min={0.01}
-                      max={10}
-                      step={0.01}
-                      disabled={activeLayer.locked}
-                    />
+                    <div className='flex items-center gap-2'>
+                      <input
+                        type='range'
+                        className='nook-slider flex-1'
+                        value={activeLayer.transform.scaleX ?? (activeLayer.transform as any).scale ?? 1}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          if (activeLayer.scaleLocked !== false) {
+                            updateImageTransform(activeLayer.id, { scaleX: v, scaleY: v });
+                          } else {
+                            updateImageTransform(activeLayer.id, { scaleX: v });
+                          }
+                        }}
+                        min={0.01}
+                        max={10}
+                        step={0.01}
+                        disabled={activeLayer.locked}
+                        style={{ '--slider-fill': `${((activeLayer.transform.scaleX ?? (activeLayer.transform as any).scale ?? 1) - 0.01) / 9.99 * 100}%` } as React.CSSProperties}
+                      />
+                      <input
+                        type='number'
+                        className='w-16 h-8 shrink-0 rounded-input border-[3px] border-[var(--nook-wood-light)] bg-[var(--bg-surface)] px-1 text-sm text-center text-[var(--text-heading)] font-nook font-semibold focus:outline-none focus:border-[var(--theme-draw)] focus:ring-2 focus:ring-[var(--theme-draw)] transition-all duration-200 disabled:opacity-50'
+                        value={String((activeLayer.transform.scaleX ?? (activeLayer.transform as any).scale ?? 1).toFixed(2))}
+                        onChange={(e) => {
+                          const v = Math.max(0.01, Math.min(10, Number(e.target.value)));
+                          if (activeLayer.scaleLocked !== false) {
+                            updateImageTransform(activeLayer.id, { scaleX: v, scaleY: v });
+                          } else {
+                            updateImageTransform(activeLayer.id, { scaleX: v });
+                          }
+                        }}
+                        min={0.01}
+                        max={10}
+                        step={0.01}
+                        disabled={activeLayer.locked}
+                      />
+                    </div>
                     {activeLayer.scaleLocked === false && (
                       <>
                         <div className='flex items-center gap-2'>
-                          <span className='nook-label mb-0'>缩放 Y</span>
+                          <span className='text-xs font-medium text-[var(--text-main)]'>缩放 Y</span>
                           <span className='text-xs font-bold text-[var(--theme-draw)] min-w-[40px] text-right'>
                             {(activeLayer.transform.scaleY ?? (activeLayer.transform as any).scale ?? 1).toFixed(2)}x
                           </span>
                         </div>
-                        <input
-                          type='range'
-                          className='nook-slider'
-                          value={activeLayer.transform.scaleY ?? (activeLayer.transform as any).scale ?? 1}
-                          onChange={(e) => updateImageTransform(activeLayer.id, { scaleY: Number(e.target.value) })}
-                          min={0.01}
-                          max={10}
-                          step={0.01}
-                          disabled={activeLayer.locked}
-                        />
+                        <div className='flex items-center gap-2'>
+                          <input
+                            type='range'
+                            className='nook-slider flex-1'
+                            value={activeLayer.transform.scaleY ?? (activeLayer.transform as any).scale ?? 1}
+                            onChange={(e) => updateImageTransform(activeLayer.id, { scaleY: Number(e.target.value) })}
+                            min={0.01}
+                            max={10}
+                            step={0.01}
+                            disabled={activeLayer.locked}
+                            style={{ '--slider-fill': `${((activeLayer.transform.scaleY ?? (activeLayer.transform as any).scale ?? 1) - 0.01) / 9.99 * 100}%` } as React.CSSProperties}
+                          />
+                          <input
+                            type='number'
+                            className='w-16 h-8 shrink-0 rounded-input border-[3px] border-[var(--nook-wood-light)] bg-[var(--bg-surface)] px-1 text-sm text-center text-[var(--text-heading)] font-nook font-semibold focus:outline-none focus:border-[var(--theme-draw)] focus:ring-2 focus:ring-[var(--theme-draw)] transition-all duration-200 disabled:opacity-50'
+                            value={String((activeLayer.transform.scaleY ?? (activeLayer.transform as any).scale ?? 1).toFixed(2))}
+                            onChange={(e) => {
+                              const v = Math.max(0.01, Math.min(10, Number(e.target.value)));
+                              updateImageTransform(activeLayer.id, { scaleY: v });
+                            }}
+                            min={0.01}
+                            max={10}
+                            step={0.01}
+                            disabled={activeLayer.locked}
+                          />
+                        </div>
                       </>
                     )}
                   </div>
 
-                  {/* 旋转 */}
-                  <div className='flex flex-col gap-2'>
-                    <div className='flex items-center gap-2'>
-                      <span className='nook-label mb-0'>旋转</span>
-                      <span className='text-xs font-bold text-[var(--theme-draw)] min-w-[40px] text-right'>
-                        {Math.round(activeLayer.transform.rotation)}°
-                      </span>
-                    </div>
-                    <input
-                      type='range'
-                      className='nook-slider'
-                      value={activeLayer.transform.rotation}
-                      onChange={(e) => updateImageTransform(activeLayer.id, { rotation: Number(e.target.value) })}
-                      min={-180}
-                      max={180}
-                      step={5}
-                      disabled={activeLayer.locked}
-                    />
-                  </div>
                 </div>
               )}
 
@@ -376,20 +406,23 @@ export function ImageLayerPanel() {
                   className='hidden'
                   onChange={handleFileChange}
                 />
-                <button
-                  className='nook-btn nook-btn-secondary flex-1 text-xs'
+                <Button
+                  size='xs'
+                  variant='secondary'
+                  color='green'
+                  block
                   onClick={handleFileSelect}
                 >
                   <Plus className='w-3.5 h-3.5' />
                   添加图片
-                </button>
+                </Button>
 
                 {activeLayerId && imageLayers.some((l) => l.id === activeLayerId) && (
                   <button
                     title='删除'
                     onClick={() => deleteLayer(activeLayerId)}
                     disabled={activeLayer?.locked}
-                    className='nook-btn text-xs text-[var(--color-danger)] justify-center border-[var(--theme-danger-light-5)] hover:bg-[var(--theme-danger-light-9)] disabled:opacity-40 disabled:cursor-not-allowed'
+                    className='w-full h-8 rounded-lg border border-[var(--theme-danger-light-5)] bg-[var(--bg-surface)] flex items-center justify-center gap-1.5 text-xs font-semibold text-[var(--color-danger)] cursor-pointer transition-colors hover:bg-[var(--theme-danger-light-9)] disabled:opacity-40 disabled:cursor-not-allowed'
                   >
                     <Trash2 className='w-3.5 h-3.5' />
                     删除图层
@@ -412,9 +445,9 @@ export function ImageLayerPanel() {
             width: 200,
           }}
         >
-          <input
+          <Input
             autoFocus
-            className='nook-input text-xs py-1.5 px-2'
+            size='xs'
             value={renamePopover.value}
             onChange={(e) => setRenamePopover((p) => ({ ...p, value: e.target.value }))}
             onKeyDown={(e) => {
@@ -428,21 +461,25 @@ export function ImageLayerPanel() {
             }}
           />
           <div className='flex gap-1.5 justify-end'>
-            <button
-              className='nook-btn nook-btn-secondary text-xs py-1 px-2'
+            <Button
+              size='xs'
+              variant='secondary'
+              color='green'
               onClick={() => setRenamePopover((p) => ({ ...p, open: false }))}
             >
               取消
-            </button>
-            <button
-              className='nook-btn nook-btn-primary text-xs py-1 px-2'
+            </Button>
+            <Button
+              size='xs'
+              variant='primary'
+              color='green'
               onClick={() => {
                 renameLayer(renamePopover.layerId, renamePopover.value);
                 setRenamePopover((p) => ({ ...p, open: false }));
               }}
             >
               确认
-            </button>
+            </Button>
           </div>
         </div>
       )}

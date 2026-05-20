@@ -84,6 +84,9 @@
   /* 瀛椾綋锟?*/
   --font-family: 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 
+  /* 鍔ㄦ晥 */
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
   /* === 璇箟灞傦紙Semantic Tokens锟?=== */
   /* 涓婚鑹诧細Nook 钖勮嵎锟?*/
   --color-primary: var(--ac-green);
@@ -438,11 +441,19 @@ body {
     scrollbar-color: var(--ac-green) var(--nook-paper);
   }
 
-  /* === 鏃犻殰纰嶆敮锟?=== */
-  :focus-visible {
-    outline: 3px solid var(--color-focus);
-    outline-offset: 2px;
-    border-radius: var(--radius-sm);
+  /* === 无障碍支持 === */
+  /* 焦点色不再全局固定，由各组件根据主题色/按钮色自行设置同色系 ring */
+  /* 彻底禁用所有元素的默认 focus outline（Tailwind 的 outline-none 在某些浏览器中仍可能显示透明轮廓框） */
+  *:focus,
+  *:focus-visible {
+    outline: none !important;
+  }
+  /* 强制移除 button 的所有浏览器默认焦点/点击视觉效果 */
+  button {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    -webkit-tap-highlight-color: transparent !important;
   }
 
 /* === 鍔ㄧ敾鍏抽敭甯э紙绮剧‘澶嶅埢锟?=== */
@@ -920,42 +931,6 @@ body {
   min-height: 100vh;
 }
 
-/* 鈹€鈹€鈹€ 闈㈡澘楠ㄦ灦 鈹€鈹€鈹€ */
-.nook-panel {
-  background: var(--surface-solid);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--nook-wood-light);
-}
-
-/* 鈹€鈹€鈹€ 鎸夐挳楠ㄦ灦 鈹€鈹€鈹€ */
-.nook-btn {
-  padding: 6px 16px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  border: 1px solid var(--nook-wood);
-  background: var(--surface-solid);
-  color: var(--text-primary);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.nook-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.nook-btn-primary {
-  background: var(--text-secondary);
-  color: #fff;
-  border-color: var(--text-secondary);
-}
-.nook-btn-secondary {
-  background: var(--surface-solid);
-  color: var(--text-secondary);
-  border-color: var(--nook-wood-light);
-}
-
 /* ─── 工具按钮骨架 ─── */
 .nook-tool {
   width: 36px; height: 36px;
@@ -973,45 +948,6 @@ body {
   color: var(--text-primary);
 }
 
-/* 鈹€鈹€鈹€ 杈撳叆妗嗛锟?鈹€鈹€鈹€ */
-.nook-input {
-  background: var(--surface-solid);
-  border: 1px solid var(--nook-wood);
-  border-radius: var(--radius-sm);
-  padding: 6px 10px;
-  font-size: 14px;
-  color: var(--text-primary);
-  width: 100%;
-  outline: none;
-}
-.nook-textarea {
-  background: var(--surface-solid);
-  border: 1px solid var(--nook-wood);
-  border-radius: var(--radius-sm);
-  padding: 8px 10px;
-  font-size: 14px;
-  color: var(--text-primary);
-  width: 100%;
-  outline: none;
-  min-height: 60px;
-  resize: vertical;
-}
-.nook-select {
-  appearance: none;
-  -webkit-appearance: none;
-  background: var(--surface-solid);
-  border: 1px solid var(--nook-wood);
-  border-radius: var(--radius-sm);
-  padding: 6px 28px 6px 10px;
-  font-size: 14px;
-  color: var(--text-primary);
-  cursor: pointer;
-  outline: none;
-  width: 100%;
-}
-
-/* 鈹€鈹€鈹€ dop 涓嬫媺閫夋嫨锟?鈹€鈹€鈹€ */
-
 /* 鈹€鈹€鈹€ 婊戝潡楠ㄦ灦 鈹€鈹€鈹€ */
 .nook-slider {
   width: 100%;
@@ -1019,9 +955,15 @@ body {
   appearance: none;
   height: 6px;
   border-radius: 999px;
-  background: var(--nook-wood-light);
+  background: transparent;
   outline: none;
   cursor: pointer;
+  --slider-fill: 0%;
+}
+.nook-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--theme-draw) var(--slider-fill), var(--nook-wood-light) var(--slider-fill));
 }
 .nook-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -1033,10 +975,21 @@ body {
   border: 2px solid var(--theme-draw);
   box-shadow: 0 1px 4px rgba(43, 180, 171, 0.3);
   transition: transform 0.15s, box-shadow 0.15s;
+  margin-top: -5px;
 }
 .nook-slider::-webkit-slider-thumb:hover {
   transform: scale(1.15);
   box-shadow: 0 2px 8px rgba(43, 180, 171, 0.4);
+}
+.nook-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--nook-wood-light);
+}
+.nook-slider::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--theme-draw);
 }
 .nook-slider::-moz-range-thumb {
   width: 16px;
@@ -1046,17 +999,6 @@ body {
   border: 2px solid var(--theme-draw);
   box-shadow: 0 1px 4px rgba(43, 180, 171, 0.3);
   cursor: pointer;
-}
-
-/* 鈹€鈹€鈹€ 鏍囩楠ㄦ灦 鈹€鈹€鈹€ */
-.nook-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-muted);
-  display: block;
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
 }
 
 /* 鈹€鈹€鈹€ 缁樺埗妯″紡闈㈡澘楠ㄦ灦 鈹€鈹€鈹€ */
@@ -1083,25 +1025,7 @@ body {
   color: var(--theme-draw-dark-2);
 }
 
-/* 鈹€鈹€鈹€ 閫夐」琛岄鏋?鈹€鈹€鈹€ */
-.nook-option-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  transition: background-color 0.15s;
-}
-.nook-option-row:hover {
-  background: var(--bg-surface-alt);
-}
-.nook-option-row-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-main);
-}
-
-/* 鈹€鈹€鈹€ 鍥惧眰楠ㄦ灦 鈹€鈹€鈹€ */
+/* 图层骨架（扁平清晰风格） */
 .nook-layer {
   padding: 8px 12px;
   border-radius: var(--radius-sm);
@@ -1111,10 +1035,14 @@ body {
   gap: 8px;
   margin-bottom: 4px;
   border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.nook-layer:hover {
+  background: var(--bg-surface-alt);
 }
 .nook-layer.active {
-  background: var(--nook-wood-light);
-  border-color: var(--nook-wood);
+  background: var(--theme-draw-light-9);
+  border-color: var(--theme-draw-light-3);
 }
 .nook-layer-thumb {
   width: 32px; height: 32px;

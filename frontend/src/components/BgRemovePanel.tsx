@@ -44,7 +44,7 @@ export function BgRemovePanel({ backendAvailable = true }: BgRemovePanelProps) {
   }, [models, bgModel, setBgModel]);
 
   return (
-    <div className="nook-panel flex flex-col">
+    <div className="flex flex-col rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden">
       <div className="px-4 py-3">
         <div className="mb-2">
           <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">
@@ -61,6 +61,7 @@ export function BgRemovePanel({ backendAvailable = true }: BgRemovePanelProps) {
                 value={bgModel}
                 options={models.map((m) => ({ key: m.name, label: m.label }))}
                 onChange={(val) => setBgModel(val)}
+                themeColor={theme.main}
               />
             </div>
           </div>

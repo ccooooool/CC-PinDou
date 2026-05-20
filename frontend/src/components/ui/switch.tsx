@@ -6,6 +6,7 @@ export interface SwitchProps {
   onChange?: (checked: boolean) => void
   disabled?: boolean
   className?: string
+  themeColor?: string
 }
 
 export function Switch({
@@ -13,7 +14,9 @@ export function Switch({
   onChange,
   disabled,
   className,
+  themeColor,
 }: SwitchProps) {
+  const focusColor = themeColor || 'var(--color-primary)'
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange?.(e.target.checked)
   }
@@ -28,7 +31,10 @@ export function Switch({
           disabled={disabled}
           onChange={handleChange}
         />
-        <div className="w-12 h-7 bg-[var(--bg-surface-alt)] rounded-full peer-checked:bg-ac-green transition-colors duration-300 ease-nook border border-[var(--border-default)] peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--color-focus)]" />
+        <div
+          className="w-12 h-7 bg-[var(--bg-surface-alt)] rounded-full peer-checked:bg-ac-green transition-colors duration-300 ease-nook border border-[var(--border-default)] peer-focus-visible:ring-2 peer-focus-visible:ring-[color:var(--switch-focus-color,var(--color-primary))]"
+          style={{ ['--switch-focus-color' as string]: focusColor }}
+        />
         <div className="absolute left-1 top-1 w-5 h-5 bg-[var(--bg-surface)] rounded-full shadow-switch-thumb transition-transform duration-300 ease-nook peer-checked:translate-x-5" />
       </div>
     </label>

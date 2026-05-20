@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react';
 import { useEditorStore } from '../store/useEditorStore';
+import { Button, Input } from '@/components/ui';
 import {
   Eye,
   EyeOff,
@@ -35,7 +36,7 @@ export function LayerPanel() {
   const activeLayer = layers.find((l) => l.id === activeLayerId);
 
   return (
-    <div className="nook-panel flex flex-col">
+    <div className="flex flex-col rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border-subtle)]">
         <Layers className="w-4 h-4 text-[var(--color-primary)]" />
         <span className="text-sm font-bold text-[var(--text-main)]">图层</span>
@@ -124,6 +125,7 @@ export function LayerPanel() {
                 min={0}
                 max={100}
                 step={5}
+                style={{ '--slider-fill': `${activeLayer.opacity}%` } as React.CSSProperties}
               />
             </div>
           )}
@@ -131,33 +133,41 @@ export function LayerPanel() {
           {/* 操作按钮 */}
           <div className="px-4 py-3 border-b border-[var(--border-subtle)] last:border-b-0 flex flex-col gap-2">
             <div className="flex gap-1.5">
-              <button
-                className="nook-btn nook-btn-secondary flex-1 text-xs"
+              <Button
+                size="xs"
+                variant="secondary"
+                color="green"
+                className="flex-1"
                 onClick={() => addBeadLayer('', 32)}
               >
                 <Plus className="w-3.5 h-3.5" />
                 新建
-              </button>
-              <button
-                className="nook-btn nook-btn-secondary flex-1 text-xs"
+              </Button>
+              <Button
+                size="xs"
+                variant="secondary"
+                color="green"
+                className="flex-1"
                 onClick={() => setShowImageInput(!showImageInput)}
               >
                 <Image className="w-3.5 h-3.5" />
                 图片
-              </button>
+              </Button>
             </div>
 
             {showImageInput && (
               <div className="flex gap-1.5">
-                <input
-                  type="text"
+                <Input
+                  size="xs"
                   placeholder="图片 URL"
                   value={newImageUrl}
                   onChange={(e) => setNewImageUrl(e.target.value)}
-                  className="nook-input flex-1 text-xs"
+                  className="flex-1 text-xs"
                 />
-                <button
-                  className="nook-btn nook-btn-primary text-xs"
+                <Button
+                  size="xs"
+                  variant="primary"
+                  color="green"
                   onClick={() => {
                     if (newImageUrl.trim()) {
                       addImageLayer('', newImageUrl.trim());
@@ -167,7 +177,7 @@ export function LayerPanel() {
                   }}
                 >
                   添加
-                </button>
+                </Button>
               </div>
             )}
 

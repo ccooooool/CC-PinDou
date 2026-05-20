@@ -27,6 +27,7 @@ export interface ModalProps {
   children?: React.ReactNode
   className?: string
   width?: number | string
+  themeColor?: string
 }
 
 export function Modal({
@@ -37,7 +38,9 @@ export function Modal({
   children,
   className,
   width = 420,
+  themeColor,
 }: ModalProps) {
+  const borderColor = themeColor || 'var(--ac-green)'
   const [mounted, setMounted] = React.useState(false)
   const modalRef = React.useRef<HTMLDivElement>(null)
 
@@ -91,11 +94,13 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         className={cn(
-          "relative bg-[var(--bg-surface)] rounded-card border-4 border-ac-green shadow-modal w-full overflow-hidden animate-pop outline-none",
+          "relative bg-[var(--bg-surface)] rounded-card border-4 shadow-modal w-full overflow-hidden animate-pop outline-none",
+          "border-[color:var(--modal-border-color,var(--ac-green))]",
           className
         )}
         style={{
           maxWidth: typeof width === "number" ? `${width}px` : width,
+          ['--modal-border-color' as string]: borderColor,
         }}
         onClick={(e) => e.stopPropagation()}
       >

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { getModeTheme } from '../utils/theme';
-import { Switch } from '@/components/ui';
+import { Switch, Button, Badge } from '@/components/ui';
 import { Select } from './ui/select';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import {
@@ -36,31 +36,32 @@ export function SettingsPanel({ mode, config, onChange }: SettingsPanelProps) {
     <div className="flex flex-col gap-4 min-w-[280px]">
       {/* 品牌 */}
       <div className="flex flex-col gap-2">
-        <label className="nook-label">拼豆品牌</label>
+        <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">拼豆品牌</label>
         <Select
           value={brand}
           options={BRANDS.map((b) => ({ key: b, label: b }))}
           onChange={(val) => onChange({ brand: val })}
+          themeColor={theme.main}
         />
       </div>
 
       {/* 选项列表 */}
       <div className="flex flex-col gap-1">
-        <label className="nook-label">显示选项</label>
+        <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">显示选项</label>
 
-        <div className="nook-option-row">
-          <span className="nook-option-row-label">显示色号</span>
-          <Switch checked={showCode} onChange={(v) => onChange({ showCode: v })} />
+        <div className="flex items-center justify-between px-3 py-2 rounded-xl transition-colors hover:bg-[var(--bg-surface-alt)]">
+          <span className="text-sm font-medium text-[var(--text-main)]">显示色号</span>
+          <Switch checked={showCode} onChange={(v) => onChange({ showCode: v })} themeColor={theme.main} />
         </div>
 
-        <div className="nook-option-row">
-          <span className="nook-option-row-label">圆形珠子</span>
-          <Switch checked={circleMode} onChange={(v) => onChange({ circleMode: v })} />
+        <div className="flex items-center justify-between px-3 py-2 rounded-xl transition-colors hover:bg-[var(--bg-surface-alt)]">
+          <span className="text-sm font-medium text-[var(--text-main)]">圆形珠子</span>
+          <Switch checked={circleMode} onChange={(v) => onChange({ circleMode: v })} themeColor={theme.main} />
         </div>
 
-        <div className="nook-option-row">
-          <span className="nook-option-row-label">标识线</span>
-          <Switch checked={showMarkLines} onChange={(v) => onChange({ showMarkLines: v })} />
+        <div className="flex items-center justify-between px-3 py-2 rounded-xl transition-colors hover:bg-[var(--bg-surface-alt)]">
+          <span className="text-sm font-medium text-[var(--text-main)]">标识线</span>
+          <Switch checked={showMarkLines} onChange={(v) => onChange({ showMarkLines: v })} themeColor={theme.main} />
         </div>
 
         {showMarkLines && (
@@ -84,31 +85,34 @@ export function SettingsPanel({ mode, config, onChange }: SettingsPanelProps) {
 
       {/* 质量检查（仅展示按钮，实际检测在父组件触发） */}
       <div className="flex flex-col gap-2">
-        <label className="nook-label">质量检查</label>
-        <button
+        <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">质量检查</label>
+        <Button
+          size="xs"
+          variant={showChecks ? 'primary' : 'secondary'}
+          color="green"
+          block
           onClick={() => setShowChecks(!showChecks)}
-          className={`nook-btn text-xs justify-center py-1.5 ${showChecks ? 'nook-btn-primary' : 'nook-btn-secondary'}`}
         >
           <Search className="w-3.5 h-3.5" />
           {showChecks ? '收起检查工具' : '展开检查工具'}
-        </button>
+        </Button>
         {showChecks && (
           <div className="flex flex-wrap gap-1.5 px-1">
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="nook-badge cursor-help">
+                <Badge variant="outline" className="cursor-help text-xs py-0.5 px-2">
                   <AlertTriangle className="w-3 h-3" />
                   孤立像素
-                </span>
+                </Badge>
               </TooltipTrigger>
               <TooltipContent>请在画布右键菜单中使用检测功能</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="nook-badge cursor-help">
+                <Badge variant="outline" className="cursor-help text-xs py-0.5 px-2">
                   <AlertTriangle className="w-3 h-3" />
                   结构不稳
-                </span>
+                </Badge>
               </TooltipTrigger>
               <TooltipContent>请在画布右键菜单中使用检测功能</TooltipContent>
             </Tooltip>

@@ -5,9 +5,10 @@ import { ImageCropModal } from './ImageCropModal';
 
 interface ImageUploaderProps {
   onImageSelect: (file: File, dataUrl: string) => void;
+  themeColor?: string;
 }
 
-export function ImageUploader({ onImageSelect }: ImageUploaderProps) {
+export function ImageUploader({ onImageSelect, themeColor }: ImageUploaderProps) {
   const [cropOpen, setCropOpen] = useState(false);
   const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
   const [cropFile, setCropFile] = useState<File | null>(null);
@@ -75,6 +76,7 @@ export function ImageUploader({ onImageSelect }: ImageUploaderProps) {
         onClose={handleCancel}
         onCrop={handleCrop}
         onSkip={handleSkip}
+        themeColor={themeColor}
       />
     </>
   );

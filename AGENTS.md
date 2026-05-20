@@ -25,9 +25,12 @@ CC-PinDou 是一个将任意图片转换为拼豆（Perler Beads / 融合珠）�
 | 数据库 | SQLite（色号映射，`data/colors.db`） |
 | 前端 | Vite 5 + React 18 + TypeScript 5 + Tailwind CSS 3 + shadcn/ui |
 | 状态管理 | Zustand（已按领域拆分为 `useEditorStore` / `useUIStore` / `useConfigStore`） |
-| UI 设计系统 | NookUI（Animal Crossing 马卡龙风格） |
+| UI 设计系统 | NookUI（Animal Crossing 马卡龙风格）+ NES.css（像素光标与复古元素） |
 | 路由 | React Router v7（嵌套路由 `/simple/:mode`、`/full/:mode`） |
-| 测试 | Vitest（前端）+ pytest（后端） |
+| 动画 | Framer Motion + CSS View Transitions（NookPhone 风格转场） |
+| Toast | Sonner 2.0.7 + NookUI 自定义样式 |
+| Tooltip | Radix UI `@radix-ui/react-tooltip` |
+| 测试 | Vitest（前端，jsdom）+ pytest（后端） |
 
 ---
 
@@ -35,18 +38,18 @@ CC-PinDou 是一个将任意图片转换为拼豆（Perler Beads / 融合珠）�
 
 ```
 CC-PinDou/
-├── run.py                      # 生产启动入口（waitress，端口 5678）
+├── run.py                      # 生产启动入口（waitress，端口 5678，8 线程）
 ├── build.py                    # 前后端联合构建脚本（含环境检查、依赖安装、测试、构建）
 ├── requirements.txt            # Python 依赖
 │
 ├── server/                     # Flask 后端
-│   ├── app.py                  # 路由入口（背景移除、线条增强、像素检测、导出、SSE 进度）
-│   ├── config.py               # 全局配置、参数边界、模型元数据
+│   ├── app.py                  # 路由入口（背景移除、线条增强、像素检测、导出、SSE 进度、SPA fallback）
+│   ├── config.py               # 全局配置、参数边界、rembg 模型元数据
 │   ├── colors.py               # 色号数据库（SQLite + JSON），含最近色匹配（cKDTree 加速）
-│   ├── utils.py                # 工具函数（文件校验、日志、图像验证等）
+│   ├── utils.py                # 工具函数（文件校验、日志、图像验证、参数解析、安全清理）
 │   ├── image_processing.py     # 图像预处理（背景移除、线条增强、颜色简化）
 │   ├── pixel_processing.py     # 像素图处理（自动检测、网格生成、颜色量化）
-│   ├── normal_processing.py    # 普通图 → 拼豆图案（保留但当前前端已承担主要计算）
+│   ├── normal_processing.py    # 普通图 → 拼豆图案（后端备用路径）
 │   ├── export_generator.py     # 高清图纸导出（PNG/JPG，含图例和坐标轴）
 │   ├── models_manager.py       # rembg ONNX 模型加载与管理
 │   ├── tests/                  # pytest 测试套件
@@ -55,21 +58,25 @@ CC-PinDou/
 │   │   ├── test_image_processing.py
 │   │   ├── test_pixel_processing.py
 │   │   └── test_utils.py
-│   └── uploads/                # 临时上传目录（程序自动清理）
+│   └── uploads/                # 临时上传目录（惰性创建，程序自动清理）
 │
 ├── frontend/                   # 前端（Vite + React + TypeScript）
-│   ├── package.json            # npm 依赖与脚本（版本 2.0.0）
+│   ├── package.json            # npm 依赖与脚本（版本 2.0.0，type: module）
 │   ├── vite.config.ts          # Vite 配置（dev 端口 6789，代理 /api 和 /export 到 localhost:5678）
 │   ├── vitest.config.ts        # Vitest 配置（jsdom 环境，globals: true，setupFiles: src/test/setup.ts）
-│   ├── tailwind.config.js      # Tailwind 配置（NookUI 设计令牌扩展）
+│   ├── tailwind.config.js      # Tailwind 配置（NookUI 设计令牌扩展、动画 keyframes、字体）
 │   ├── postcss.config.js
 │   ├── components.json         # shadcn/ui 初始化配置
 │   ├── tsconfig.json           # 项目引用 tsconfig.app.json + tsconfig.node.json
 │   └── src/
-│       ├── main.tsx            # React 入口（挂载到 #root，添加 .nookui 类）
+│       ├── main.tsx            # React 入口（挂载到 #root，添加 .nookui 类，导入 NES.css）
 │       ├── App.tsx             # 主应用组件（三模式路由/状态协调）
 │       ├── Router.tsx          # react-router-dom 路由（/ → EntryPage, /simple/:mode, /full/:mode）
-│       ├── pages/              # 页面组件（EntryPage / SimplePage / FullPage / design-system/）
+│       ├── pages/              # 页面组件
+│       │   ├── EntryPage.tsx
+│       │   ├── SimplePage.tsx
+│       │   ├── FullPage.tsx
+│       │   └── design-system/  # 设计系统展示页
 │       ├── components/         # React 组件
 │       │   ├── CanvasEditor.tsx       # 主画板编辑器（Canvas 渲染 + 交互）
 │       │   ├── Toolbar.tsx            # 顶部工具栏
@@ -79,7 +86,7 @@ CC-PinDou/
 │       │   ├── DrawToolBar.tsx        # 绘制模式左侧工具栏
 │       │   ├── LayerPanel.tsx         # 图层面板（图层列表管理）
 │       │   ├── BeadLayerPanel.tsx     # 拼豆图层专属控制面板
-│       │   ├── ImageLayerPanel.tsx    # 图片图层专属控制面板
+│       │   ├── ImageLayerPanel.tsx    # 图片图层上传与管理
 │       │   ├── LegendBar.tsx          # 颜色图例（底部用量统计条）
 │       │   ├── ExportModal.tsx        # 导出设置弹窗
 │       │   ├── SaveModal.tsx          # 保存工程弹窗
@@ -93,7 +100,26 @@ CC-PinDou/
 │       │   ├── ModeBackground.tsx     # 模式切换背景动效
 │       │   ├── ColorPickerPopover.tsx # 颜色选择浮层
 │       │   ├── ToolPropertiesPopover.tsx # 工具属性浮层
-│       │   └── ui/                    # shadcn/ui 基础组件（Button、Slider、Select 等）
+│       │   └── ui/                    # shadcn/ui 基础组件
+│       │       ├── alert.tsx
+│       │       ├── badge.tsx
+│       │       ├── button.tsx
+│       │       ├── card.tsx
+│       │       ├── checkbox.tsx
+│       │       ├── form-field.tsx
+│       │       ├── index.ts
+│       │       ├── input.tsx
+│       │       ├── modal.tsx
+│       │       ├── panel-card.tsx
+│       │       ├── progress.tsx
+│       │       ├── select.tsx
+│       │       ├── skeleton.tsx
+│       │       ├── slider.tsx
+│       │       ├── switch.tsx
+│       │       ├── tabs.tsx
+│       │       ├── toast.tsx
+│       │       ├── tooltip.tsx
+│       │       └── uploader.tsx
 │       ├── hooks/              # 自定义 Hooks
 │       │   ├── useCanvasRenderer.ts      # Canvas 渲染逻辑（方块/圆形/bead 三模式，离屏缓存优化）
 │       │   ├── useCanvasInteractions.ts  # 画布交互（点击/拖拽/空格平移）
@@ -110,7 +136,8 @@ CC-PinDou/
 │       │   ├── useEditorStore.ts      # 编辑状态（gridData、colorList、historyStack、图层系统）
 │       │   ├── useUIStore.ts          # UI 状态（mode、drawTool、symmetryMode、面板状态）
 │       │   ├── useConfigStore.ts      # 配置状态（brand、gridSize、colorMode 等参数）
-│       │   └── usePerlerStore.ts      # 兼容层（re-export 三个子 Store）
+│       │   ├── usePerlerStore.ts      # 兼容层（re-export 三个子 Store）
+│       │   └── usePerlerStore.test.ts # Vitest 单元测试
 │       ├── engine/             # 前端计算引擎
 │       │   ├── PerlerEngine.ts        # OKLab 颜色匹配、网格生成、BFS 连通合并
 │       │   ├── PerlerEngine.test.ts   # Vitest 单元测试
@@ -134,6 +161,8 @@ CC-PinDou/
 │       │   └── nookui-theme.css       # NookUI 设计令牌 + 组件类（~1500 行）
 │       ├── data/
 │       │   └── colorSystemMapping.json # 5 品牌色号映射 JSON 数据
+│       ├── lib/
+│       │   └── utils.ts               # cn() 等通用工具（shadcn 标准）
 │       └── test/
 │           └── setup.ts               # Vitest 测试初始化（ImageData polyfill）
 │
@@ -174,14 +203,14 @@ CC-PinDou/
 | 文件 | 说明 |
 |------|------|
 | `requirements.txt` | Python 依赖：Flask、flask-cors、Pillow、numpy、scipy、rembg、waitress |
-| `frontend/package.json` | 前端依赖与 npm 脚本（版本 2.0.0） |
-| `frontend/vite.config.ts` | Vite 构建配置、dev server 端口 6789、代理规则、manualChunks 拆包策略 |
+| `frontend/package.json` | 前端依赖与 npm 脚本（版本 2.0.0，type: module） |
+| `frontend/vite.config.ts` | Vite 构建配置、dev server 端口 6789、代理规则、manualChunks 拆包策略（vendor-react/vendor-motion/vendor-radix/vendor-icons/vendor-state/vendor-tw/vendor-sonner/vendor-cropper/vendor-xlsx/engine） |
 | `frontend/vitest.config.ts` | Vitest 测试配置（jsdom、globals: true、setupFiles: src/test/setup.ts） |
-| `frontend/tailwind.config.js` | Tailwind CSS 配置，扩展了 NookUI 设计令牌和动画 keyframes |
+| `frontend/tailwind.config.js` | Tailwind CSS 配置，扩展了 NookUI 设计令牌、动画 keyframes、字体、圆角、阴影 |
 | `frontend/tsconfig.json` | TypeScript 项目引用配置（引用 tsconfig.app.json + tsconfig.node.json） |
 | `frontend/components.json` | shadcn/ui 初始化配置 |
-| `.prettierrc.json` | 代码格式化：前端 2 空格单引号，Python 4 空格双引号，LF 换行 |
-| `.gitignore` | 忽略 node_modules、dist、ONNX 模型、备份目录、IDE 配置、NookUI 子项目等 |
+| `.prettierrc.json` | 代码格式化：前端 2 空格单引号，Python 4 空格双引号，LF 换行，printWidth 120 |
+| `.gitignore` | 忽略 node_modules、dist、ONNX 模型、备份目录、IDE 配置、NookUI 子项目、开发环境文件等 |
 
 ---
 
@@ -196,7 +225,7 @@ CC-PinDou/
 ### 开发环境启动
 
 ```bash
-# 终端 1：启动后端（生产服务器 waitress，端口 5678）
+# 终端 1：启动后端（生产服务器 waitress，端口 5678，8 线程）
 python run.py
 
 # 或者手动进入 server 目录启动
@@ -335,6 +364,7 @@ NookUI 在 `NookUI/` 目录下包含两个版本：
 1. **`frontend/src/styles/nookui-theme.css`**（~1500 行）：从 NookUI `globals.css` 复制/移植的设计令牌和组件类
 2. **`frontend/src/main.tsx`** 在 `#root` 元素上挂载 `.nookui` 类以激活全局基础样式
 3. 前端实际 UI 组件基于 **shadcn/ui + Radix UI 基础组件** 自行封装，视觉风格通过 `nook-*` 类名和 Tailwind 工具类实现
+4. **`nes.css`** 被导入用于像素光标和复古元素，但在 `index.css` 中通过 `cursor: revert !important` 覆盖了 NES.css 的默认像素光标
 
 **组件类名规范**：前端所有 UI 组件使用 `nook-*` 前缀类名（如 `.nook-btn`、`.nook-panel`、`.nook-card`）。这些类定义在 `nookui-theme.css` 中，与 Tailwind 工具类可混用。
 
@@ -405,14 +435,14 @@ font-family: 'Nunito', 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/api/remove-bg` | POST | AI 背景移除。支持 `task_id` SSE 进度、`edge_threshold`  alpha matting、`model` 模型选择 |
-| `/api/progress/<task_id>` | GET | SSE 进度流，200ms 轮询，最长 60 秒，最大 16 并发 |
+| `/api/remove-bg` | POST | AI 背景移除。支持 `task_id` SSE 进度、`edge_threshold` alpha matting、`model` 模型选择 |
+| `/api/progress/<task_id>` | GET | SSE 进度流，200ms 轮询，最长 60 秒（300 轮），最大 16 并发 |
 | `/api/enhance-lines` | POST | 线条增强，MinFilter 形态学操作 |
 | `/api/generate` | POST | 普通图 → 拼豆网格（后端备用路径）|
 | `/api/detect-pixel` | POST | 像素图自动检测像素大小和偏移 |
-| `/api/models` | GET | 返回可用 rembg 模型列表 |
+| `/api/models` | GET | 返回可用 rembg 模型列表（含元数据：label、desc、size_mb、tags） |
 | `/export` | POST | 高清导出 PNG/JPG，限制 200×200 网格 |
-| `/` / `/<path:path>` | GET | SPA 静态文件服务与 fallback |
+| `/` / `/<path:path>` | GET | SPA 静态文件服务与 fallback（排除 api/、export、static/） |
 
 ### 颜色匹配算法
 

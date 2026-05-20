@@ -35,11 +35,12 @@ const Slider = React.forwardRef<
           "transition-all duration-200 ease-nook",
           "hover:scale-125 hover:shadow-lg",
           "active:scale-110",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+          "focus-visible:ring-[color:var(--slider-focus-color,var(--color-primary))]",
           "disabled:pointer-events-none disabled:opacity-50",
           "cursor-grab active:cursor-grabbing"
         )}
-        style={{ borderColor: thumbBorder }}
+        style={{ borderColor: thumbBorder, ['--slider-focus-color' as string]: thumbBorder }}
       />
     </SliderPrimitive.Root>
   );

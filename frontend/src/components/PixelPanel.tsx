@@ -93,7 +93,7 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
               }}
             />
             <Upload className="w-10 h-10 text-[var(--text-muted)] mx-auto" />
-            <p className="mt-2 mb-1 text-sm font-bold text-[var(--text-main)]">点击或拖拽上传像素图</p>
+            <p className="mt-2 mb-1 text-sm font-bold text-[var(--text-main)]">点击或拖拽上传图片</p>
             <p className="m-0 text-xs font-bold text-[var(--text-muted)]">支持 JPG、PNG 格式</p>
           </div>
         ) : (
@@ -192,6 +192,7 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
                   value={pixelSampleMethod}
                   options={SAMPLE_OPTIONS}
                   onChange={(val) => setPixelSampleMethod(val as 'center' | 'mode' | 'mean')}
+                  themeColor={theme.main}
                 />
               </div>
             </div>
@@ -237,6 +238,7 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
         open={showClearConfirm}
         onClose={() => setShowClearConfirm(false)}
         title="确认清除图片"
+        themeColor={theme.main}
         footer={
           <>
             <Button variant="ghost" onClick={() => setShowClearConfirm(false)}>
@@ -260,6 +262,7 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
         onClose={handleCancel}
         onCrop={handleCrop}
         onSkip={handleSkip}
+        themeColor={theme.main}
       />
     </div>
   );

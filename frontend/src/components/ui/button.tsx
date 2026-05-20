@@ -4,7 +4,7 @@ import { cva } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap font-nook font-semibold transition-all duration-300 ease-nook focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 relative overflow-hidden active:scale-[0.96]",
+  "inline-flex items-center justify-center whitespace-nowrap font-nook font-semibold transition-all duration-300 ease-nook focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 relative overflow-hidden active:scale-[0.96]",
   {
     variants: {
       variant: {
@@ -16,6 +16,7 @@ const buttonVariants = cva(
         dashed:    "border-2 border-dashed bg-transparent rounded-button px-7 py-3",
         '3d':      "bg-[var(--bg-surface)] shadow-3d-btn hover:shadow-3d-btn-hover hover:-translate-y-[1px] active:shadow-3d-btn-active active:translate-y-[2px] rounded-button px-7 py-3 border border-[var(--border-default)]",
         icon:      "rounded-full h-10 w-10 p-0 flex items-center justify-center",
+        'icon-sm': "rounded-full h-8 w-8 p-0 flex items-center justify-center text-sm",
       },
       color: {
         green:  "",
@@ -28,24 +29,27 @@ const buttonVariants = cva(
         default: "text-base",
         sm:      "text-sm px-5 py-2",
         lg:      "text-lg px-10 py-4",
+        xs:      "text-xs px-3 py-1 rounded-lg",
       },
     },
     compoundVariants: [
       // primary / icon: 填充色 + 边框 + 阴影
-      { variant: ["primary", "icon"], color: "green",  class: "bg-ac-green text-white border-[4px] border-btn-ring-green shadow-btn-green hover:-translate-y-[3px] hover:shadow-btn-green-hover active:translate-y-0 active:shadow-none" },
-      { variant: ["primary", "icon"], color: "blue",   class: "bg-ac-blue text-white border-[4px] border-btn-ring-blue shadow-btn-blue hover:-translate-y-[3px] hover:shadow-btn-blue-hover active:translate-y-0 active:shadow-none" },
-      { variant: ["primary", "icon"], color: "coral",  class: "bg-ac-coral text-white border-[4px] border-btn-ring-coral shadow-btn-coral hover:-translate-y-[3px] hover:shadow-btn-coral-hover active:translate-y-0 active:shadow-none" },
-      { variant: ["primary", "icon"], color: "yellow", class: "bg-ac-yellow text-nook-brown border-[4px] border-btn-ring-yellow shadow-btn-yellow hover:-translate-y-[3px] hover:shadow-btn-yellow-hover active:translate-y-0 active:shadow-none" },
-      // secondary / ghost
-      { variant: ["secondary", "ghost"], color: "green", class: "border-[3px] border-[var(--ac-green)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)] hover:-translate-y-[3px] active:translate-y-0" },
-      { variant: ["secondary", "ghost"], color: "blue",  class: "border-[3px] border-[var(--ac-blue)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)] hover:-translate-y-[3px] active:translate-y-0" },
-      { variant: ["secondary", "ghost"], color: "coral", class: "border-[3px] border-[var(--ac-coral)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)] hover:-translate-y-[3px] active:translate-y-0" },
+      // primary / icon — focus ring 跟随按钮同色系
+      { variant: ["primary", "icon", "icon-sm"], color: "green",  class: "bg-ac-green text-white border-[4px] border-btn-ring-green shadow-btn-green hover:-translate-y-[3px] hover:shadow-btn-green-hover active:translate-y-0 active:shadow-none focus-visible:ring-[var(--ac-green)]" },
+      { variant: ["primary", "icon", "icon-sm"], color: "blue",   class: "bg-ac-blue text-white border-[4px] border-btn-ring-blue shadow-btn-blue hover:-translate-y-[3px] hover:shadow-btn-blue-hover active:translate-y-0 active:shadow-none focus-visible:ring-[var(--ac-blue)]" },
+      { variant: ["primary", "icon", "icon-sm"], color: "coral",  class: "bg-ac-coral text-white border-[4px] border-btn-ring-coral shadow-btn-coral hover:-translate-y-[3px] hover:shadow-btn-coral-hover active:translate-y-0 active:shadow-none focus-visible:ring-[var(--ac-coral)]" },
+      { variant: ["primary", "icon", "icon-sm"], color: "yellow", class: "bg-ac-yellow text-nook-brown border-[4px] border-btn-ring-yellow shadow-btn-yellow hover:-translate-y-[3px] hover:shadow-btn-yellow-hover active:translate-y-0 active:shadow-none focus-visible:ring-[var(--ac-yellow)]" },
+      // secondary / ghost — focus ring 跟随边框同色系
+      { variant: ["secondary", "ghost"], color: "green",  class: "border-[3px] border-[var(--ac-green)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)] hover:-translate-y-[3px] active:translate-y-0 focus-visible:ring-[var(--ac-green)]" },
+      { variant: ["secondary", "ghost"], color: "blue",   class: "border-[3px] border-[var(--ac-blue)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)] hover:-translate-y-[3px] active:translate-y-0 focus-visible:ring-[var(--ac-blue)]" },
+      { variant: ["secondary", "ghost"], color: "yellow", class: "border-[3px] border-[var(--ac-yellow)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)] hover:-translate-y-[3px] active:translate-y-0 focus-visible:ring-[var(--ac-yellow)]" },
+      { variant: ["secondary", "ghost"], color: "coral",  class: "border-[3px] border-[var(--ac-coral)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)] hover:-translate-y-[3px] active:translate-y-0 focus-visible:ring-[var(--ac-coral)]" },
       // text
-      { variant: "text", color: "none", class: "text-[var(--text-secondary)] hover:text-[var(--text-primary)]" },
+      { variant: "text", color: "none", class: "text-[var(--text-secondary)] hover:text-[var(--text-primary)] focus-visible:ring-[var(--text-primary)]" },
       // link
-      { variant: "link", color: "green", class: "text-ac-green" },
-      { variant: "link", color: "blue",  class: "text-ac-blue" },
-      { variant: "link", color: "coral", class: "text-ac-coral" },
+      { variant: "link", color: "green", class: "text-ac-green focus-visible:ring-[var(--ac-green)]" },
+      { variant: "link", color: "blue",  class: "text-ac-blue focus-visible:ring-[var(--ac-blue)]" },
+      { variant: "link", color: "coral", class: "text-ac-coral focus-visible:ring-[var(--ac-coral)]" },
       // dashed
       { variant: "dashed", color: "none", class: "border-[var(--border-default)] text-[var(--text-primary)] hover:border-ac-green hover:text-ac-green" },
     ],
@@ -58,9 +62,9 @@ const buttonVariants = cva(
 )
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "ghost" | "text" | "link" | "dashed" | "3d" | "icon"
+  variant?: "primary" | "secondary" | "ghost" | "text" | "link" | "dashed" | "3d" | "icon" | "icon-sm"
   color?: "green" | "blue" | "coral" | "yellow" | "none"
-  size?: "default" | "sm" | "lg"
+  size?: "default" | "sm" | "lg" | "xs"
   loading?: boolean
   block?: boolean
 }
@@ -91,7 +95,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     // 自动推断颜色：primary 默认 green，danger 场景可用 coral
     const resolvedColor = color ?? (
-      variant === "primary" || variant === "icon" ? "green" :
+      variant === "primary" || variant === "icon" || variant === "icon-sm" ? "green" :
       variant === "secondary" || variant === "ghost" ? "green" :
       variant === "link" ? "green" :
       "none"
@@ -142,6 +146,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           block && "w-full",
           loading && "cursor-wait"
         )}
+        style={{ outline: 'none', ...(props.style as React.CSSProperties) }}
         ref={buttonRef}
         onClick={handleClick}
         disabled={disabled || loading}

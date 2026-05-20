@@ -237,7 +237,7 @@ function App({ variant = 'full' }: AppProps) {
                   {/* 图片上传/预览区 */}
                   <div className="px-5 py-4 border-b border-[var(--border-default)]">
                     {!showImage ? (
-                      <ImageUploader onImageSelect={handleImageSelect} />
+                      <ImageUploader onImageSelect={handleImageSelect} themeColor={theme.main} />
                     ) : (
                       <div className="flex flex-col gap-2.5">
                         <div
@@ -329,6 +329,7 @@ function App({ variant = 'full' }: AppProps) {
                     open={showClearConfirm}
                     onClose={() => setShowClearConfirm(false)}
                     title="确认清除图片"
+                    themeColor={theme.main}
                     footer={
                       <>
                         <Button variant="ghost" onClick={() => setShowClearConfirm(false)}>
@@ -409,10 +410,10 @@ function App({ variant = 'full' }: AppProps) {
           {/* 图例区（draw 模式下隐藏） */}
           {mode !== 'draw' && <LegendBar />}
 
-          {/* 浮动提示：进入自由绘制 */}
+          {/* 浮动提示：进入绘制模式 */}
           {gridData && mode !== 'draw' && showEditTip && (
             <div className="absolute top-16 right-4 z-20 w-[220px]">
-              <div className="nook-panel relative">
+              <div className="relative rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden">
                 <button
                   className="absolute top-2 right-2 p-1 rounded-full hover:bg-black/5 transition-colors"
                   onClick={() => setShowEditTip(false)}
@@ -423,14 +424,14 @@ function App({ variant = 'full' }: AppProps) {
                   <div className="flex items-center gap-1.5">
                     <span className="w-1 h-3 rounded-full" style={{ background: theme.main }} />
                     <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">
-                      自由绘制
+                      绘制模式
                     </span>
                   </div>
                   <p className="text-xs text-[var(--text-body)] leading-relaxed">
-                    进入自由绘制模式，可对图案进行手动编辑、颜色填充、魔法棒选区等操作。
+                    进入绘制模式，可对图案进行手动编辑、颜色填充、魔法棒选区等操作。
                   </p>
                   <button
-                    className="nook-btn nook-btn-primary text-xs justify-center"
+                    className="inline-flex items-center justify-center gap-1 text-xs font-semibold rounded-lg px-3 py-1.5 border-[3px] text-white transition-all duration-200 ease-nook hover:-translate-y-0.5 active:translate-y-0"
                     style={{ background: theme.main, borderColor: theme.light5 }}
                     onClick={() => {
                       const basePath = isSimple ? '/simple' : '/full';
@@ -449,16 +450,12 @@ function App({ variant = 'full' }: AppProps) {
         {mode === 'draw' && gridData && (
           <aside
             className={cn(
-              'flex flex-col w-[280px] min-w-[280px] overflow-y-auto overflow-x-hidden flex-shrink-0 z-20 border-l-[3px]',
-              mode === 'normal' && 'bg-[var(--theme-normal-light-9)] border-l-[var(--theme-normal)]',
-              mode === 'pixel' && 'bg-[var(--theme-pixel-light-9)] border-l-[var(--theme-pixel)]',
-              mode === 'draw' && 'bg-[var(--theme-draw-light-9)] border-l-[var(--theme-draw)]',
+              'flex flex-col w-[280px] min-w-[280px] overflow-y-auto overflow-x-hidden flex-shrink-0 z-20 border-l-[3px] gap-4 py-4 px-1',
+              'bg-[var(--bg-surface)] border-l-[var(--theme-draw)]',
             )}
           >
             {gridData && <EditPanel colorMapping={colorMappingData} />}
-            {gridData && <div className="h-[2px] bg-[var(--border-strong)] mx-4 rounded-full my-1" />}
             <BeadLayerPanel />
-            <div className="h-[2px] bg-[var(--border-strong)] mx-4 rounded-full my-1" />
             <ImageLayerPanel />
           </aside>
         )}
@@ -469,6 +466,7 @@ function App({ variant = 'full' }: AppProps) {
         open={modeSwitchConfirm.open}
         onClose={() => setModeSwitchConfirm({ open: false, targetMode: '' })}
         title="确认切换模式"
+        themeColor={theme.main}
         footer={
           <>
             <Button variant="ghost" onClick={() => setModeSwitchConfirm({ open: false, targetMode: '' })}>

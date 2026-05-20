@@ -4,11 +4,13 @@ import { X } from "lucide-react"
 
 export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   allowClear?: boolean
-  size?: "sm" | "default"
+  size?: "xs" | "sm" | "default"
+  themeColor?: string
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, allowClear, size = "default", value, onChange, ...props }, ref) => {
+  ({ className, type, allowClear, size = "default", value, onChange, themeColor, ...props }, ref) => {
+    const focusColor = themeColor || 'var(--color-primary)'
     const inputRef = React.useRef<HTMLInputElement>(null)
     React.useImperativeHandle(ref, () => inputRef.current!)
 
@@ -32,13 +34,16 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             "rounded-input",
             "placeholder:text-[var(--text-caption)]",
             "transition-all duration-200 ease-nook",
-            "focus:outline-none focus:border-ac-green focus:ring-2 focus:ring-[var(--color-focus)] focus:ring-offset-1",
+            "focus:outline-none focus:ring-2 focus:ring-offset-1",
+            "focus:border-[color:var(--input-focus-color,var(--color-primary))] focus:ring-[color:var(--input-focus-color,var(--color-primary))]",
             "disabled:opacity-50 disabled:cursor-not-allowed",
+            size === "xs" && "h-8 px-2.5 text-sm",
             size === "sm" && "h-9 px-3 text-sm",
             size === "default" && "h-11 px-4 text-base",
             allowClear && "pr-10",
             className
           )}
+          style={{ ['--input-focus-color' as string]: focusColor, ...((props.style as React.CSSProperties) || {}) }}
           ref={inputRef}
           value={value}
           onChange={onChange}

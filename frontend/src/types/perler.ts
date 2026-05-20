@@ -108,6 +108,8 @@ export interface BeadLayer extends LayerBase {
 export interface ImageLayer extends LayerBase {
   type: 'image';
   imageUrl: string;
+  width: number;
+  height: number;
   transform: {
     x: number;
     y: number;

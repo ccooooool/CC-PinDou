@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useEditorStore } from '../store/useEditorStore';
 import { useConfigStore } from '../store/useConfigStore';
 import { useUIStore } from '../store/useUIStore';
-import { Modal, Input, Switch } from '@/components/ui';
+import { getModeTheme } from '../utils/theme';
+import { Modal, Input, Switch, Button } from '@/components/ui';
 import { Download, FileSpreadsheet, Save, Loader2, AlertCircle, Image, Table } from 'lucide-react';
 import { exportImageFrontend } from '../engine/frontendAlgorithms';
 import colorMappingJson from '../data/colorSystemMapping.json';
@@ -19,6 +20,8 @@ interface SaveModalProps {
 export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps) {
   const { gridData, colorList, exportProject } = useEditorStore();
   const { brand, canvasConfig } = useConfigStore();
+  const mode = useUIStore((s) => s.mode);
+  const theme = getModeTheme(mode);
   const [activeTab, setActiveTab] = useState<'image' | 'csv' | 'excel' | 'project'>('image');
 
   // 图纸导出状态
@@ -186,6 +189,7 @@ export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps)
       title="保存"
       onClose={onClose}
       width={420}
+      themeColor={theme.main}
     >
       {/* Tab 切换 */}
       <div className="flex gap-1 mb-4 p-1 bg-[var(--bg-surface-alt)] rounded-xl">
@@ -215,51 +219,51 @@ export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps)
           <>
             <div>
               <label className="block text-xs font-bold text-[var(--text-muted)] mb-1.5">文件名</label>
-              <Input value={fileName} onChange={(e) => setFileName(e.target.value)} allowClear />
+              <Input value={fileName} onChange={(e) => setFileName(e.target.value)} allowClear themeColor={theme.main} />
             </div>
             <div>
               <label className="block text-xs font-bold text-[var(--text-muted)] mb-1.5">格式</label>
               <div className="flex gap-2">
-                <button className={`nook-btn flex-1 ${format === 'png' ? 'nook-btn-primary' : 'nook-btn-secondary'}`} onClick={() => setFormat('png')}>PNG</button>
-                <button className={`nook-btn flex-1 ${format === 'jpg' ? 'nook-btn-primary' : 'nook-btn-secondary'}`} onClick={() => setFormat('jpg')}>JPG</button>
+                <Button className="flex-1" variant={format === 'png' ? 'primary' : 'secondary'} color="green" onClick={() => setFormat('png')}>PNG</Button>
+                <Button className="flex-1" variant={format === 'jpg' ? 'primary' : 'secondary'} color="green" onClick={() => setFormat('jpg')}>JPG</Button>
               </div>
             </div>
             <div className="flex flex-col gap-2">
-              <label className="nook-label">选项</label>
+              <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">选项</span>
               <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
                 <span className="text-[13px] font-medium text-[var(--text-main)]">显示色号</span>
-                <Switch checked={showCode} onChange={(v) => setShowCode(v)} />
+                <Switch checked={showCode} onChange={(v) => setShowCode(v)} themeColor={theme.main} />
               </div>
               <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
                 <span className="text-[13px] font-medium text-[var(--text-main)]">显示图例</span>
-                <Switch checked={showLegend} onChange={(v) => setShowLegend(v)} />
+                <Switch checked={showLegend} onChange={(v) => setShowLegend(v)} themeColor={theme.main} />
               </div>
               <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
                 <span className="text-[13px] font-medium text-[var(--text-main)]">圆形珠子</span>
-                <Switch checked={circleMode} onChange={(v) => setCircleMode(v)} />
+                <Switch checked={circleMode} onChange={(v) => setCircleMode(v)} themeColor={theme.main} />
               </div>
               <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
                 <span className="text-[13px] font-medium text-[var(--text-main)]">标识线</span>
-                <Switch checked={showMarkLines} onChange={(v) => setShowMarkLines(v)} />
+                <Switch checked={showMarkLines} onChange={(v) => setShowMarkLines(v)} themeColor={theme.main} />
               </div>
               {showMarkLines && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--theme-draw-light-9)]">
                   <span className="text-xs font-medium text-[var(--theme-draw)]">间隔</span>
-                  <input type="number" className="nook-input w-[60px] text-center text-xs py-1" value={String(markInterval)} onChange={(e) => setMarkInterval(Number(e.target.value))} min={1} />
+                  <Input type="number" size="xs" className="w-[60px] text-center text-xs py-1" value={String(markInterval)} onChange={(e) => setMarkInterval(Number(e.target.value))} min={1} />
                   <span className="text-[10px] text-[var(--text-muted)]">格</span>
                 </div>
               )}
             </div>
             {!backendAvailable && (
-              <div className="nook-panel flex items-center gap-2 text-xs text-[var(--text-caption)] px-3 py-2 bg-[var(--bg-surface-alt)]">
+              <div className="flex items-center gap-2 text-xs text-[var(--text-caption)] px-3 py-2 bg-[var(--bg-surface-alt)] rounded-xl border border-[var(--border-subtle)] overflow-hidden">
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                 后端不可用，使用前端降级导出（质量可能略有差异）
               </div>
             )}
-            <button className="nook-btn nook-btn-primary w-full justify-center mt-auto" disabled={isExporting || !hasGrid} onClick={handleExportImage}>
+            <Button variant="primary" color="green" className="w-full justify-center mt-auto" disabled={isExporting || !hasGrid} onClick={handleExportImage}>
               {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               导出图纸
-            </button>
+            </Button>
           </>
         )}
 
@@ -269,10 +273,10 @@ export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps)
             <p className="text-sm text-[var(--text-body)]">
               导出当前图纸的色号用量清单为 CSV 格式，可用 Excel 直接打开。
             </p>
-            <button className="nook-btn nook-btn-primary w-full justify-center mt-auto" disabled={!hasGrid} onClick={handleExportCSV}>
+            <Button variant="primary" color="green" className="w-full justify-center mt-auto" disabled={!hasGrid} onClick={handleExportCSV}>
               <Table className="w-4 h-4" />
               导出 CSV
-            </button>
+            </Button>
           </div>
         )}
 
@@ -282,10 +286,10 @@ export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps)
             <p className="text-sm text-[var(--text-body)]">
               导出当前图纸的色号用量清单为 Excel 格式。
             </p>
-            <button className="nook-btn nook-btn-primary w-full justify-center mt-auto" disabled={!hasGrid} onClick={handleExportExcel}>
+            <Button variant="primary" color="green" className="w-full justify-center mt-auto" disabled={!hasGrid} onClick={handleExportExcel}>
               <FileSpreadsheet className="w-4 h-4" />
               导出 Excel
-            </button>
+            </Button>
           </div>
         )}
 
@@ -295,15 +299,15 @@ export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps)
             <p className="text-sm text-[var(--text-body)]">
               保存完整的工程文件（.pindou.json），包含图层、颜色、画布设置等，之后可以重新打开继续编辑。
             </p>
-            <button className="nook-btn nook-btn-primary w-full justify-center mt-auto" disabled={!hasGrid} onClick={handleSaveProject}>
+            <Button variant="primary" color="green" className="w-full justify-center mt-auto" disabled={!hasGrid} onClick={handleSaveProject}>
               <Save className="w-4 h-4" />
               保存工程
-            </button>
+            </Button>
           </div>
         )}
 
         {exportError && (
-          <div className="nook-panel text-[13px] text-[var(--color-danger)] px-3 py-2 bg-[rgba(252,77,80,0.06)]">
+          <div className="text-[13px] text-[var(--color-danger)] px-3 py-2 bg-[rgba(252,77,80,0.06)] rounded-xl border border-[var(--border-subtle)] overflow-hidden">
             {exportError}
           </div>
         )}

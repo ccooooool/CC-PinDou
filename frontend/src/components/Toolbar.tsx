@@ -5,7 +5,9 @@ import { useUIStore } from '../store/useUIStore';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { SaveModal } from './SaveModal';
 import { SettingsPanel, type SettingsConfig } from './SettingsPanel';
+import { Button } from '@/components/ui';
 import { Modal } from './ui/modal';
+import { getModeTheme } from '../utils/theme';
 import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import {
   Save,
@@ -33,6 +35,7 @@ export function Toolbar({ backendAvailable, variant = 'full', onSwitchMode }: To
   // 配置 store
   const { brand, setBrand, canvasConfig, updateCanvasConfig } = useConfigStore();
   const { mode } = useUIStore();
+  const theme = getModeTheme(mode);
 
   // 设置弹窗的临时状态
   const [draftConfig, setDraftConfig] = useState<SettingsConfig>({
@@ -87,12 +90,9 @@ export function Toolbar({ backendAvailable, variant = 'full', onSwitchMode }: To
               <span className="text-xs font-bold text-[var(--color-success)] truncate">
                 自动备份（{formatTime(lastSavedAt)}）
               </span>
-              <button
-                className="nook-btn nook-btn-primary text-xs py-1 px-2.5 shrink-0"
-                onClick={handleRestore}
-              >
+              <Button size="xs" variant="primary" color="green" onClick={handleRestore}>
                 恢复
-              </button>
+              </Button>
             </>
           )}
           {gridData && lastSavedAt && (
@@ -111,17 +111,17 @@ export function Toolbar({ backendAvailable, variant = 'full', onSwitchMode }: To
             <>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button className="nook-btn nook-btn-icon nook-btn-primary" onClick={() => setSaveOpen(true)}>
+                  <Button variant="icon-sm" color="green" onClick={() => setSaveOpen(true)}>
                     <Save className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent>保存（图纸 / CSV / Excel / 工程）</TooltipContent>
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button className="nook-btn nook-btn-icon nook-btn-secondary" onClick={openSettings}>
+                  <Button variant="icon-sm" color="none" className="bg-[var(--bg-surface)] border-[3px] border-[var(--nook-wood-light)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]" onClick={openSettings}>
                     <Settings className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent>设置（品牌 / 色号 / 标识线 / 预览）</TooltipContent>
               </Tooltip>
@@ -130,12 +130,14 @@ export function Toolbar({ backendAvailable, variant = 'full', onSwitchMode }: To
           {onSwitchMode && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
-                  className={`nook-btn nook-btn-icon ${variant === 'simple' ? 'nook-btn-secondary' : backendAvailable ? 'nook-btn-primary' : 'nook-btn-secondary'}`}
+                <Button
+                  variant="icon-sm"
+                  color={variant === 'simple' ? 'none' : backendAvailable ? 'green' : 'none'}
+                  className={variant === 'simple' || !backendAvailable ? 'bg-[var(--bg-surface)] border-[3px] border-[var(--nook-wood-light)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]' : ''}
                   onClick={onSwitchMode}
                 >
                   {variant === 'simple' ? <CloudOff className="w-4 h-4" /> : backendAvailable ? <Cloud className="w-4 h-4" /> : <CloudOff className="w-4 h-4" />}
-                </button>
+                </Button>
               </TooltipTrigger>
               <TooltipContent>
                 {variant === 'simple'
@@ -156,16 +158,17 @@ export function Toolbar({ backendAvailable, variant = 'full', onSwitchMode }: To
         title="设置"
         onClose={handleCancelSettings}
         width={360}
+        themeColor={theme.main}
         footer={
           <>
-            <button className="nook-btn nook-btn-secondary" onClick={handleCancelSettings}>
+            <Button variant="secondary" size="sm" color="green" onClick={handleCancelSettings}>
               <X className="w-3.5 h-3.5" />
               取消
-            </button>
-            <button className="nook-btn nook-btn-primary" onClick={handleConfirmSettings}>
+            </Button>
+            <Button variant="primary" size="sm" color="green" onClick={handleConfirmSettings}>
               <Check className="w-3.5 h-3.5" />
               确认
-            </button>
+            </Button>
           </>
         }
       >

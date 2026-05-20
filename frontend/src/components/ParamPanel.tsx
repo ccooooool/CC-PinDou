@@ -28,7 +28,7 @@ export function ParamPanel({ isSimple = false }: ParamPanelProps) {
 
   return (
 
-    <div className="nook-panel flex flex-col">
+    <div className="flex flex-col rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden">
 
       {/* 参数设置卡片 */}
 
@@ -84,6 +84,7 @@ export function ParamPanel({ isSimple = false }: ParamPanelProps) {
                   { key: '221', label: '221色（常用）' },
                 ]}
                 onChange={(val) => setColorMode(val as 'full' | '221')}
+                themeColor={theme.main}
               />
             </div>
           </div>
@@ -103,6 +104,7 @@ export function ParamPanel({ isSimple = false }: ParamPanelProps) {
                       ]
                 }
                 onChange={(val) => setGenerateAlgorithm(val as 'frontend' | 'backend')}
+                themeColor={theme.main}
               />
             </div>
           </div>

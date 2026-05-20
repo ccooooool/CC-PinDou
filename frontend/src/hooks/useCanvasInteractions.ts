@@ -106,8 +106,8 @@ export function useCanvasInteractions(
     if (fillPositions.length > 0) {
       const records: Array<{ x: number; y: number; oldColor: string; oldCodes: Record<string, string>; newColor: string; newCodes: Record<string, string> }> = [];
       for (const p of fillPositions) {
-        const record = paintCell(p.x, p.y, replacementColor, selectedColorRef.current ? { ...selectedColorRef.current.codes } : {});
-        if (record) records.push(record);
+        const record = paintAt(p.x, p.y, replacementColor, selectedColorRef.current ? { ...selectedColorRef.current.codes } : {});
+        if (record.length > 0) records.push(...record);
       }
       if (records.length > 0) {
         pushHistory({ type: 'batch_paint', layerId: activeLayerId || 'default', positions: records });
@@ -161,33 +161,15 @@ export function useCanvasInteractions(
 
       if (e.button !== 0) return;
 
-      if (isImageLayer && !spacePressed && !activeLayerLocked && drawTool !== 'eyedropper') {
-        handleImageLayerDown(e);
-        e.preventDefault();
-        return;
-      }
-
-      if (drawTool === 'move' && !isImageLayer && !spacePressed) {
-        if (!activeLayerLocked) {
-          handleBeadLayerDown(e);
-          e.preventDefault();
-        }
-        return;
-      }
-
-      if (activeLayerLocked) return;
-
-      const pos = getGridXY(e);
-      if (!pos) return;
-
-      if (!isDrawMode) return;
-
+      // 吸管工具不受锁定限制（取色不修改图层）
       if (drawTool === 'eyedropper') {
         const state = useEditorStore.getState();
         const layer = state.layers.find((l) => l.id === state.activeLayerId);
         if (!layer) return;
 
         if (layer.type === 'bead') {
+          const pos = getGridXY(e);
+          if (!pos) return;
           const gd = state.gridData;
           if (!gd) return;
           const cell = gd[pos.y]?.[pos.x];
@@ -217,6 +199,27 @@ export function useCanvasInteractions(
         e.preventDefault();
         return;
       }
+
+      if (isImageLayer && !spacePressed && !activeLayerLocked) {
+        handleImageLayerDown(e);
+        e.preventDefault();
+        return;
+      }
+
+      if (drawTool === 'move' && !isImageLayer && !spacePressed) {
+        if (!activeLayerLocked) {
+          handleBeadLayerDown(e);
+          e.preventDefault();
+        }
+        return;
+      }
+
+      if (activeLayerLocked) return;
+
+      const pos = getGridXY(e);
+      if (!pos) return;
+
+      if (!isDrawMode) return;
 
       // 画笔类工具禁止无颜色/透明绘制（透明操作只属于橡皮擦）
       if (
@@ -333,10 +336,16 @@ export function useCanvasInteractions(
         return;
       }
 
-      if (isDrawMode && (drawTool === 'pen' || drawTool === 'eraser' || drawTool === 'replace')) {
+      // 画笔/橡皮/替换 + 取色器（bead 图层）显示单格预览
+      const showPreview = isDrawMode && (
+        drawTool === 'pen' || drawTool === 'eraser' || drawTool === 'replace' ||
+        (drawTool === 'eyedropper' && !isImageLayer)
+      );
+      if (showPreview) {
         const previewPos = getGridXY(e);
         if (previewPos) {
-          setBrushPreview({ x: previewPos.x, y: previewPos.y, size: brushSize, enabled: true });
+          const size = drawTool === 'eyedropper' ? 1 : brushSize;
+          setBrushPreview({ x: previewPos.x, y: previewPos.y, size, enabled: true });
         }
       }
 
@@ -392,7 +401,7 @@ export function useCanvasInteractions(
       }
     },
     [
-      isDragging, spacePressed, isBatchPainting, activeLayerId,
+      isDragging, spacePressed, isBatchPainting, activeLayerId, isImageLayer,
       isDrawMode, drawTool, getGridXY, paintCell, paintAt,
       scheduleDrawGrid, onDragMove, pushHistory, brushSize, setBrushPreview,
     ],
@@ -402,7 +411,57 @@ export function useCanvasInteractions(
     setBrushPreview({ x: 0, y: 0, size: 1, enabled: false });
   }, [setBrushPreview]);
 
-  const handleMouseUp = useCallback(() => {
+  const sampleImagePixel = useCallback(
+    (px: number, py: number): Promise<{ r: number; g: number; b: number; a: number } | null> => {
+      return new Promise((resolve) => {
+        const state = useEditorStore.getState();
+        const layer = state.layers.find((l) => l.id === state.activeLayerId);
+        if (!layer || layer.type !== 'image') {
+          resolve(null);
+          return;
+        }
+        const { margin } = useConfigStore.getState().canvasConfig;
+        const t = layer.transform;
+
+        const img = new Image();
+        img.onload = () => {
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = img.naturalWidth;
+          tempCanvas.height = img.naturalHeight;
+          const tempCtx = tempCanvas.getContext('2d');
+          if (!tempCtx) {
+            resolve(null);
+            return;
+          }
+          tempCtx.drawImage(img, 0, 0);
+
+          const w = img.naturalWidth;
+          const h = img.naturalHeight;
+          const dx = px - margin - t.x - w / 2;
+          const dy = py - margin - t.y - h / 2;
+          const rad = (-t.rotation * Math.PI) / 180;
+          const cos = Math.cos(rad);
+          const sin = Math.sin(rad);
+          const rdx = dx * cos - dy * sin;
+          const rdy = dx * sin + dy * cos;
+          const imgX = Math.round(rdx / t.scaleX + w / 2);
+          const imgY = Math.round(rdy / t.scaleY + h / 2);
+
+          if (imgX >= 0 && imgX < img.naturalWidth && imgY >= 0 && imgY < img.naturalHeight) {
+            const d = tempCtx.getImageData(imgX, imgY, 1, 1).data;
+            resolve({ r: d[0], g: d[1], b: d[2], a: d[3] });
+          } else {
+            resolve(null);
+          }
+        };
+        img.onerror = () => resolve(null);
+        img.src = layer.imageUrl;
+      });
+    },
+    [],
+  );
+
+  const handleMouseUp = useCallback(async () => {
     stopDrag();
 
     // Eyedropper：图片图层松开时执行吸色
@@ -412,25 +471,44 @@ export function useCanvasInteractions(
       const py = lastPixelPosRef.current?.y ?? eyedropperPreviewRef.current.startY;
       lastPixelPosRef.current = null;
 
-      const canvasEl = document.querySelector('canvas');
-      if (canvasEl) {
-        const ctx2d = canvasEl.getContext('2d');
-        if (ctx2d) {
-          const imageData = ctx2d.getImageData(px, py, 1, 1);
-          const [r, g, b, a] = imageData.data;
-          if (a < 128) {
-            toast.info('该位置为透明色');
-          } else if (engineRef.current) {
-            const matchedHex = engineRef.current.nearestColor([r, g, b]);
-            const codes = colorMappingData[matchedHex] || {};
-            const colorInfo: ColorInfo = {
-              hex: matchedHex,
-              count: 0,
-              codes,
-            };
-            setSelectedColor(colorInfo);
-            const brand = useConfigStore.getState().brand;
-            toast.success(`已吸取色号 ${codes[brand] || matchedHex}`);
+      const pixel = await sampleImagePixel(px, py);
+      if (pixel) {
+        if (pixel.a < 128) {
+          toast.info('该位置为透明色');
+        } else if (engineRef.current) {
+          const matchedHex = engineRef.current.nearestColor([pixel.r, pixel.g, pixel.b]);
+          const codes = colorMappingData[matchedHex] || {};
+          const colorInfo: ColorInfo = {
+            hex: matchedHex,
+            count: 0,
+            codes,
+          };
+          setSelectedColor(colorInfo);
+          const brand = useConfigStore.getState().brand;
+          toast.success(`已吸取色号 ${codes[brand] || matchedHex}`);
+        }
+      } else {
+        // 回退到主 canvas 取色（如坐标越界等情况）
+        const canvasEl = document.querySelector('canvas');
+        if (canvasEl) {
+          const ctx2d = canvasEl.getContext('2d');
+          if (ctx2d) {
+            const imageData = ctx2d.getImageData(px, py, 1, 1);
+            const [r, g, b, a] = imageData.data;
+            if (a < 128) {
+              toast.info('该位置为透明色');
+            } else if (engineRef.current) {
+              const matchedHex = engineRef.current.nearestColor([r, g, b]);
+              const codes = colorMappingData[matchedHex] || {};
+              const colorInfo: ColorInfo = {
+                hex: matchedHex,
+                count: 0,
+                codes,
+              };
+              setSelectedColor(colorInfo);
+              const brand = useConfigStore.getState().brand;
+              toast.success(`已吸取色号 ${codes[brand] || matchedHex}`);
+            }
           }
         }
       }
@@ -568,6 +646,7 @@ export function useCanvasInteractions(
     isDrawMode, drawTool, activeLayerId, shapeFilled,
     bresenhamLine, midPointCircle, paintCell, paintAt,
     pushHistory, scheduleDrawGrid, stopDrag, setShapePreview,
+    sampleImagePixel,
   ]);
 
   // 全局鼠标事件
@@ -587,7 +666,7 @@ export function useCanvasInteractions(
       }
     };
 
-    const handleGlobalMouseUp = () => {
+    const handleGlobalMouseUp = async () => {
       // Eyedropper：在 canvas 外松开时也执行吸色
       if (eyedropperPreviewRef.current?.active) {
         eyedropperPreviewRef.current.active = false;
@@ -595,25 +674,43 @@ export function useCanvasInteractions(
         const py = lastPixelPosRef.current?.y ?? eyedropperPreviewRef.current.startY;
         lastPixelPosRef.current = null;
 
-        const canvasEl = document.querySelector('canvas');
-        if (canvasEl) {
-          const ctx2d = canvasEl.getContext('2d');
-          if (ctx2d) {
-            const imageData = ctx2d.getImageData(px, py, 1, 1);
-            const [r, g, b, a] = imageData.data;
-            if (a < 128) {
-              toast.info('该位置为透明色');
-            } else if (engineRef.current) {
-              const matchedHex = engineRef.current.nearestColor([r, g, b]);
-              const codes = colorMappingData[matchedHex] || {};
-              const colorInfo: ColorInfo = {
-                hex: matchedHex,
-                count: 0,
-                codes,
-              };
-              setSelectedColor(colorInfo);
-              const brand = useConfigStore.getState().brand;
-              toast.success(`已吸取色号 ${codes[brand] || matchedHex}`);
+        const pixel = await sampleImagePixel(px, py);
+        if (pixel) {
+          if (pixel.a < 128) {
+            toast.info('该位置为透明色');
+          } else if (engineRef.current) {
+            const matchedHex = engineRef.current.nearestColor([pixel.r, pixel.g, pixel.b]);
+            const codes = colorMappingData[matchedHex] || {};
+            const colorInfo: ColorInfo = {
+              hex: matchedHex,
+              count: 0,
+              codes,
+            };
+            setSelectedColor(colorInfo);
+            const brand = useConfigStore.getState().brand;
+            toast.success(`已吸取色号 ${codes[brand] || matchedHex}`);
+          }
+        } else {
+          const canvasEl = document.querySelector('canvas');
+          if (canvasEl) {
+            const ctx2d = canvasEl.getContext('2d');
+            if (ctx2d) {
+              const imageData = ctx2d.getImageData(px, py, 1, 1);
+              const [r, g, b, a] = imageData.data;
+              if (a < 128) {
+                toast.info('该位置为透明色');
+              } else if (engineRef.current) {
+                const matchedHex = engineRef.current.nearestColor([r, g, b]);
+                const codes = colorMappingData[matchedHex] || {};
+                const colorInfo: ColorInfo = {
+                  hex: matchedHex,
+                  count: 0,
+                  codes,
+                };
+                setSelectedColor(colorInfo);
+                const brand = useConfigStore.getState().brand;
+                toast.success(`已吸取色号 ${codes[brand] || matchedHex}`);
+              }
             }
           }
         }

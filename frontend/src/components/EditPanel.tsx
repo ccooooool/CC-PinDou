@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui';
 import { useEditorStore } from '../store/useEditorStore';
 import type { EditorState } from '../store/useEditorStore';
 import { produce } from 'immer';
@@ -7,7 +8,6 @@ import {
   X,
   Undo2,
   Redo2,
-  Paintbrush,
   Trash2,
   Clock,
   Wand2,
@@ -33,13 +33,13 @@ export function EditPanel(_props: EditPanelProps) {
   const clearSelection = useEditorStore((s) => s.clearSelection);
 
   return (
-    <div className="flex flex-col mx-2 my-1.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--theme-draw-light-5)] shadow-[0_1px_4px_rgba(43,180,171,0.08)] overflow-hidden">
+    <div className="flex flex-col mx-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden">
       {/* Header */}
       <div
         className="flex items-center gap-2 px-4 py-2.5 border-b border-[var(--theme-draw-light-5)] bg-[var(--theme-draw-light-9)] cursor-pointer select-none"
         onClick={() => setExpanded(!expanded)}
       >
-        <Paintbrush className="w-4 h-4 text-[var(--theme-draw)]" />
+        <div className="w-1 h-4 rounded-full bg-[var(--theme-draw)]" />
         <h5 className="text-sm font-bold text-[var(--theme-draw-dark-2)]">操作记录</h5>
         <ChevronDown
           className={cn('w-4 h-4 ml-auto transition-transform duration-300', expanded && 'rotate-180')}
@@ -58,22 +58,28 @@ export function EditPanel(_props: EditPanelProps) {
             {/* 撤销/重做 */}
             <div className="px-4 py-3 border-b border-[var(--border-subtle)] last:border-b-0 flex flex-col gap-2">
               <div className="flex gap-2">
-                <button
-                  className="nook-btn nook-btn-secondary flex-1 text-xs"
+                <Button
+                  size="xs"
+                  variant="secondary"
+                  color="green"
+                  className="flex-1 justify-center"
                   disabled={historyStack.length === 0}
                   onClick={undo}
                 >
                   <Undo2 className="w-3.5 h-3.5" />
                   撤销
-                </button>
-                <button
-                  className="nook-btn nook-btn-secondary flex-1 text-xs"
+                </Button>
+                <Button
+                  size="xs"
+                  variant="secondary"
+                  color="green"
+                  className="flex-1 justify-center"
                   disabled={redoStack.length === 0}
                   onClick={redo}
                 >
                   <Redo2 className="w-3.5 h-3.5" />
                   重做
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -85,8 +91,11 @@ export function EditPanel(_props: EditPanelProps) {
                   已选中 {selectedCells.length} 个格子
                 </div>
                 <div className="flex gap-1.5">
-                  <button
-                    className="nook-btn nook-btn-primary flex-1 text-xs py-1.5 justify-center disabled:opacity-40"
+                  <Button
+                    size="xs"
+                    variant="primary"
+                    color="green"
+                    className="flex-1 justify-center"
                     disabled={!selectedColor}
                     onClick={() => {
                       if (!selectedColor) return;
@@ -114,9 +123,12 @@ export function EditPanel(_props: EditPanelProps) {
                   >
                     <Replace className="w-3.5 h-3.5" />
                     替换为当前色
-                  </button>
-                  <button
-                    className="nook-btn nook-btn-secondary text-xs py-1.5 justify-center"
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="secondary"
+                    color="green"
+                    className="justify-center"
                     onClick={() => {
                       useEditorStore.setState(produce((draft: EditorState) => {
                         const positions = selectedCells.map((c: { x: number; y: number }) => {
@@ -141,20 +153,23 @@ export function EditPanel(_props: EditPanelProps) {
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     删除选区
-                  </button>
-                  <button
-                    className="nook-btn nook-btn-secondary text-xs py-1.5 px-2 justify-center"
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="secondary"
+                    color="green"
+                    className="justify-center px-2"
                     onClick={clearSelection}
                   >
                     <X className="w-3.5 h-3.5" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
 
             {/* 操作记录 */}
             <div className="px-4 py-3 border-b border-[var(--border-subtle)] last:border-b-0 flex flex-col gap-2">
-              <div className="text-xs font-bold text-[var(--theme-draw)] mb-2 uppercase tracking-wider flex items-center gap-1.5">
+              <div className="text-xs font-bold text-[var(--theme-draw)] mb-1 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" />
                 操作记录
               </div>

@@ -85,7 +85,7 @@ export interface EditorState {
   // ========== 图层系统 Actions（新增）==========
   setActiveLayer: (id: string | null) => void;
   addBeadLayer: (name: string, size: number) => void;
-  addImageLayer: (name: string, imageUrl: string, initialTransform?: Partial<ImageLayer['transform']>) => string;
+  addImageLayer: (name: string, imageUrl: string, initialTransform?: Partial<ImageLayer['transform']>, size?: { width: number; height: number }) => string;
   toggleLayerVisible: (id: string) => void;
   toggleLayerLock: (id: string) => void;
   reorderLayer: (id: string, direction: 'up' | 'down') => void;
@@ -127,7 +127,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         zIndex: 0,
         gridData: grid,
         colorList: colors,
-        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+        transform: { x: 0, y: 0, scale: 1, rotation: 0 },
       };
       set({ layers: [layer], activeLayerId: id, gridData: grid, colorList: colors, historyStack: [], redoStack: [], selectedCells: [] });
     } else {
@@ -136,7 +136,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const targetLayer =
           draft.layers.find((l) => l.id === draft.activeLayerId && l.type === 'bead') ||
           draft.layers.find((l) => l.type === 'bead');
-        if (targetLayer) {
+        if (targetLayer && targetLayer.type === 'bead') {
           targetLayer.gridData = grid;
           targetLayer.colorList = colors;
         }
@@ -307,7 +307,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   clearHistory: () => set({ historyStack: [], redoStack: [] }),
 
   flipHorizontal: () => {
-    const { gridData, activeLayerId } = get();
+    const { gridData, activeLayerId, layers } = get();
+    const activeLayer = layers.find((l) => l.id === activeLayerId);
+    if (activeLayer?.type === 'image') {
+      if (activeLayer.locked) return;
+      set(produce((draft: EditorState) => {
+        const layer = draft.layers.find((l) => l.id === activeLayerId);
+        if (layer && layer.type === 'image') {
+          const oldScaleX = layer.transform.scaleX;
+          layer.transform.scaleX *= -1;
+          layer.transform.x -= layer.width * oldScaleX;
+        }
+      }));
+      return;
+    }
     if (!gridData) return;
     const rows = gridData.length;
     const cols = gridData[0].length;
@@ -336,7 +349,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   flipVertical: () => {
-    const { gridData, activeLayerId } = get();
+    const { gridData, activeLayerId, layers } = get();
+    const activeLayer = layers.find((l) => l.id === activeLayerId);
+    if (activeLayer?.type === 'image') {
+      if (activeLayer.locked) return;
+      set(produce((draft: EditorState) => {
+        const layer = draft.layers.find((l) => l.id === activeLayerId);
+        if (layer && layer.type === 'image') {
+          const oldScaleY = layer.transform.scaleY;
+          layer.transform.scaleY *= -1;
+          layer.transform.y -= layer.height * oldScaleY;
+        }
+      }));
+      return;
+    }
     if (!gridData) return;
     const rows = gridData.length;
     const cols = gridData[0].length;
@@ -365,7 +391,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   rotateCW: () => {
-    const { gridData, activeLayerId } = get();
+    const { gridData, activeLayerId, layers } = get();
+    const activeLayer = layers.find((l) => l.id === activeLayerId);
+    if (activeLayer?.type === 'image') {
+      if (activeLayer.locked) return;
+      set(produce((draft: EditorState) => {
+        const layer = draft.layers.find((l) => l.id === activeLayerId);
+        if (layer && layer.type === 'image') {
+          layer.transform.rotation += 90;
+        }
+      }));
+      return;
+    }
     if (!gridData) return;
     const rows = gridData.length;
     const cols = gridData[0].length;
@@ -394,7 +431,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   rotateCCW: () => {
-    const { gridData, activeLayerId } = get();
+    const { gridData, activeLayerId, layers } = get();
+    const activeLayer = layers.find((l) => l.id === activeLayerId);
+    if (activeLayer?.type === 'image') {
+      if (activeLayer.locked) return;
+      set(produce((draft: EditorState) => {
+        const layer = draft.layers.find((l) => l.id === activeLayerId);
+        if (layer && layer.type === 'image') {
+          layer.transform.rotation -= 90;
+        }
+      }));
+      return;
+    }
     if (!gridData) return;
     const rows = gridData.length;
     const cols = gridData[0].length;
@@ -650,7 +698,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       zIndex: 0,
       gridData: grid,
       colorList: [],
-      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
     };
     set({ layers: [layer], activeLayerId: id, gridData: grid, colorList: [], historyStack: [], redoStack: [], selectedCells: [] });
   },
@@ -710,7 +758,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         zIndex: 0,
         gridData: grid,
         colorList: colors,
-        transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+        transform: { x: 0, y: 0, scale: 1, rotation: 0 },
       };
       set({
         layers: [layer],
@@ -759,12 +807,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       zIndex: maxZ + 1,
       gridData: grid,
       colorList: [],
-      transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0 },
+      transform: { x: 0, y: 0, scale: 1, rotation: 0 },
     };
     set({ layers: [...state.layers, layer], activeLayerId: id, gridData: grid, colorList: [], historyStack: [], redoStack: [], selectedCells: [] });
   },
 
-  addImageLayer: (name, imageUrl, initialTransform) => {
+  addImageLayer: (name, imageUrl, initialTransform, size) => {
     const state = get();
     const id = genId();
     const maxZ = state.layers.reduce((m, l) => Math.max(m, l.zIndex), -1);
@@ -777,6 +825,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       opacity: 100,
       zIndex: maxZ + 1,
       imageUrl,
+      width: size?.width ?? 0,
+      height: size?.height ?? 0,
       transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0, ...initialTransform },
       scaleLocked: true,
     };
@@ -901,7 +951,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   flipLayerContent: (id, direction) => {
     set(produce((draft: EditorState) => {
       const layer = draft.layers.find((l) => l.id === id);
-      if (!layer || layer.type !== 'bead' || !layer.gridData) return;
+      if (!layer) return;
+      if (layer.type === 'image') {
+        if (layer.locked) return;
+        if (direction === 'h') {
+          const oldScaleX = layer.transform.scaleX;
+          layer.transform.scaleX *= -1;
+          layer.transform.x -= layer.width * oldScaleX;
+        } else {
+          const oldScaleY = layer.transform.scaleY;
+          layer.transform.scaleY *= -1;
+          layer.transform.y -= layer.height * oldScaleY;
+        }
+        return;
+      }
+      if (layer.type !== 'bead' || !layer.gridData) return;
       const rows = layer.gridData.length;
       const cols = layer.gridData[0].length;
       const newGrid: GridCell[][] = [];

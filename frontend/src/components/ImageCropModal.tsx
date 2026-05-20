@@ -26,6 +26,7 @@ interface ImageCropModalProps {
   onClose: () => void;
   onCrop: (croppedFile: File, croppedDataUrl: string) => void;
   onSkip: (dataUrl: string) => void;
+  themeColor?: string;
 }
 
 export function ImageCropModal({
@@ -35,6 +36,7 @@ export function ImageCropModal({
   onClose,
   onCrop,
   onSkip,
+  themeColor,
 }: ImageCropModalProps) {
   const imgRef = useRef<HTMLImageElement>(null);
   const cropperRef = useRef<Cropper | null>(null);
@@ -124,6 +126,7 @@ export function ImageCropModal({
       title="裁剪图片"
       onClose={handleCancel}
       width={840}
+      themeColor={themeColor}
       footer={
         <>
           <Button variant="text" onClick={handleCancel}>

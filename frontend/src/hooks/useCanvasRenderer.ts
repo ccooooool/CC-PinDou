@@ -225,8 +225,10 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
           const x = margin + layer.transform.x;
           const y = margin + layer.transform.y;
           ctx.translate(x, y);
+          ctx.translate(img.width / 2, img.height / 2);
           ctx.rotate((layer.transform.rotation * Math.PI) / 180);
-          ctx.scale(layer.transform.scaleX ?? layer.transform.scale ?? 1, layer.transform.scaleY ?? layer.transform.scale ?? 1);
+          ctx.scale(layer.transform.scaleX, layer.transform.scaleY);
+          ctx.translate(-img.width / 2, -img.height / 2);
           ctx.strokeStyle = 'rgba(255, 180, 60, 0.85)';
           ctx.lineWidth = 2;
           ctx.setLineDash([6, 4]);
@@ -302,10 +304,12 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
           ctx.translate(t.x, t.y);
         }
         if (layer.gridData) {
+          const hasImageBelow = imageLayers.length > 0 && mode === 'draw';
           drawNormalBeads({
             ctx, gridData: layer.gridData, beadSize, margin,
             circleMode, showCode, brand, getBrightness, getCircleBeadCanvas,
             patternA, patternB,
+            skipTransparentPattern: hasImageBelow,
           });
         }
         ctx.restore();
@@ -647,10 +651,12 @@ interface DrawNormalBeadsOptions {
   getCircleBeadCanvas: (size: number, color: string) => HTMLCanvasElement;
   patternA?: CanvasPattern | null;
   patternB?: CanvasPattern | null;
+  /** draw 模式下存在图片图层时，透明格子不绘制棋盘格，让底层图片透出 */
+  skipTransparentPattern?: boolean;
 }
 
 function drawNormalBeads(options: DrawNormalBeadsOptions) {
-  const { ctx, gridData, beadSize, margin, circleMode, showCode, brand, getBrightness, getCircleBeadCanvas, patternA, patternB } = options;
+  const { ctx, gridData, beadSize, margin, circleMode, showCode, brand, getBrightness, getCircleBeadCanvas, patternA, patternB, skipTransparentPattern } = options;
   if (!gridData.length || !gridData[0]) return;
   const rows = gridData.length;
   const cols = gridData[0].length;
@@ -662,9 +668,10 @@ function drawNormalBeads(options: DrawNormalBeadsOptions) {
         const px = margin + x * beadSize;
         const py = margin + y * beadSize;
         if (cell.color === 'transparent') {
-          // 透明格子：交替棋盘格底色
-          ctx.fillStyle = ((x + y) % 2 === 0 ? patternA : patternB) ?? '#FFFFFF';
-          ctx.fillRect(px, py, beadSize, beadSize);
+          if (!skipTransparentPattern) {
+            ctx.fillStyle = ((x + y) % 2 === 0 ? patternA : patternB) ?? '#FFFFFF';
+            ctx.fillRect(px, py, beadSize, beadSize);
+          }
           continue;
         }
         const beadCanvas = getCircleBeadCanvas(beadSize, cell.color);
@@ -685,9 +692,10 @@ function drawNormalBeads(options: DrawNormalBeadsOptions) {
         const px = margin + x * beadSize;
         const py = margin + y * beadSize;
         if (cell.color === 'transparent') {
-          // 透明格子：交替棋盘格底色
-          ctx.fillStyle = ((x + y) % 2 === 0 ? patternA : patternB) ?? '#FFFFFF';
-          ctx.fillRect(px, py, beadSize, beadSize);
+          if (!skipTransparentPattern) {
+            ctx.fillStyle = ((x + y) % 2 === 0 ? patternA : patternB) ?? '#FFFFFF';
+            ctx.fillRect(px, py, beadSize, beadSize);
+          }
           continue;
         }
         ctx.fillStyle = cell.color;
@@ -825,8 +833,10 @@ function drawImageLayer(
   const x = margin + layer.transform.x;
   const y = margin + layer.transform.y;
   ctx.translate(x, y);
+  ctx.translate(img.width / 2, img.height / 2);
   ctx.rotate((layer.transform.rotation * Math.PI) / 180);
-  ctx.scale(layer.transform.scaleX ?? layer.transform.scale ?? 1, layer.transform.scaleY ?? layer.transform.scale ?? 1);
+  ctx.scale(layer.transform.scaleX, layer.transform.scaleY);
+  ctx.translate(-img.width / 2, -img.height / 2);
   ctx.drawImage(img, 0, 0);
   ctx.restore();
 }

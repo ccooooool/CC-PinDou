@@ -1,7 +1,9 @@
 ﻿import { useState } from 'react';
 import { useEditorStore } from '../store/useEditorStore';
 import { useConfigStore } from '../store/useConfigStore';
-import { Modal, Input, Switch } from '@/components/ui';
+import { useUIStore } from '../store/useUIStore';
+import { getModeTheme } from '../utils/theme';
+import { Modal, Input, Switch, Button } from '@/components/ui';
 import { Download, AlertCircle, Loader2 } from 'lucide-react';
 import { exportImageFrontend } from '../engine/frontendAlgorithms';
 
@@ -14,6 +16,8 @@ interface ExportModalProps {
 export function ExportModal({ isOpen, onClose, backendAvailable }: ExportModalProps) {
   const { gridData, colorList } = useEditorStore();
   const { brand, canvasConfig } = useConfigStore();
+  const mode = useUIStore((s) => s.mode);
+  const theme = getModeTheme(mode);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -95,19 +99,21 @@ export function ExportModal({ isOpen, onClose, backendAvailable }: ExportModalPr
       open={isOpen}
       title="导出图纸"
       onClose={onClose}
+      themeColor={theme.main}
       footer={
         <>
-          <button className="nook-btn nook-btn-secondary" onClick={onClose}>
+          <Button variant="secondary" color="green" onClick={onClose}>
             取消
-          </button>
-          <button
-            className="nook-btn nook-btn-primary"
+          </Button>
+          <Button
+            variant="primary"
+            color="green"
             disabled={isExporting || !gridData}
             onClick={handleExport}
           >
             {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             导出
-          </button>
+          </Button>
         </>
       }
     >
@@ -118,51 +124,57 @@ export function ExportModal({ isOpen, onClose, backendAvailable }: ExportModalPr
             value={fileName}
             onChange={(e) => setFileName(e.target.value)}
             allowClear
+            themeColor={theme.main}
           />
         </div>
 
         <div>
           <label className="block text-xs font-bold text-[var(--text-muted)] mb-1.5">格式</label>
           <div className="flex gap-2">
-            <button
-              className={`nook-btn flex-1 ${format === 'png' ? 'nook-btn-primary' : 'nook-btn-secondary'}`}
+            <Button
+              className="flex-1"
+              variant={format === 'png' ? 'primary' : 'secondary'}
+              color="green"
               onClick={() => setFormat('png')}
             >
               PNG
-            </button>
-            <button
-              className={`nook-btn flex-1 ${format === 'jpg' ? 'nook-btn-primary' : 'nook-btn-secondary'}`}
+            </Button>
+            <Button
+              className="flex-1"
+              variant={format === 'jpg' ? 'primary' : 'secondary'}
+              color="green"
               onClick={() => setFormat('jpg')}
             >
               JPG
-            </button>
+            </Button>
           </div>
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="nook-label">选项</label>
+          <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">选项</span>
           <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
             <span className="text-[13px] font-medium text-[var(--text-main)]">显示色号</span>
-            <Switch checked={showCode} onChange={(v) => setShowCode(v)} />
+            <Switch checked={showCode} onChange={(v) => setShowCode(v)} themeColor={theme.main} />
           </div>
           <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
             <span className="text-[13px] font-medium text-[var(--text-main)]">显示图例</span>
-            <Switch checked={showLegend} onChange={(v) => setShowLegend(v)} />
+            <Switch checked={showLegend} onChange={(v) => setShowLegend(v)} themeColor={theme.main} />
           </div>
           <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
             <span className="text-[13px] font-medium text-[var(--text-main)]">圆形珠子</span>
-            <Switch checked={circleMode} onChange={(v) => setCircleMode(v)} />
+            <Switch checked={circleMode} onChange={(v) => setCircleMode(v)} themeColor={theme.main} />
           </div>
           <div className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[var(--bg-surface-alt)] transition-colors">
             <span className="text-[13px] font-medium text-[var(--text-main)]">标识线</span>
-            <Switch checked={showMarkLines} onChange={(v) => setShowMarkLines(v)} />
+            <Switch checked={showMarkLines} onChange={(v) => setShowMarkLines(v)} themeColor={theme.main} />
           </div>
           {showMarkLines && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--theme-draw-light-9)]">
               <span className="text-xs font-medium text-[var(--theme-draw)]">间隔</span>
-              <input
+              <Input
                 type="number"
-                className="nook-input w-[60px] text-center text-xs py-1"
+                size="xs"
+                className="w-[60px] text-center text-xs py-1"
                 value={String(markInterval)}
                 onChange={(e) => setMarkInterval(Math.max(1, Number(e.target.value) || 1))}
                 min={1}
@@ -173,14 +185,14 @@ export function ExportModal({ isOpen, onClose, backendAvailable }: ExportModalPr
         </div>
 
         {!backendAvailable && (
-          <div className="nook-panel flex items-center gap-2 text-xs text-[var(--text-caption)] px-3 py-2 bg-[var(--bg-surface-alt)]">
+          <div className="flex items-center gap-2 text-xs text-[var(--text-caption)] px-3 py-2 bg-[var(--bg-surface-alt)] rounded-xl border border-[var(--border-subtle)] overflow-hidden">
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
             后端不可用，使用前端降级导出（质量可能略有差异）
           </div>
         )}
 
         {exportError && (
-          <div className="nook-panel text-[13px] text-[var(--color-danger)] px-3 py-2 bg-[rgba(252,77,80,0.06)]">
+          <div className="text-[13px] text-[var(--color-danger)] px-3 py-2 bg-[rgba(252,77,80,0.06)] rounded-xl border border-[var(--border-subtle)] overflow-hidden">
             {exportError}
           </div>
         )}

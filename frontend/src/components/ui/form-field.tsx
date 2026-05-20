@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Slider } from './slider';
+import { Input } from '@/components/ui';
 import { cn } from '@/lib/utils';
 
 interface FormFieldProps {
@@ -53,14 +54,14 @@ export function FormSlider({
           className="w-full"
           themeColor={themeColor}
         />
-        <input
+        <Input
           type="number"
           min={min}
           max={max}
           step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className={cn('nook-input text-center px-1', inputWidth)}
+          className={cn('text-center px-1', inputWidth)}
         />
       </div>
     </div>

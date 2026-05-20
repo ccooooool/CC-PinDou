@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { Button, Input } from '@/components/ui';
 import { useEditorStore } from '../store/useEditorStore';
 import {
   Eye,
@@ -54,12 +55,12 @@ export function BeadLayerPanel() {
   }, [renamePopover.open]);
 
   return (
-    <div className='flex flex-col mx-2 my-1.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--theme-draw-light-5)] shadow-[0_1px_4px_rgba(43,180,171,0.08)] overflow-hidden'>
+    <div className='flex flex-col mx-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden'>
       <div
         className='flex items-center gap-2 px-4 py-2.5 border-b border-[var(--theme-draw-light-5)] bg-[var(--theme-draw-light-9)] cursor-pointer select-none'
         onClick={() => setExpanded(!expanded)}
       >
-        <Layers className='w-4 h-4 text-[var(--theme-draw)]' />
+        <div className='w-1 h-4 rounded-full bg-[var(--theme-draw)]' />
         <span className='text-sm font-bold text-[var(--theme-draw-dark-2)]'>拼豆图层</span>
         <ChevronDown
           className={cn('w-4 h-4 ml-auto transition-transform duration-300', expanded && 'rotate-180')}
@@ -168,27 +169,31 @@ export function BeadLayerPanel() {
                   min={0}
                   max={100}
                   step={5}
+                  style={{ '--slider-fill': `${activeLayer.opacity}%` } as React.CSSProperties}
                 />
               </div>
             )}
 
             {/* 操作按钮 */}
             <div className='px-4 py-3 border-b border-[var(--border-subtle)] last:border-b-0 flex flex-col gap-2'>
-              <button
-                className='nook-btn nook-btn-secondary flex-1 text-xs'
+              <Button
+                size='xs'
+                variant='secondary'
+                color='green'
+                className='flex-1'
                 onClick={() => addBeadLayer('', 32)}
               >
                 <Plus className='w-3.5 h-3.5' />
                 新建图层
-              </button>
+              </Button>
 
               <div className='flex gap-1.5'>
                 <button
                   title='上移'
                   onClick={() => activeLayerId && reorderLayer(activeLayerId, 'up')}
                   disabled={!activeLayerId}
-                  className={`flex-1 px-1 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] flex items-center justify-center text-[var(--text-muted)] ${
-                    activeLayerId ? 'cursor-pointer opacity-100' : 'cursor-not-allowed opacity-40'
+                  className={`flex-1 h-8 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] flex items-center justify-center text-[var(--text-muted)] transition-colors ${
+                    activeLayerId ? 'cursor-pointer hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)] opacity-100' : 'cursor-not-allowed opacity-40'
                   }`}
                 >
                   <ArrowUp className='w-3.5 h-3.5' />
@@ -197,8 +202,8 @@ export function BeadLayerPanel() {
                   title='下移'
                   onClick={() => activeLayerId && reorderLayer(activeLayerId, 'down')}
                   disabled={!activeLayerId}
-                  className={`flex-1 px-1 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] flex items-center justify-center text-[var(--text-muted)] ${
-                    activeLayerId ? 'cursor-pointer opacity-100' : 'cursor-not-allowed opacity-40'
+                  className={`flex-1 h-8 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] flex items-center justify-center text-[var(--text-muted)] transition-colors ${
+                    activeLayerId ? 'cursor-pointer hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)] opacity-100' : 'cursor-not-allowed opacity-40'
                   }`}
                 >
                   <ArrowDown className='w-3.5 h-3.5' />
@@ -207,8 +212,8 @@ export function BeadLayerPanel() {
                   title='合并'
                   onClick={() => activeLayerId && mergeLayerDown(activeLayerId)}
                   disabled={!activeLayerId}
-                  className={`flex-1 px-1 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] flex items-center justify-center text-[var(--text-muted)] ${
-                    activeLayerId ? 'cursor-pointer opacity-100' : 'cursor-not-allowed opacity-40'
+                  className={`flex-1 h-8 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] flex items-center justify-center text-[var(--text-muted)] transition-colors ${
+                    activeLayerId ? 'cursor-pointer hover:bg-[var(--bg-surface-alt)] hover:text-[var(--text-primary)] opacity-100' : 'cursor-not-allowed opacity-40'
                   }`}
                 >
                   <Merge className='w-3.5 h-3.5' />
@@ -217,8 +222,8 @@ export function BeadLayerPanel() {
                   title='删除'
                   onClick={() => activeLayerId && deleteLayer(activeLayerId)}
                   disabled={!activeLayerId}
-                  className={`flex-1 px-1 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] flex items-center justify-center text-[var(--color-danger)] ${
-                    activeLayerId ? 'cursor-pointer opacity-100' : 'cursor-not-allowed opacity-40'
+                  className={`flex-1 h-8 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] flex items-center justify-center text-[var(--color-danger)] transition-colors ${
+                    activeLayerId ? 'cursor-pointer hover:bg-[var(--theme-danger-light-9)] opacity-100' : 'cursor-not-allowed opacity-40'
                   }`}
                 >
                   <Trash2 className='w-3.5 h-3.5' />
@@ -233,16 +238,16 @@ export function BeadLayerPanel() {
       {renamePopover.open && renamePopover.anchor && (
         <div
           ref={renamePopoverRef}
-          className='nook-panel fixed z-[200] p-2.5 flex flex-col gap-2'
+          className='fixed z-[200] p-2.5 flex flex-col gap-2 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] shadow-soft'
           style={{
             left: renamePopover.anchor.getBoundingClientRect().left - 200 - 8,
             top: renamePopover.anchor.getBoundingClientRect().top - 4,
             width: 200,
           }}
         >
-          <input
+          <Input
             autoFocus
-            className='nook-input text-xs py-1.5 px-2'
+            size='xs'
             value={renamePopover.value}
             onChange={(e) => setRenamePopover((p) => ({ ...p, value: e.target.value }))}
             onKeyDown={(e) => {
@@ -256,21 +261,25 @@ export function BeadLayerPanel() {
             }}
           />
           <div className='flex gap-1.5 justify-end'>
-            <button
-              className='nook-btn nook-btn-secondary text-xs py-1 px-2'
+            <Button
+              size='xs'
+              variant='secondary'
+              color='green'
               onClick={() => setRenamePopover((p) => ({ ...p, open: false }))}
             >
               取消
-            </button>
-            <button
-              className='nook-btn nook-btn-primary text-xs py-1 px-2'
+            </Button>
+            <Button
+              size='xs'
+              variant='primary'
+              color='green'
               onClick={() => {
                 renameLayer(renamePopover.layerId, renamePopover.value);
                 setRenamePopover((p) => ({ ...p, open: false }));
               }}
             >
               确认
-            </button>
+            </Button>
           </div>
         </div>
       )}

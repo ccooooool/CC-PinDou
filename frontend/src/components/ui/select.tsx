@@ -16,10 +16,12 @@ interface SelectProps {
   placeholder?: string
   disabled?: boolean
   className?: string
+  themeColor?: string
 }
 
 const Select = React.forwardRef<React.ElementRef<typeof SelectPrimitive.Root>, SelectProps>(
-  ({ value, options, onChange, placeholder = "请选择...", disabled, className }, ref) => {
+  ({ value, options, onChange, placeholder = "请选择...", disabled, className, themeColor }, ref) => {
+    const focusColor = themeColor || 'var(--color-primary)'
     return (
       <SelectPrimitive.Root
         value={value}
@@ -27,6 +29,7 @@ const Select = React.forwardRef<React.ElementRef<typeof SelectPrimitive.Root>, S
         disabled={disabled}
       >
         <SelectPrimitive.Trigger
+          style={{ ['--select-focus-color' as string]: focusColor }}
           ref={ref as any}
           className={cn(
             "inline-flex w-full items-center justify-between",
@@ -34,10 +37,11 @@ const Select = React.forwardRef<React.ElementRef<typeof SelectPrimitive.Root>, S
             "font-nook font-semibold text-base text-[var(--text-heading)]",
             "bg-[var(--bg-surface)] border-[3px] border-[var(--nook-wood-light)] rounded-input",
             "transition-all duration-200 ease-nook",
-            "focus:outline-none focus:border-ac-green focus:ring-2 focus:ring-[var(--color-focus)] focus:ring-offset-1",
+            "focus:outline-none focus:ring-2 focus:ring-offset-1",
+            "focus:border-[color:var(--select-focus-color,var(--color-primary))] focus:ring-[color:var(--select-focus-color,var(--color-primary))]",
             "hover:border-[var(--nook-wood)]",
             "disabled:opacity-50 disabled:cursor-not-allowed",
-            "data-[state=open]:border-ac-green",
+            "data-[state=open]:border-[color:var(--select-focus-color,var(--color-primary))]",
             className
           )}
         >
@@ -74,8 +78,8 @@ const Select = React.forwardRef<React.ElementRef<typeof SelectPrimitive.Root>, S
                     "text-[var(--text-heading)] outline-none",
                     "transition-all duration-150 ease-nook",
                     "hover:bg-[var(--bg-surface-alt)] hover:translate-x-0.5",
-                    "data-[state=checked]:bg-ac-green data-[state=checked]:text-white data-[state=checked]:shadow-btn-green",
-                    "data-[state=checked]:hover:bg-ac-green data-[state=checked]:hover:text-white"
+                    "data-[state=checked]:bg-[color:var(--select-focus-color,var(--color-primary))] data-[state=checked]:text-white",
+                    "data-[state=checked]:hover:bg-[color:var(--select-focus-color,var(--color-primary))] data-[state=checked]:hover:text-white"
                   )}
                 >
                   <span className="absolute left-3 flex h-4 w-4 items-center justify-center">

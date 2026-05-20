@@ -89,7 +89,7 @@ export function ToolPropertiesPopover({ open, onClose, anchorEl, targetTool }: T
   return (
     <div
       ref={popoverRef}
-      className="nook-panel fixed flex flex-col z-[200] p-3.5 gap-3"
+      className="fixed flex flex-col z-[200] p-3.5 gap-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden"
       style={{
         left,
         top,
@@ -107,7 +107,7 @@ export function ToolPropertiesPopover({ open, onClose, anchorEl, targetTool }: T
       {/* 笔刷粗细 */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <span className="nook-label mb-0">
+          <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-0">
             {effectiveTool === 'line' || effectiveTool === 'rect' || effectiveTool === 'circle' ? '线条粗细' : '笔刷大小'}
           </span>
           <span className="text-xs font-bold text-[var(--theme-draw)] min-w-[20px] text-right">
@@ -122,6 +122,7 @@ export function ToolPropertiesPopover({ open, onClose, anchorEl, targetTool }: T
           step={1}
           value={brushSize}
           onChange={(e) => setBrushSize(Number(e.target.value), effectiveTool)}
+          style={{ '--slider-fill': `${((brushSize - 1) / 4) * 100}%` } as React.CSSProperties}
         />
         {/* 大小预览点 */}
         <div className="flex items-center justify-center gap-1 py-1">
