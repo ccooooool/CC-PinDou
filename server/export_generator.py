@@ -2,9 +2,25 @@
 import os
 from io import BytesIO
 
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageColor
 
-from utils import get_text_size, draw_checkerboard, logger
+from colors import color_mapping, find_closest_colors_batch
+from utils import get_text_size, draw_checkerboard, hex_to_rgb, logger
+
+
+# Bayer 矩阵
+BAYER_2x2 = np.array([
+    [0, 2],
+    [3, 1]
+], dtype=np.float32) / 4.0
+
+BAYER_4x4 = np.array([
+    [0, 8, 2, 10],
+    [12, 4, 14, 6],
+    [3, 11, 1, 9],
+    [15, 7, 13, 5]
+], dtype=np.float32) / 16.0
 
 
 # 模块级字体缓存，避免重复加载
@@ -36,12 +52,155 @@ def _load_font(size):
     return default_font
 
 
+def _find_second_best_color(rgb, exclude_hex, mode='full'):
+    """找第二近的拼豆色号（排除指定色号）。"""
+    from colors import _get_arrays
+    hex_list, rgb_array = _get_arrays(mode)
+    rgb_arr = np.array(rgb, dtype=np.float32)
+    dists = np.sqrt(np.sum((rgb_array - rgb_arr) ** 2, axis=1))
+
+    # 排除指定色号
+    for i, h in enumerate(hex_list):
+        if h == exclude_hex:
+            dists[i] = float('inf')
+
+    best_idx = int(dists.argmin())
+    return hex_list[best_idx]
+
+
+def _apply_aa(img, grid_data, bead_size, margin, circle_mode=False):
+    """
+    边缘 AA：在相邻不同颜色的边界插入 1px 过渡色（从色库中选取）。
+    仅在导出时作为'艺术预览'选项。
+    """
+    rows = len(grid_data)
+    if rows == 0:
+        return img
+    cols = len(grid_data[0])
+    draw = ImageDraw.Draw(img)
+
+    # 预计算所有边界需要的 AA 色
+    aa_colors_h = {}  # 水平边界: (y, x) -> aa_color
+    aa_colors_v = {}  # 垂直边界: (y, x) -> aa_color
+
+    for y in range(rows):
+        for x in range(cols):
+            left = grid_data[y][x]['color']
+            # 右邻居
+            if x + 1 < cols:
+                right = grid_data[y][x + 1]['color']
+                if left != right and left != 'transparent' and right != 'transparent':
+                    rgb_l = np.array(hex_to_rgb(left))
+                    rgb_r = np.array(hex_to_rgb(right))
+                    mix = ((rgb_l + rgb_r) / 2).astype(np.uint8)
+                    aa_hex = find_closest_colors_batch(mix.reshape(1, 3))[0]
+                    aa_colors_v[(y, x)] = aa_hex
+            # 下邻居
+            if y + 1 < rows:
+                down = grid_data[y + 1][x]['color']
+                if left != down and left != 'transparent' and down != 'transparent':
+                    rgb_l = np.array(hex_to_rgb(left))
+                    rgb_d = np.array(hex_to_rgb(down))
+                    mix = ((rgb_l + rgb_d) / 2).astype(np.uint8)
+                    aa_hex = find_closest_colors_batch(mix.reshape(1, 3))[0]
+                    aa_colors_h[(y, x)] = aa_hex
+
+    # 绘制 AA 线
+    for (y, x), color in aa_colors_v.items():
+        px = margin + (x + 1) * bead_size
+        py = margin + y * bead_size
+        if circle_mode:
+            # 圆形模式下在边界画小竖线
+            draw.line([(px, py + 2), (px, py + bead_size - 2)], fill=color, width=1)
+        else:
+            draw.line([(px, py + 1), (px, py + bead_size - 1)], fill=color, width=1)
+
+    for (y, x), color in aa_colors_h.items():
+        px = margin + x * bead_size
+        py = margin + (y + 1) * bead_size
+        if circle_mode:
+            draw.line([(px + 2, py), (px + bead_size - 2, py)], fill=color, width=1)
+        else:
+            draw.line([(px + 1, py), (px + bead_size - 1, py)], fill=color, width=1)
+
+    return img
+
+
+def _apply_dither(img, grid_data, bead_size, margin, strength=0.5):
+    """
+    有序抖动（简化版）：在格子内部根据 Bayer 矩阵绘制次优色小点。
+    不需要原始图片，仅基于 grid_data 中相邻色的差异。
+    """
+    rows = len(grid_data)
+    if rows == 0:
+        return img
+    cols = len(grid_data[0])
+    draw = ImageDraw.Draw(img)
+
+    bayer = BAYER_4x4
+    bayer_size = 4
+
+    for y in range(rows):
+        for x in range(cols):
+            color = grid_data[y][x]['color']
+            if color == 'transparent':
+                continue
+
+            # 收集邻居颜色
+            neighbors = []
+            for dy, dx in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                ny, nx = y + dy, x + dx
+                if 0 <= ny < rows and 0 <= nx < cols:
+                    nc = grid_data[ny][nx]['color']
+                    if nc != color and nc != 'transparent':
+                        neighbors.append(nc)
+
+            if not neighbors:
+                continue
+
+            # 找次优色（基于 RGB 距离的邻居色）
+            rgb = np.array(hex_to_rgb(color))
+            best_neighbor = None
+            best_dist = float('inf')
+            for nc in neighbors:
+                n_rgb = np.array(hex_to_rgb(nc))
+                dist = np.linalg.norm(rgb - n_rgb)
+                if dist < best_dist:
+                    best_dist = dist
+                    best_neighbor = nc
+
+            if best_neighbor is None:
+                continue
+
+            # Bayer 矩阵决定是否绘制次优色小点
+            threshold_val = bayer[y % bayer_size, x % bayer_size] * 255
+            if best_dist * strength > threshold_val:
+                px = margin + x * bead_size
+                py = margin + y * bead_size
+                # 在格子中心画一个小点
+                dot_size = max(2, bead_size // 4)
+                cx = px + bead_size // 2
+                cy = py + bead_size // 2
+                draw.ellipse(
+                    [cx - dot_size, cy - dot_size, cx + dot_size, cy + dot_size],
+                    fill=best_neighbor
+                )
+
+    return img
+
+
 def generate_export_image(grid_data, color_list, brand='MARD', show_code=False,
                           show_legend=True, circle_mode=False, show_mark_lines=False,
-                          mark_interval=5, fmt='png'):
+                          mark_interval=5, fmt='png',
+                          aa_enabled=False, dither_enabled=False, dither_strength=0.5):
     """
     根据网格数据和颜色列表生成拼豆图案。
     返回 BytesIO 对象。
+
+    Phase 5 新增参数：
+    - aa_enabled: 边缘 AA（艺术预览）
+    - dither_enabled: 有序抖动（艺术预览）
+    - dither_strength: 抖动强度 0.0~1.0
     """
     if not grid_data:
         raise ValueError("grid_data is empty")
@@ -125,6 +284,14 @@ def generate_export_image(grid_data, color_list, brand='MARD', show_code=False,
                     (px + bead_size / 2 - text_w / 2, py + bead_size / 2 - text_h / 2),
                     code, fill=text_color, font=code_font
                 )
+
+    # Phase 5: 边缘 AA
+    if aa_enabled:
+        img = _apply_aa(img, grid_data, bead_size, margin, circle_mode=circle_mode)
+
+    # Phase 5: 有序抖动
+    if dither_enabled:
+        img = _apply_dither(img, grid_data, bead_size, margin, strength=dither_strength)
 
     # 绘制网格线
     for i in range(rows + 1):

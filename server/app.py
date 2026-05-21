@@ -19,6 +19,7 @@ from image_processing import enhance_lines, remove_background
 from models_manager import AVAILABLE_MODELS, DEFAULT_MODEL
 from pixel_processing import detect_pixel_size_and_alignment
 from normal_processing import generate_perler_bead_data
+from algorithms import generate_with_algorithm
 from utils import (
     logger, parse_form_param, safe_remove, validate_image_file, verify_image_bytes
 )
@@ -306,24 +307,71 @@ def api_generate():
             except (ValueError, TypeError):
                 max_colors = None
 
-        result = generate_perler_bead_data(
-            file_path,
-            grid_size=grid_size,
-            remove_bg=False,
-            color_simplify=color_simplify,
-            enhance_lines_strength=enhance_lines_strength,
-            color_mode=color_mode,
-            adaptive_merge=adaptive_merge,
-            min_area=min_area,
-            max_colors=max_colors,
-            bfs_threshold=bfs_threshold
-        )
+        # Phase 4: 算法选择
+        algorithm = request.form.get('algorithm', 'dominant')
+        if algorithm not in ('dominant', 'kmeans', 'slic', 'meanshift'):
+            algorithm = 'dominant'
+
+        if algorithm == 'dominant':
+            result = generate_perler_bead_data(
+                file_path,
+                grid_size=grid_size,
+                remove_bg=False,
+                color_simplify=color_simplify,
+                enhance_lines_strength=enhance_lines_strength,
+                color_mode=color_mode,
+                adaptive_merge=adaptive_merge,
+                min_area=min_area,
+                max_colors=max_colors,
+                bfs_threshold=bfs_threshold
+            )
+        else:
+            # 实验性算法：直接从 PIL Image 生成
+            from PIL import Image
+            img = Image.open(file_path).convert('RGBA')
+
+            if enhance_lines_strength > 0:
+                from image_processing import enhance_lines
+                img = enhance_lines(img, enhance_lines_strength)
+
+            if color_simplify > 0:
+                from image_processing import simplify_colors
+                img = simplify_colors(img, color_simplify)
+
+            # 解析算法专属参数
+            kmeans_k = 50
+            slic_segments = 500
+            slic_compactness = 10
+            try:
+                algo_params_raw = request.form.get('algorithm_params', '')
+                if algo_params_raw:
+                    algo_params = json.loads(algo_params_raw)
+                    kmeans_k = algo_params.get('kmeans_k', 50)
+                    slic_segments = algo_params.get('slic_segments', 500)
+                    slic_compactness = algo_params.get('slic_compactness', 10)
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+            result = generate_with_algorithm(
+                img,
+                grid_size=grid_size,
+                algorithm=algorithm,
+                color_mode=color_mode,
+                adaptive_merge=adaptive_merge,
+                min_area=min_area,
+                max_colors=max_colors,
+                bfs_threshold=bfs_threshold,
+                kmeans_k=kmeans_k,
+                slic_segments=slic_segments,
+                slic_compactness=slic_compactness
+            )
 
         return jsonify({
             "success": True,
             "grid_data": result["grid_data"],
             "color_list": result["color_list"],
-            "grid_size": result["grid_size"]
+            "grid_size": result["grid_size"],
+            "algorithm": algorithm
         })
 
     except Exception as e:
@@ -393,6 +441,19 @@ def export_image():
     circle_mode = bool(data.get('circle_mode', False))
     show_mark_lines = bool(data.get('show_mark_lines', False))
 
+    # Phase 5: 渲染模式参数
+    render_mode = str(data.get('render_mode', 'standard')).lower()
+    render_params = data.get('render_params', {})
+    aa_enabled = bool(render_params.get('aa_enabled', False))
+    dither_enabled = bool(render_params.get('dither_enabled', False))
+    dither_strength = float(render_params.get('dither_strength', 0.5))
+    dither_strength = max(0.0, min(1.0, dither_strength))
+
+    # 艺术预览模式自动开启 AA 和抖动
+    if render_mode == 'artistic':
+        aa_enabled = True
+        dither_enabled = True
+
     try:
         mark_interval = int(data.get('mark_interval', 5))
     except (ValueError, TypeError):
@@ -420,7 +481,10 @@ def export_image():
             grid_data, color_list, brand=brand, show_code=show_code,
             show_legend=show_legend, circle_mode=circle_mode,
             show_mark_lines=show_mark_lines,
-            mark_interval=mark_interval, fmt=fmt
+            mark_interval=mark_interval, fmt=fmt,
+            aa_enabled=aa_enabled,
+            dither_enabled=dither_enabled,
+            dither_strength=dither_strength
         )
 
         mime = 'image/jpeg' if fmt.lower() in ('jpg', 'jpeg') else 'image/png'
