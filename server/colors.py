@@ -14,6 +14,31 @@ from utils import hex_to_rgb, logger
 _init_lock = threading.Lock()
 
 
+def _rgb_to_oklab(r, g, b):
+    """sRGB → OKLab 感知均匀颜色空间（前端 PerlerEngine.ts 的 Python 移植）。
+    参考: https://bottosson.github.io/posts/oklab/
+    """
+    # 1. sRGB → linear RGB
+    lr = r / 3294.6 if r <= 10 else ((r / 255 + 0.055) / 1.055) ** 2.4
+    lg = g / 3294.6 if g <= 10 else ((g / 255 + 0.055) / 1.055) ** 2.4
+    lb = b / 3294.6 if b <= 10 else ((b / 255 + 0.055) / 1.055) ** 2.4
+
+    # 2. linear RGB → XYZ (D65)
+    x = 0.8189330101 * lr + 0.3618667424 * lg - 0.1288597137 * lb
+    y = 0.0329845436 * lr + 0.9293118715 * lg + 0.0361456387 * lb
+    z = 0.0482003018 * lr + 0.2643662691 * lg + 0.6338517070 * lb
+
+    # 3. XYZ → LMS → OKLab
+    l_ = np.cbrt(x)
+    m_ = np.cbrt(y)
+    s_ = np.cbrt(z)
+
+    L = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_
+    A = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_
+    B = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
+    return L, A, B
+
+
 def init_db():
     """从 JSON 初始化 SQLite 数据库（若不存在）。线程安全。"""
     if os.path.exists(DB_PATH):
@@ -68,7 +93,11 @@ _RGB_ARRAY_FULL = None
 _HEX_LIST_221 = None
 _RGB_ARRAY_221 = None
 
-# cKDTree 加速最近邻搜索
+# OKLab 预计算数组（与前端对齐）
+_OKLAB_ARRAY_FULL = None
+_OKLAB_ARRAY_221 = None
+
+# cKDTree 加速最近邻搜索（OKLab 空间）
 _tree_full = None
 _tree_221 = None
 
@@ -106,10 +135,19 @@ def _ensure_initialized():
             _HEX_LIST_221.append(h)
     _RGB_ARRAY_221 = np.array([hex_to_rgb(h) for h in _HEX_LIST_221], dtype=np.float32)
 
-    # 构建 cKDTree，将最近邻搜索从 O(N*M) 降至 O(N log M)
+    # 预计算 OKLab 数组（与前端 OKLab 颜色匹配对齐）
+    global _OKLAB_ARRAY_FULL, _OKLAB_ARRAY_221
+    _OKLAB_ARRAY_FULL = np.array(
+        [_rgb_to_oklab(*rgb) for rgb in _RGB_ARRAY_FULL], dtype=np.float32
+    )
+    _OKLAB_ARRAY_221 = np.array(
+        [_rgb_to_oklab(*rgb) for rgb in _RGB_ARRAY_221], dtype=np.float32
+    ) if len(_RGB_ARRAY_221) > 0 else None
+
+    # 构建 cKDTree（OKLab 空间），将最近邻搜索从 O(N*M) 降至 O(N log M)
     global _tree_full, _tree_221
-    _tree_full = cKDTree(_RGB_ARRAY_FULL)
-    _tree_221 = cKDTree(_RGB_ARRAY_221) if len(_RGB_ARRAY_221) > 0 else None
+    _tree_full = cKDTree(_OKLAB_ARRAY_FULL)
+    _tree_221 = cKDTree(_OKLAB_ARRAY_221) if _OKLAB_ARRAY_221 is not None and len(_OKLAB_ARRAY_221) > 0 else None
 
 
 def get_color_mapping():
@@ -162,7 +200,7 @@ color_mapping = _LazyColorMapping()
 
 
 def _get_arrays(mode='full'):
-    """根据模式返回对应的颜色数组。"""
+    """根据模式返回对应的颜色数组（RGB）。"""
     _ensure_initialized()
     if mode == '221':
         return _HEX_LIST_221, _RGB_ARRAY_221
@@ -170,30 +208,55 @@ def _get_arrays(mode='full'):
 
 
 def _get_tree(mode='full'):
-    """根据模式返回对应的 cKDTree 和 hex 列表。"""
+    """根据模式返回对应的 OKLab cKDTree 和 hex 列表。"""
     _ensure_initialized()
     if mode == '221':
         return _HEX_LIST_221, _tree_221
     return _HEX_LIST_FULL, _tree_full
 
 
+def _batch_rgb_to_oklab(pixels):
+    """批量 RGB → OKLab。pixels: ndarray of shape (N, 3)。"""
+    p = pixels.astype(np.float32)
+    # sRGB → linear RGB (向量化)
+    lr = np.where(p[:, 0] <= 10, p[:, 0] / 3294.6,
+                  ((p[:, 0] / 255 + 0.055) / 1.055) ** 2.4)
+    lg = np.where(p[:, 1] <= 10, p[:, 1] / 3294.6,
+                  ((p[:, 1] / 255 + 0.055) / 1.055) ** 2.4)
+    lb = np.where(p[:, 2] <= 10, p[:, 2] / 3294.6,
+                  ((p[:, 2] / 255 + 0.055) / 1.055) ** 2.4)
+
+    # linear RGB → XYZ (D65)
+    x = 0.8189330101 * lr + 0.3618667424 * lg - 0.1288597137 * lb
+    y = 0.0329845436 * lr + 0.9293118715 * lg + 0.0361456387 * lb
+    z = 0.0482003018 * lr + 0.2643662691 * lg + 0.6338517070 * lb
+
+    # XYZ → LMS → OKLab
+    l_ = np.cbrt(x)
+    m_ = np.cbrt(y)
+    s_ = np.cbrt(z)
+
+    L = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_
+    A = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_
+    B = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
+    return np.column_stack([L, A, B])
+
+
 def find_closest_color(rgb, mode='full'):
-    """对单个 RGB 元组查找最近拼豆色。mode: 'full' | '221'"""
-    hex_list, rgb_array = _get_arrays(mode)
-    rgb_arr = np.array(rgb, dtype=np.float32)
-    dists = np.sqrt(np.sum((rgb_array - rgb_arr) ** 2, axis=1))
-    return hex_list[int(dists.argmin())]
+    """对单个 RGB 元组查找最近拼豆色（OKLab 感知均匀空间）。mode: 'full' | '221'"""
+    results = find_closest_colors_batch(np.array([rgb], dtype=np.float32), mode=mode)
+    return results[0] if results else "#FFFFFF"
 
 
 def find_closest_colors_batch(pixels, mode='full'):
     """
-    批量查找最近拼豆色。mode: 'full' | '221'
+    批量查找最近拼豆色（OKLab 感知均匀空间）。mode: 'full' | '221'
     pixels: ndarray of shape (N, 3) uint8 or float
-    使用 cKDTree 将复杂度从 O(N*M) 降至 O(N log M)，大幅降低内存占用。
+    使用 OKLab cKDTree 将复杂度从 O(N*M) 降至 O(N log M)。
     """
     hex_list, tree = _get_tree(mode)
     if tree is None:
         return []
-    p = pixels.astype(np.float32)
-    _, indices = tree.query(p)
+    oklab_pixels = _batch_rgb_to_oklab(pixels)
+    _, indices = tree.query(oklab_pixels)
     return [hex_list[int(i)] for i in indices]

@@ -65,6 +65,15 @@ export function useCanvasInteractions(
   const imageDragStartRef = useRef<{ x: number; y: number; transformX: number; transformY: number } | null>(null);
   const beadDragStartRef = useRef<{ x: number; y: number; transformX: number; transformY: number } | null>(null);
 
+  // 选区移动
+  const isSelectionMovingRef = useRef(false);
+  const selectionMoveStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  // 批量绘制工具记录（用于操作记录命名）
+  const drawToolRef = useRef(drawTool);
+  drawToolRef.current = drawTool;
+  const batchToolRef = useRef<string>('pen');
+
   // 吸管工具：图片图层按住预览，松开吸色
   const eyedropperPreviewRef = useRef<{ active: boolean; startX: number; startY: number } | null>(null);
   const lastPixelPosRef = useRef<{ x: number; y: number } | null>(null);
@@ -80,6 +89,7 @@ export function useCanvasInteractions(
     setIsBatchPainting(true);
     batchPositionsRef.current = [];
     batchPaintedSetRef.current = new Set();
+    batchToolRef.current = drawToolRef.current;
     const records = paintAt(pos.x, pos.y, forceColor, forceCodes);
     for (const r of records) {
       const key = `${r.x},${r.y}`;
@@ -110,7 +120,7 @@ export function useCanvasInteractions(
         if (record.length > 0) records.push(...record);
       }
       if (records.length > 0) {
-        pushHistory({ type: 'batch_paint', layerId: activeLayerId || 'default', positions: records });
+        pushHistory({ type: 'batch_paint', layerId: activeLayerId || 'default', tool: 'fill', positions: records });
         scheduleDrawGrid();
       }
     }
@@ -232,9 +242,18 @@ export function useCanvasInteractions(
       }
 
       switch (drawTool) {
-        case 'wand':
-          handleWandDown(pos, e.shiftKey);
+        case 'wand': {
+          const editorState = useEditorStore.getState();
+          const inSelection = editorState.selectedCells.some((c) => c.x === pos.x && c.y === pos.y);
+          if (editorState.selectedCells.length > 0 && inSelection) {
+            isSelectionMovingRef.current = true;
+            selectionMoveStartRef.current = { x: pos.x, y: pos.y };
+            e.preventDefault();
+          } else {
+            handleWandDown(pos, e.shiftKey);
+          }
           break;
+        }
         case 'fill':
           handleFillDown(pos);
           break;
@@ -367,6 +386,21 @@ export function useCanvasInteractions(
 
       const pos = getGridXY(e);
       if (!pos) return;
+
+      // 选区移动
+      if (isSelectionMovingRef.current && pos) {
+        const start = selectionMoveStartRef.current;
+        if (start) {
+          const dx = pos.x - start.x;
+          const dy = pos.y - start.y;
+          if (dx !== 0 || dy !== 0) {
+            useEditorStore.getState().moveSelection(dx, dy);
+            selectionMoveStartRef.current = { x: pos.x, y: pos.y };
+            scheduleDrawGrid();
+          }
+        }
+        return;
+      }
 
       if (isDrawMode && isBatchPainting) {
         const target = e.target as HTMLElement;
@@ -623,7 +657,7 @@ export function useCanvasInteractions(
           }
         }
         if (records.length > 0) {
-          pushHistory({ type: 'batch_paint', layerId: activeLayerId || 'default', positions: records });
+          pushHistory({ type: 'batch_paint', layerId: activeLayerId || 'default', tool: drawToolRef.current, positions: records });
         }
       }
       // 主动清除 shape preview，避免虚线残留
@@ -637,6 +671,7 @@ export function useCanvasInteractions(
       pushHistory({
         type: 'batch_paint',
         layerId: activeLayerId || 'default',
+        tool: batchToolRef.current,
         positions: batchPositionsRef.current,
       });
     }
@@ -736,6 +771,11 @@ export function useCanvasInteractions(
         beadDragStartRef.current = null;
         return;
       }
+      if (isSelectionMovingRef.current) {
+        isSelectionMovingRef.current = false;
+        selectionMoveStartRef.current = null;
+        return;
+      }
       if (isBatchPaintingRef.current || isDrawingRef.current) {
         stopDrag();
         setIsDrawing(false);
@@ -743,7 +783,7 @@ export function useCanvasInteractions(
         setIsBatchPainting(false);
         if (batchPositionsRef.current.length > 0) {
           const latestLayerId = useEditorStore.getState().activeLayerId;
-          pushHistory({ type: 'batch_paint', positions: batchPositionsRef.current, layerId: latestLayerId || 'default' });
+          pushHistory({ type: 'batch_paint', tool: batchToolRef.current, positions: batchPositionsRef.current, layerId: latestLayerId || 'default' });
         }
         batchPositionsRef.current = [];
         batchPaintedSetRef.current = new Set();

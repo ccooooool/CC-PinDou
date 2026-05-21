@@ -22,7 +22,7 @@ const TOOLS = [
   { key: 'circle' as const, label: '圆形', icon: Circle, hasProps: true },
   { key: 'fill' as const, label: '填充', icon: PaintBucket, hasProps: false },
   { key: 'eraser' as const, label: '橡皮', icon: Eraser, hasProps: true },
-  { key: 'wand' as const, label: '魔棒', icon: Wand2, hasProps: false },
+  { key: 'wand' as const, label: '魔棒', icon: Wand2, hasProps: true },
   { key: 'replace' as const, label: '替换', icon: Replace, hasProps: true },
 ];
 

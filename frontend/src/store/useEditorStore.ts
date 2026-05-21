@@ -41,6 +41,7 @@ export interface EditorState {
 
   // ========== 选区（魔法棒）==========
   selectedCells: Array<{ x: number; y: number }>;
+  tolerance: number;
 
   // ========== 质量检查 ==========
   isolatedCells: Array<{ x: number; y: number }>;
@@ -71,6 +72,11 @@ export interface EditorState {
   // 魔法棒选区
   clearSelection: () => void;
   magicWandSelect: (x: number, y: number, append: boolean) => void;
+  invertSelection: () => void;
+  moveSelection: (dx: number, dy: number) => void;
+  fillSelection: () => void;
+  deleteSelection: () => void;
+  setTolerance: (v: number) => void;
 
   // 全局颜色替换
   replaceColorGlobally: (fromHex: string, toHex: string, toCodes: Record<string, string>) => void;
@@ -109,6 +115,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   historyStack: [],
   redoStack: [],
   selectedCells: [],
+  tolerance: 0,
   isolatedCells: [],
   unstableCells: [],
 
@@ -545,7 +552,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         });
         draft.colorList = recalculateColorList(draft.gridData!);
         draft.isolatedCells = [];
-        draft.historyStack.push({ type: 'batch_paint', layerId: draft.activeLayerId || 'default', positions });
+        draft.historyStack.push({ type: 'batch_paint', layerId: draft.activeLayerId || 'default', tool: 'merge_isolated', positions });
         draft.redoStack = [];
       }));
     }
@@ -603,14 +610,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   clearQualityChecks: () => set({ isolatedCells: [], unstableCells: [] }),
 
   clearSelection: () => set({ selectedCells: [] }),
+  setTolerance: (v) => set({ tolerance: Math.max(0, Math.min(255, v)) }),
 
   magicWandSelect: (x, y, append) => {
-    const { gridData, selectedCells } = get();
+    const { gridData, selectedCells, tolerance } = get();
     if (!gridData) return;
     const rows = gridData.length;
     const cols = gridData[0].length;
     const targetColor = gridData[y]?.[x]?.color;
     if (!targetColor || targetColor === 'transparent') return;
+
+    const _hexToRgb = (hex: string) => {
+      const n = parseInt(hex.replace('#', ''), 16);
+      return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff };
+    };
+    const _colorDist = (a: string, b: string) => {
+      const ca = _hexToRgb(a);
+      const cb = _hexToRgb(b);
+      return Math.sqrt((ca.r - cb.r) ** 2 + (ca.g - cb.g) ** 2 + (ca.b - cb.b) ** 2);
+    };
+    const _isMatch = (color: string) => {
+      if (color === 'transparent') return false;
+      if (tolerance <= 0) return color === targetColor;
+      return _colorDist(color, targetColor) <= tolerance;
+    };
 
     const visited = new Set<string>();
     const region: Array<{ x: number; y: number }> = [];
@@ -624,7 +647,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
         const nx = cx + dx, ny = cy + dy;
         const key = `${nx},${ny}`;
-        if (nx >= 0 && nx < cols && ny >= 0 && ny < rows && !visited.has(key) && gridData[ny][nx].color === targetColor) {
+        if (nx >= 0 && nx < cols && ny >= 0 && ny < rows && !visited.has(key) && _isMatch(gridData[ny][nx].color)) {
           visited.add(key);
           queue.push({ x: nx, y: ny });
         }
@@ -641,6 +664,162 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     } else {
       set({ selectedCells: region });
     }
+  },
+
+  invertSelection: () => {
+    const { gridData, selectedCells } = get();
+    if (!gridData) return;
+    const rows = gridData.length;
+    const cols = gridData[0].length;
+    const selectedSet = new Set(selectedCells.map((c) => `${c.x},${c.y}`));
+    const inverted: Array<{ x: number; y: number }> = [];
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        if (!selectedSet.has(`${x},${y}`)) {
+          inverted.push({ x, y });
+        }
+      }
+    }
+    set({ selectedCells: inverted });
+  },
+
+  moveSelection: (dx, dy) => {
+    const { gridData, selectedCells } = get();
+    if (!gridData || selectedCells.length === 0 || (dx === 0 && dy === 0)) return;
+    const rows = gridData.length;
+    const cols = gridData[0].length;
+
+    // 检查目标位置是否都在边界内
+    for (const c of selectedCells) {
+      const nx = c.x + dx, ny = c.y + dy;
+      if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) return;
+    }
+
+    const layerId = get().activeLayerId || 'default';
+
+    set(produce((draft: EditorState) => {
+      if (!draft.gridData) return;
+
+      const moves = selectedCells.map((c) => ({
+        sx: c.x, sy: c.y,
+        dx: c.x + dx, dy: c.y + dy,
+        color: draft.gridData![c.y][c.x].color,
+        codes: { ...draft.gridData![c.y][c.x].codes },
+        targetOldColor: draft.gridData![c.y + dy][c.x + dx].color,
+        targetOldCodes: { ...draft.gridData![c.y + dy][c.x + dx].codes },
+      }));
+
+      const positions: Array<{ x: number; y: number; oldColor: string; oldCodes: Record<string, string>; newColor: string; newCodes: Record<string, string> }> = [];
+
+      // 记录原位置清空
+      for (const m of moves) {
+        positions.push({
+          x: m.sx, y: m.sy,
+          oldColor: m.color,
+          oldCodes: m.codes,
+          newColor: 'transparent',
+          newCodes: {},
+        });
+      }
+      // 记录新位置填充
+      for (const m of moves) {
+        positions.push({
+          x: m.dx, y: m.dy,
+          oldColor: m.targetOldColor,
+          oldCodes: m.targetOldCodes,
+          newColor: m.color,
+          newCodes: m.codes,
+        });
+      }
+
+      // 应用：先清空原位置
+      for (const m of moves) {
+        draft.gridData![m.sy][m.sx].color = 'transparent';
+        draft.gridData![m.sy][m.sx].codes = {};
+      }
+      // 再填充新位置
+      for (const m of moves) {
+        draft.gridData![m.dy][m.dx].color = m.color;
+        draft.gridData![m.dy][m.dx].codes = m.codes;
+      }
+
+      draft.selectedCells = moves.map((m) => ({ x: m.dx, y: m.dy }));
+      draft.colorList = recalculateColorList(draft.gridData!);
+
+      if (draft.historyStack.length >= MAX_HISTORY_SIZE) draft.historyStack.shift();
+      draft.historyStack.push({ type: 'batch_paint', layerId, tool: 'wand_move', positions });
+      draft.redoStack = [];
+
+      const layer = draft.layers.find((l) => l.id === layerId);
+      if (layer && layer.type === 'bead') {
+        layer.gridData = draft.gridData;
+        layer.colorList = draft.colorList;
+      }
+    }));
+  },
+
+  fillSelection: () => {
+    const { gridData, selectedCells, selectedColor, activeLayerId } = get();
+    if (!gridData || selectedCells.length === 0 || !selectedColor) return;
+
+    const layerId = activeLayerId || 'default';
+    const positions = selectedCells.map((c) => ({
+      x: c.x, y: c.y,
+      oldColor: gridData[c.y][c.x].color,
+      oldCodes: { ...gridData[c.y][c.x].codes },
+      newColor: selectedColor.hex,
+      newCodes: { ...selectedColor.codes },
+    }));
+
+    set(produce((draft: EditorState) => {
+      for (const p of positions) {
+        draft.gridData![p.y][p.x].color = p.newColor;
+        draft.gridData![p.y][p.x].codes = p.newCodes;
+      }
+      draft.colorList = recalculateColorList(draft.gridData!);
+      draft.selectedCells = [];
+      if (draft.historyStack.length >= MAX_HISTORY_SIZE) draft.historyStack.shift();
+      draft.historyStack.push({ type: 'batch_paint', layerId, tool: 'wand_fill', positions });
+      draft.redoStack = [];
+
+      const layer = draft.layers.find((l) => l.id === layerId);
+      if (layer && layer.type === 'bead') {
+        layer.gridData = draft.gridData!;
+        layer.colorList = draft.colorList;
+      }
+    }));
+  },
+
+  deleteSelection: () => {
+    const { gridData, selectedCells, activeLayerId } = get();
+    if (!gridData || selectedCells.length === 0) return;
+
+    const layerId = activeLayerId || 'default';
+    const positions = selectedCells.map((c) => ({
+      x: c.x, y: c.y,
+      oldColor: gridData[c.y][c.x].color,
+      oldCodes: { ...gridData[c.y][c.x].codes },
+      newColor: 'transparent',
+      newCodes: {},
+    }));
+
+    set(produce((draft: EditorState) => {
+      for (const p of positions) {
+        draft.gridData![p.y][p.x].color = 'transparent';
+        draft.gridData![p.y][p.x].codes = {};
+      }
+      draft.colorList = recalculateColorList(draft.gridData!);
+      draft.selectedCells = [];
+      if (draft.historyStack.length >= MAX_HISTORY_SIZE) draft.historyStack.shift();
+      draft.historyStack.push({ type: 'batch_paint', layerId, tool: 'wand_delete', positions });
+      draft.redoStack = [];
+
+      const layer = draft.layers.find((l) => l.id === layerId);
+      if (layer && layer.type === 'bead') {
+        layer.gridData = draft.gridData!;
+        layer.colorList = draft.colorList;
+      }
+    }));
   },
 
   replaceColorGlobally: (fromHex, toHex, toCodes) => {
@@ -670,7 +849,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
           draft.gridData![pos.y][pos.x].codes = pos.newCodes;
         });
         draft.colorList = recalculateColorList(draft.gridData!);
-        draft.historyStack.push({ type: 'batch_paint', layerId, positions });
+        draft.historyStack.push({ type: 'batch_paint', layerId, tool: 'replace_global', positions });
         draft.redoStack = [];
 
         const layer = draft.layers.find((l) => l.id === layerId);

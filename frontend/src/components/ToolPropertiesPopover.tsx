@@ -1,7 +1,8 @@
-﻿import { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useUIStore } from '../store/useUIStore';
 import { useEditorStore } from '../store/useEditorStore';
 import { useConfigStore } from '../store/useConfigStore';
+import { Slider } from './ui/slider';
 
 function ReplaceToolSettings() {
   const selectedColor = useEditorStore((s) => s.selectedColor);
@@ -48,8 +49,11 @@ export function ToolPropertiesPopover({ open, onClose, anchorEl, targetTool }: T
     setShapeFilled,
   } = useUIStore();
 
+  const tolerance = useEditorStore((s) => s.tolerance);
+  const setTolerance = useEditorStore((s) => s.setTolerance);
+
   const effectiveTool = targetTool || drawTool;
-  const hasProps = effectiveTool === 'pen' || effectiveTool === 'eraser' || effectiveTool === 'line' || effectiveTool === 'rect' || effectiveTool === 'circle' || effectiveTool === 'replace';
+  const hasProps = effectiveTool === 'pen' || effectiveTool === 'eraser' || effectiveTool === 'line' || effectiveTool === 'rect' || effectiveTool === 'circle' || effectiveTool === 'replace' || effectiveTool === 'wand';
 
   const brushSize = brushSizes[effectiveTool] || 1;
   const shapeFilled = shapeFillMap[effectiveTool] ?? (effectiveTool === 'rect' || effectiveTool === 'circle');
@@ -78,6 +82,7 @@ export function ToolPropertiesPopover({ open, onClose, anchorEl, targetTool }: T
     circle: '圆形',
     eraser: '橡皮',
     replace: '替换',
+    wand: '魔棒',
   };
 
   if (!open || !anchorEl || !hasProps) return null;
@@ -104,42 +109,44 @@ export function ToolPropertiesPopover({ open, onClose, anchorEl, targetTool }: T
         {TOOL_NAMES[effectiveTool] || '工具'}设置
       </div>
 
-      {/* 笔刷粗细 */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-0">
-            {effectiveTool === 'line' || effectiveTool === 'rect' || effectiveTool === 'circle' ? '线条粗细' : '笔刷大小'}
-          </span>
-          <span className="text-xs font-bold text-[var(--theme-draw)] min-w-[20px] text-right">
-            {brushSize}
-          </span>
+      {/* 笔刷粗细（魔棒不需要） */}
+      {effectiveTool !== 'wand' && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide mb-0">
+              {effectiveTool === 'line' || effectiveTool === 'rect' || effectiveTool === 'circle' ? '线条粗细' : '笔刷大小'}
+            </span>
+            <span className="text-xs font-bold text-[var(--theme-draw)] min-w-[20px] text-right">
+              {brushSize}
+            </span>
+          </div>
+          <input
+            type="range"
+            className="nook-slider"
+            min={1}
+            max={5}
+            step={1}
+            value={brushSize}
+            onChange={(e) => setBrushSize(Number(e.target.value), effectiveTool)}
+            style={{ '--slider-fill': `${((brushSize - 1) / 4) * 100}%` } as React.CSSProperties}
+          />
+          {/* 大小预览点 */}
+          <div className="flex items-center justify-center gap-1 py-1">
+            {[1, 2, 3, 4, 5].map((s) => (
+              <div
+                key={s}
+                className="rounded-full transition-all"
+                style={{
+                  width: 4 + s * 3,
+                  height: 4 + s * 3,
+                  background: s === brushSize ? 'var(--theme-draw)' : 'var(--nook-wood-light)',
+                  transform: s === brushSize ? 'scale(1.2)' : 'scale(1)',
+                }}
+              />
+            ))}
+          </div>
         </div>
-        <input
-          type="range"
-          className="nook-slider"
-          min={1}
-          max={5}
-          step={1}
-          value={brushSize}
-          onChange={(e) => setBrushSize(Number(e.target.value), effectiveTool)}
-          style={{ '--slider-fill': `${((brushSize - 1) / 4) * 100}%` } as React.CSSProperties}
-        />
-        {/* 大小预览点 */}
-        <div className="flex items-center justify-center gap-1 py-1">
-          {[1, 2, 3, 4, 5].map((s) => (
-            <div
-              key={s}
-              className="rounded-full transition-all"
-              style={{
-                width: 4 + s * 3,
-                height: 4 + s * 3,
-                background: s === brushSize ? 'var(--theme-draw)' : 'var(--nook-wood-light)',
-                transform: s === brushSize ? 'scale(1.2)' : 'scale(1)',
-              }}
-            />
-          ))}
-        </div>
-      </div>
+      )}
 
       {/* 填充（仅 rect / circle） */}
       {(effectiveTool === 'rect' || effectiveTool === 'circle') && (
@@ -163,6 +170,29 @@ export function ToolPropertiesPopover({ open, onClose, anchorEl, targetTool }: T
 
       {/* 颜色替换信息 */}
       {effectiveTool === 'replace' && <ReplaceToolSettings />}
+
+      {/* 容差（仅 wand） */}
+      {effectiveTool === 'wand' && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-[var(--text-muted)]">容差阈值</span>
+            <span className="text-xs font-bold text-[var(--theme-draw)] min-w-[20px] text-right">
+              {tolerance}
+            </span>
+          </div>
+          <Slider
+            value={[tolerance]}
+            onValueChange={([v]) => setTolerance(v)}
+            min={0}
+            max={255}
+            step={1}
+            themeColor="var(--theme-draw)"
+          />
+          <div className="text-[11px] text-[var(--text-caption)] leading-relaxed">
+            容差越大，选中的近似色范围越广。0 表示严格匹配同色。
+          </div>
+        </div>
+      )}
     </div>
   );
 }

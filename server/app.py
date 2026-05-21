@@ -286,13 +286,37 @@ def api_generate():
         if color_mode not in ('full', '221'):
             color_mode = 'full'
 
+        # Phase 3 新增参数
+        adaptive_merge = request.form.get('adaptive_merge', 'true').lower() != 'false'
+        min_area = parse_form_param(
+            request.form, 'min_area', 4, int,
+            *PARAM_LIMITS['min_area'][:2]
+        )
+        bfs_threshold = parse_form_param(
+            request.form, 'bfs_threshold', 25, int,
+            *PARAM_LIMITS['bfs_threshold'][:2]
+        )
+        max_colors_raw = request.form.get('max_colors', '')
+        max_colors = None
+        if max_colors_raw:
+            try:
+                max_colors = int(max_colors_raw)
+                if max_colors < PARAM_LIMITS['max_colors'][0]:
+                    max_colors = None
+            except (ValueError, TypeError):
+                max_colors = None
+
         result = generate_perler_bead_data(
             file_path,
             grid_size=grid_size,
             remove_bg=False,
             color_simplify=color_simplify,
             enhance_lines_strength=enhance_lines_strength,
-            color_mode=color_mode
+            color_mode=color_mode,
+            adaptive_merge=adaptive_merge,
+            min_area=min_area,
+            max_colors=max_colors,
+            bfs_threshold=bfs_threshold
         )
 
         return jsonify({

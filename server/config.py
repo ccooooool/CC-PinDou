@@ -152,4 +152,10 @@ PARAM_LIMITS = {
 
     'color_quantize': (0, 100, 0),
 
+    'max_colors': (1, 291, None),       # 全局色号上限，null 表示不限制
+
+    'min_area': (1, 64, 4),             # 孤岛判定阈值（格）
+
+    'bfs_threshold': (1, 100, 25),      # BFS 合并颜色距离阈值
+
 }

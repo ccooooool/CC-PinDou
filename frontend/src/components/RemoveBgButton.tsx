@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui';
-import { Scissors, Loader2, ImageOff, Eraser } from 'lucide-react';
+import { Scissors, Loader2, ImageOff, Eraser, Download } from 'lucide-react';
 import { removeBgFrontend } from '../engine/frontendAlgorithms';
 import { useConfigStore } from '../store/useConfigStore';
 
@@ -152,6 +152,16 @@ export function RemoveBgButton({ imageFile, onBgRemoved, backendAvailable }: Rem
     }
   }, [removedPreview]);
 
+  const handleDownload = useCallback(() => {
+    if (!removedPreview) return;
+    const a = document.createElement('a');
+    a.href = removedPreview;
+    a.download = 'removed-bg.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }, [removedPreview]);
+
   if (!imageFile) return null;
 
   if (removedPreview) {
@@ -169,6 +179,9 @@ export function RemoveBgButton({ imageFile, onBgRemoved, backendAvailable }: Rem
           </Button>
           <Button variant="ghost" block onClick={handleCancel}>
             取消
+          </Button>
+          <Button variant="ghost" onClick={handleDownload} title="下载抠图结果">
+            <Download className="w-4 h-4" />
           </Button>
         </div>
       </div>

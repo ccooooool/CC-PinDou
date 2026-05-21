@@ -33,6 +33,7 @@ export type HistoryAction =
   | {
       type: 'batch_paint';
       layerId: string;
+      tool?: string;
       positions: Array<{
         x: number;
         y: number;

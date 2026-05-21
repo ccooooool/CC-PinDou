@@ -6,6 +6,7 @@ import { useProjectExport } from '../hooks/useProjectExport';
 import {
   Grid3X3, FolderOpen, Upload,
   Pencil, Minus, Square, Circle, PaintBucket, Eraser, Wand2, Replace, Move, Pipette,
+  Paintbrush, Trash2, FlipHorizontal2, X,
 } from 'lucide-react';
 import { Card, Button } from '@/components/ui';
 import { Slider } from './ui/slider';
@@ -35,6 +36,9 @@ export function CanvasEditor({ onImageSelect }: CanvasEditorProps) {
   // 自定义工具光标
   const cursorProxyRef = useRef<HTMLDivElement>(null);
   const [cursorInCanvas, setCursorInCanvas] = useState(false);
+
+  // 右键菜单
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; visible: boolean } | null>(null);
 
   // 放大镜 refs
   const magnifierRef = useRef<HTMLDivElement>(null);
@@ -271,6 +275,29 @@ export function CanvasEditor({ onImageSelect }: CanvasEditorProps) {
     setCursorInCanvas(false);
   }, [hideMagnifier]);
 
+  // 右键菜单
+  const onContextMenu = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const pos = getGridXY(e);
+    if (!pos) return;
+    const state = useEditorStore.getState();
+    const inSelection = state.selectedCells.some((c) => c.x === pos.x && c.y === pos.y);
+    if (state.selectedCells.length > 0 && inSelection) {
+      setContextMenu({ x: e.clientX, y: e.clientY, visible: true });
+    }
+  }, [getGridXY]);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  useEffect(() => {
+    if (!contextMenu?.visible) return;
+    const handleClick = () => closeContextMenu();
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [contextMenu?.visible, closeContextMenu]);
+
   // 全局 mouseup：防止在 canvas 外松开时放大镜残留
   useEffect(() => {
     const onGlobalUp = () => hideMagnifier();
@@ -437,6 +464,7 @@ export function CanvasEditor({ onImageSelect }: CanvasEditorProps) {
           onMouseUp={onMouseUp}
           onMouseEnter={onMouseEnter}
           onMouseLeave={onMouseLeave}
+          onContextMenu={onContextMenu}
           className="block flex-shrink-0"
         />
       </div>
@@ -491,6 +519,56 @@ export function CanvasEditor({ onImageSelect }: CanvasEditorProps) {
               </div>
             );
           })()}
+        </div>
+      )}
+
+      {/* ─── 选区右键菜单 ─── */}
+      {contextMenu?.visible && (
+        <div
+          className="fixed z-[200] py-1.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden shadow-lg"
+          style={{ left: contextMenu.x, top: contextMenu.y, minWidth: 150 }}
+        >
+          <button
+            className="flex items-center gap-2.5 w-full px-3 py-2 text-xs font-semibold text-left text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)] transition-colors"
+            onClick={() => {
+              useEditorStore.getState().fillSelection();
+              closeContextMenu();
+            }}
+          >
+            <Paintbrush className="w-3.5 h-3.5" />
+            填充选区
+          </button>
+          <button
+            className="flex items-center gap-2.5 w-full px-3 py-2 text-xs font-semibold text-left text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)] transition-colors"
+            onClick={() => {
+              useEditorStore.getState().deleteSelection();
+              closeContextMenu();
+            }}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            删除选区
+          </button>
+          <button
+            className="flex items-center gap-2.5 w-full px-3 py-2 text-xs font-semibold text-left text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)] transition-colors"
+            onClick={() => {
+              useEditorStore.getState().invertSelection();
+              closeContextMenu();
+            }}
+          >
+            <FlipHorizontal2 className="w-3.5 h-3.5" />
+            反选
+          </button>
+          <div className="h-px bg-[var(--border-subtle)] my-1 mx-2" />
+          <button
+            className="flex items-center gap-2.5 w-full px-3 py-2 text-xs font-semibold text-left text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)] transition-colors"
+            onClick={() => {
+              useEditorStore.getState().clearSelection();
+              closeContextMenu();
+            }}
+          >
+            <X className="w-3.5 h-3.5" />
+            取消选区
+          </button>
         </div>
       )}
 

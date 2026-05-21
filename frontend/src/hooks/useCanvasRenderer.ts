@@ -55,6 +55,10 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
     enabled: boolean;
   }>({ start: { x: 0, y: 0 }, end: { x: 0, y: 0 }, tool: 'line', enabled: false });
 
+  // 选区虚线动画偏移
+  const dashOffsetRef = useRef(0);
+  const dashAnimFrameRef = useRef<number | null>(null);
+
   // 画笔大小预览（pen/eraser/replace）
   const brushPreviewRef = useRef<{
     x: number;
@@ -370,18 +374,27 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
       drawSymmetryLines(ctx, rows, cols, beadSize, margin, symmetryMode);
     }
 
-    // 魔法棒选区高亮
+    // 魔法棒选区高亮（只画外轮廓，带动画虚线）
     const _selectedCells = selectedCellsRef.current;
     if (_selectedCells.length > 0) {
+      const selectedSet = new Set(_selectedCells.map((c) => `${c.x},${c.y}`));
       ctx.strokeStyle = '#9ca3af';
       ctx.lineWidth = 2;
-      ctx.setLineDash([3, 3]);
+      ctx.setLineDash([4, 4]);
+      ctx.lineDashOffset = dashOffsetRef.current;
       for (const { x, y } of _selectedCells) {
-        const px = margin + x * beadSize;
-        const py = margin + y * beadSize;
-        ctx.strokeRect(px + 1, py + 1, beadSize - 2, beadSize - 2);
+        // 只画边界格子（至少有一个邻居不在选区中）
+        const isBorder = [
+          [0, 1], [1, 0], [0, -1], [-1, 0],
+        ].some(([dx, dy]) => !selectedSet.has(`${x + dx},${y + dy}`));
+        if (isBorder) {
+          const px = margin + x * beadSize;
+          const py = margin + y * beadSize;
+          ctx.strokeRect(px + 1, py + 1, beadSize - 2, beadSize - 2);
+        }
       }
       ctx.setLineDash([]);
+      ctx.lineDashOffset = 0;
     }
 
     // Shape 预览（高对比度：主题色填充 + 白边）
@@ -539,6 +552,24 @@ export function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement |
       drawGrid();
     });
   }, [drawGrid]);
+
+  // 选区虚线动画循环
+  useEffect(() => {
+    const loop = () => {
+      dashOffsetRef.current -= 0.25;
+      scheduleDrawGrid();
+      dashAnimFrameRef.current = requestAnimationFrame(loop);
+    };
+    if (selectedCells.length > 0) {
+      dashAnimFrameRef.current = requestAnimationFrame(loop);
+    }
+    return () => {
+      if (dashAnimFrameRef.current !== null) {
+        cancelAnimationFrame(dashAnimFrameRef.current);
+        dashAnimFrameRef.current = null;
+      }
+    };
+  }, [selectedCells.length, scheduleDrawGrid]);
 
   // 数据变化时自动重绘
   useEffect(() => {
