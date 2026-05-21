@@ -12,11 +12,10 @@ const MODES = [
 ];
 
 interface ModeTabsProps {
-  isSimple?: boolean;
   onModeChange?: (mode: string, e?: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
-export function ModeTabs({ isSimple, onModeChange }: ModeTabsProps) {
+export function ModeTabs({ onModeChange }: ModeTabsProps) {
   const navigate = useNavigate();
   const { mode: urlMode } = useParams<{ mode: string }>();
   const mode = urlMode || 'normal';
@@ -46,14 +45,7 @@ export function ModeTabs({ isSimple, onModeChange }: ModeTabsProps) {
         <span className="font-bold text-[var(--text-heading)] text-base tracking-tight">
           CC-PinDou
         </span>
-        {isSimple && (
-          <span
-            className="text-[11px] font-bold rounded-full bg-[rgba(252,77,80,0.08)] px-2 py-0.5"
-            style={{ color: 'var(--color-danger)' }}
-          >
-            离线模式
-          </span>
-        )}
+
       </div>
 
       {/* 中间：模式导航 */}

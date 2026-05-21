@@ -26,7 +26,6 @@ import { usePatternGenerator } from './hooks/usePatternGenerator';
 import { TooltipProvider } from './components/ui/tooltip';
 import { Loader2, Wand2, Trash2, Image, ClipboardPenLine, X, Download } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
-import { useBackendHealth } from './hooks/useBackendHealth';
 import { getModeTheme } from './utils/theme';
 import { renderGridToPixelPng, downloadDataUrl } from './utils/pixelPreview';
 import { cn } from '@/lib/utils';
@@ -39,12 +38,7 @@ import colorMappingJson from './data/colorSystemMapping.json';
 
 const colorMappingData: ColorMapping = colorMappingJson as ColorMapping;
 
-interface AppProps {
-  variant?: 'simple' | 'full';
-}
-
-function App({ variant = 'full' }: AppProps) {
-  const isSimple = variant === 'simple';
+export default function App() {
   const [engine, setEngine] = useState<PerlerEngine | null>(null);
   const {
     previewImage,
@@ -54,7 +48,7 @@ function App({ variant = 'full' }: AppProps) {
     handleBgRemoved: onBgRemovedRaw,
     clearImages,
   } = useImageUpload();
-  const { gridSize, colorSimplify, enhanceLines, colorMode, generateAlgorithm } = useConfigStore();
+  const { gridSize, colorSimplify, enhanceLines, colorMode } = useConfigStore();
   const { setGridData } = useEditorStore();
 
   const {
@@ -69,7 +63,6 @@ function App({ variant = 'full' }: AppProps) {
     colorSimplify,
     enhanceLines,
     colorMode,
-    generateAlgorithm,
     onSuccess: useCallback((grid, colors) => setGridData(grid, colors), [setGridData]),
   });
   const [activeTab, setActiveTab] = useState<'removeBg' | 'generate'>('generate');
@@ -78,10 +71,6 @@ function App({ variant = 'full' }: AppProps) {
   const navigate = useNavigate();
   const { mode: urlMode } = useParams<{ mode: string }>();
   const mode = (urlMode as 'normal' | 'pixel' | 'draw') || 'normal';
-
-  // simple 模式下不检测后端，强制不可用；full 模式下正常检测
-  const health = useBackendHealth(!isSimple);
-  const backendAvailable = isSimple ? false : health.available;
 
   const gridData = useEditorStore((s) => s.gridData);
   const { setMode } = useUIStore();
@@ -106,7 +95,6 @@ function App({ variant = 'full' }: AppProps) {
   };
 
   const handleModeChange = useCallback((targetMode: string, e?: React.MouseEvent<HTMLButtonElement>) => {
-    const basePath = isSimple ? '/simple' : '/full';
     const hasGridData = gridData && gridData.length > 0;
     const hasNormalImage = !!previewImage || !!selectedFile || !!processedImage;
     const hasPixelImage = !!useConfigStore.getState().pixelImageUrl;
@@ -116,7 +104,7 @@ function App({ variant = 'full' }: AppProps) {
     const color = DEFAULT_COLORS[targetMode as 'normal' | 'pixel' | 'draw'] || 'var(--theme-normal)';
     const icon = getTransitionIcon(targetMode);
 
-    const navigateFn = () => navigate(`/${basePath}/${targetMode}`, { replace: true });
+    const navigateFn = () => navigate(`/${targetMode}`, { replace: true });
 
     const runTransition = (fn: () => void) => {
       if (originEl) {
@@ -156,10 +144,9 @@ function App({ variant = 'full' }: AppProps) {
 
     // 3b: 其他有图纸的切换，需要弹窗确认（不立即转场，等确认后再转场）
     setModeSwitchConfirm({ open: true, targetMode });
-  }, [mode, gridData, previewImage, selectedFile, processedImage, isSimple, navigate, pixelIconClass]);
+  }, [mode, gridData, previewImage, selectedFile, processedImage, navigate, pixelIconClass]);
 
   const confirmModeSwitch = useCallback(() => {
-    const basePath = isSimple ? '/simple' : '/full';
     const targetMode = modeSwitchConfirm.targetMode;
     const color = DEFAULT_COLORS[targetMode as 'normal' | 'pixel' | 'draw'] || 'var(--theme-normal)';
     const icon = getTransitionIcon(targetMode);
@@ -173,12 +160,12 @@ function App({ variant = 'full' }: AppProps) {
       clearImages();
       useEditorStore.setState({ layers: [], activeLayerId: null });
       useConfigStore.setState({ pixelImageUrl: null });
-      navigate(`/${basePath}/${targetMode}`, { replace: true });
+      navigate(`/${targetMode}`, { replace: true });
       setModeSwitchConfirm({ open: false, targetMode: '' });
     }, { color, icon, originEl: centerEl });
 
     setTimeout(() => centerEl.remove(), 1600);
-  }, [modeSwitchConfirm.targetMode, isSimple, navigate, setGridData, clearImages]);
+  }, [modeSwitchConfirm.targetMode, navigate, setGridData, clearImages]);
 
   // 初始化引擎
   useEffect(() => {
@@ -215,7 +202,7 @@ function App({ variant = 'full' }: AppProps) {
     <TooltipProvider>
     <div className="h-screen flex flex-col overflow-hidden">
       {/* 全局顶部导航栏 */}
-      <ModeTabs isSimple={isSimple} onModeChange={handleModeChange} />
+      <ModeTabs onModeChange={handleModeChange} />
 
       {/* 主体内容 */}
       <div className="flex flex-1 overflow-hidden relative">
@@ -299,14 +286,14 @@ function App({ variant = 'full' }: AppProps) {
 
                       {activeTab === 'removeBg' && (
                         <div className="flex flex-col gap-3">
-                          <BgRemovePanel backendAvailable={backendAvailable} />
-                          <RemoveBgButton imageFile={selectedFile} onBgRemoved={handleBgRemoved} backendAvailable={backendAvailable} />
+                          <BgRemovePanel />
+                          <RemoveBgButton imageFile={selectedFile} onBgRemoved={handleBgRemoved} />
                         </div>
                       )}
 
                       {activeTab === 'generate' && (
                         <div className="flex flex-col gap-3">
-                          <ParamPanel isSimple={isSimple} />
+                          <ParamPanel />
                           <Button
                             variant="primary"
                             block
@@ -350,7 +337,7 @@ function App({ variant = 'full' }: AppProps) {
                 </>
               ) : (
                 <>
-                  <PixelPanel backendAvailable={backendAvailable} />
+                  <PixelPanel />
                 </>
               )}
 
@@ -421,11 +408,7 @@ function App({ variant = 'full' }: AppProps) {
 
           {/* Toolbar — 绝对定位覆盖在 Canvas 容器上方，backdrop-filter 才能采样到下方滚动的内容 */}
           <div className="absolute top-0 left-0 right-0 z-[30]">
-            <Toolbar
-              backendAvailable={backendAvailable}
-              variant={variant}
-              onSwitchMode={() => navigate(isSimple ? `/full/${mode}` : `/simple/${mode}`)}
-            />
+            <Toolbar />
           </div>
 
           {/* Canvas 容器 — 内容从顶部开始，Toolbar 用 z-index 浮在上方 */}
@@ -470,8 +453,7 @@ function App({ variant = 'full' }: AppProps) {
                     className="inline-flex items-center justify-center gap-1 text-xs font-semibold rounded-lg px-3 py-1.5 border-[3px] text-white transition-all duration-200 ease-nook hover:-translate-y-0.5 active:translate-y-0"
                     style={{ background: theme.main, borderColor: theme.light5 }}
                     onClick={() => {
-                      const basePath = isSimple ? '/simple' : '/full';
-                      navigate(`${basePath}/draw`);
+                      navigate(`/draw`);
                     }}
                   >
                     进入编辑
@@ -524,5 +506,3 @@ function App({ variant = 'full' }: AppProps) {
     </TooltipProvider>
   );
 }
-
-export default App;

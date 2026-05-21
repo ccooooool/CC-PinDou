@@ -1,103 +1,31 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui';
-import { Scissors, Loader2, ImageOff, Eraser, Download } from 'lucide-react';
+import { Loader2, ImageOff, Eraser, Download } from 'lucide-react';
 import { removeBgFrontend } from '../engine/frontendAlgorithms';
 import { useConfigStore } from '../store/useConfigStore';
 
 interface RemoveBgButtonProps {
   imageFile: File | null;
   onBgRemoved: (blobUrl: string) => void;
-  backendAvailable: boolean;
 }
 
-export function RemoveBgButton({ imageFile, onBgRemoved, backendAvailable }: RemoveBgButtonProps) {
+export function RemoveBgButton({ imageFile, onBgRemoved }: RemoveBgButtonProps) {
   const [isRemoving, setIsRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState('');
   const [removedPreview, setRemovedPreview] = useState<string | null>(null);
-  const esRef = useRef<EventSource | null>(null);
   const transferredRef = useRef<Set<string>>(new Set());
-  const { removeBgThreshold, bgModel } = useConfigStore();
+  const { removeBgThreshold } = useConfigStore();
 
-  // 组件卸载时清理 blob URL 和 EventSource
-  // 注意：已确认转移给父组件的 URL（在 transferredRef 中）不再释放
+  // 组件卸载时清理 blob URL
   useEffect(() => {
     return () => {
       if (removedPreview && !transferredRef.current.has(removedPreview)) {
         URL.revokeObjectURL(removedPreview);
       }
-      if (esRef.current) {
-        esRef.current.close();
-        esRef.current = null;
-      }
     };
   }, [removedPreview]);
 
   const handleRemoveBg = useCallback(async () => {
-    if (!imageFile) return;
-
-    setIsRemoving(true);
-    setError(null);
-    setProgress(0);
-    setStatus('准备中...');
-
-    const taskId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-    const es = new EventSource(`/api/progress/${taskId}`);
-    esRef.current = es;
-    es.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        setProgress(data.progress);
-        setStatus(data.status);
-        if (data.done) {
-          es.close();
-          esRef.current = null;
-        }
-      } catch {
-        // ignore
-      }
-    };
-    es.onerror = () => {
-      es.close();
-      esRef.current = null;
-    };
-
-    try {
-      const formData = new FormData();
-      formData.append('image', imageFile);
-      formData.append('edge_threshold', String(removeBgThreshold));
-      if (bgModel && bgModel !== 'frontend') {
-        formData.append('model', bgModel);
-      }
-      formData.append('task_id', taskId);
-
-      const response = await fetch('/api/remove-bg', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || '背景移除失败');
-      }
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      setRemovedPreview(url);
-    } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : String(err)) || '背景移除失败');
-    } finally {
-      setIsRemoving(false);
-      if (esRef.current) {
-        esRef.current.close();
-        esRef.current = null;
-      }
-    }
-  }, [imageFile, removeBgThreshold, bgModel]);
-
-  const handleRemoveBgFallback = useCallback(async () => {
     if (!imageFile) return;
     setIsRemoving(true);
     setError(null);
@@ -195,17 +123,12 @@ export function RemoveBgButton({ imageFile, onBgRemoved, backendAvailable }: Rem
         block
         loading={isRemoving}
         disabled={isRemoving}
-        onClick={backendAvailable ? handleRemoveBg : handleRemoveBgFallback}
+        onClick={handleRemoveBg}
       >
         {isRemoving ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            {backendAvailable ? (status || 'AI 处理中...') : '处理中...'}
-          </>
-        ) : backendAvailable ? (
-          <>
-            <Scissors className="w-4 h-4" />
-            AI 移除背景
+            处理中...
           </>
         ) : (
           <>
@@ -214,15 +137,6 @@ export function RemoveBgButton({ imageFile, onBgRemoved, backendAvailable }: Rem
           </>
         )}
       </Button>
-
-      {isRemoving && (
-        <div className="flex flex-col gap-1">
-          <div className="nook-progress">
-            <div className="nook-progress-bar" style={{ width: `${progress}%` }} />
-          </div>
-          <span className="text-xs font-bold text-[var(--text-muted)] text-center">{status}</span>
-        </div>
-      )}
 
       {error && (
         <div className="nook-alert nook-alert-danger">

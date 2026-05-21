@@ -91,15 +91,6 @@ export default defineConfig({
   server: {
     host: true,
     port: 6789,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5678',
-        changeOrigin: true,
-      },
-      '/export': {
-        target: 'http://localhost:5678',
-        changeOrigin: true,
-      },
-    },
+    // frontend-only 模式：无需后端代理
   },
 })

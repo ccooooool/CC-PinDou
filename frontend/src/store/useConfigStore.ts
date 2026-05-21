@@ -73,11 +73,13 @@ export const useConfigStore = create<ConfigState>()(
 
       gridSize: 52,
       removeBg: true,
-      bgModel: 'u2net',
+      bgModel: 'frontend',
+      // frontend-only 模式固定为前端算法
       colorSimplify: 0,
       enhanceLines: 0,
       removeBgThreshold: 30,
       generateAlgorithm: 'frontend',
+      // frontend-only 模式固定为前端算法
 
       pixelSize: 16,
       pixelOffsetX: 0,

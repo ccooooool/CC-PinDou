@@ -2,9 +2,6 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { triggerViewTransition } from '../utils/viewTransition';
 import {
-  Loader2,
-  Wifi,
-  WifiOff,
   Wand2,
   Image,
   ClipboardPenLine,
@@ -200,43 +197,12 @@ function DecoOrb({
   );
 }
 
-/** 状态指示器 */
-function StatusPill({ status }: { status: 'checking' | 'online' | 'offline' }) {
-  if (status === 'checking') {
-    return (
-      <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-white/70 border border-[var(--border-subtle)] backdrop-blur-sm">
-        <Loader2 className="w-4 h-4 text-[var(--ac-green)] animate-spin" />
-        <span className="text-sm font-bold text-[var(--text-muted)]">检测服务中…</span>
-      </div>
-    );
-  }
-  if (status === 'online') {
-    return (
-      <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-[var(--theme-draw-light-9)] border border-[var(--ac-green)]/15 backdrop-blur-sm">
-        <span className="relative flex h-2.5 w-2.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--ac-green)] opacity-40" />
-          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--ac-green)]" />
-        </span>
-        <Wifi className="w-4 h-4 text-[var(--ac-green)]" />
-        <span className="text-sm font-bold text-[var(--ac-green-dark)]">后端已连接</span>
-      </div>
-    );
-  }
-  return (
-    <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-[var(--ac-coral)]/8 border border-[var(--ac-coral)]/15 backdrop-blur-sm">
-      <WifiOff className="w-4 h-4 text-[var(--ac-coral)]" />
-      <span className="text-sm font-bold text-[var(--ac-coral-dark)]">离线模式</span>
-    </div>
-  );
-}
-
 /* ================================================================== */
 /*  主页面                                                              */
 /* ================================================================== */
 
 export default function EntryPage() {
   const navigate = useNavigate();
-  const [status, setStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [mounted, setMounted] = useState(false);
   const [hoveredMode, setHoveredMode] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -247,28 +213,18 @@ export default function EntryPage() {
     return () => clearTimeout(t);
   }, []);
 
-  /* 后端健康检测 */
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch('/api/models', { signal: controller.signal })
-      .then((res) => setStatus(res.ok ? 'online' : 'offline'))
-      .catch(() => setStatus('offline'));
-    return () => controller.abort();
-  }, []);
-
   const handleNavigate = useCallback(
-    (base: 'full' | 'simple', mode?: string) => {
-      if (mode) navigate(`/${base}/${mode}`);
-      else navigate(`/${base}`);
+    (mode?: string) => {
+      if (mode) navigate(`/${mode}`);
+      else navigate('/');
     },
     [navigate]
   );
 
   const handleModeClick = useCallback(
     (e: React.MouseEvent, mode: ModeItem) => {
-      const base = status === 'online' ? 'full' : 'simple';
       triggerViewTransition(
-        () => handleNavigate(base, mode.key),
+        () => handleNavigate(mode.key),
         {
           color: mode.themeVar,
           icon: mode.transitionIcon,
@@ -276,7 +232,7 @@ export default function EntryPage() {
         }
       );
     },
-    [status, handleNavigate]
+    [handleNavigate]
   );
 
   return (
@@ -342,15 +298,6 @@ export default function EntryPage() {
           <p className="text-base sm:text-lg text-[var(--text-secondary)] font-semibold">
             把任意图片变成拼豆制作图纸
           </p>
-        </div>
-
-        {/* --- 状态 pill --- */}
-        <div
-          className={`mb-10 transition-all duration-700 delay-200 ${
-            mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`}
-        >
-          <StatusPill status={status} />
         </div>
 
         {/* --- 三模式选择（NookUI Card 风格） --- */}
@@ -449,9 +396,8 @@ export default function EntryPage() {
             }}
             onClick={(e) => {
               const drawMode = MODES[2];
-              const base = status === 'online' ? 'full' : 'simple';
               triggerViewTransition(
-                () => handleNavigate(base, drawMode.key),
+                () => handleNavigate(drawMode.key),
                 {
                   color: drawMode.themeVar,
                   icon: drawMode.transitionIcon,
@@ -464,24 +410,6 @@ export default function EntryPage() {
             <MousePointerClick className="w-5 h-5 relative z-10" />
             <span className="relative z-10">开始制作</span>
           </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              className="text-sm font-bold text-[var(--text-muted)] hover:text-[var(--ac-green)] transition-colors px-4 py-2 rounded-full hover:bg-[var(--ac-green)]/8"
-              onClick={() => handleNavigate('simple')}
-              style={{ outline: 'none' }}
-            >
-              离线模式
-            </button>
-            <span className="text-[var(--border-default)]">·</span>
-            <button
-              className="text-sm font-bold text-[var(--text-muted)] hover:text-[var(--ac-blue)] transition-colors px-4 py-2 rounded-full hover:bg-[var(--ac-blue)]/8"
-              onClick={() => handleNavigate('full')}
-              style={{ opacity: status === 'offline' ? 0.4 : 1, pointerEvents: status === 'offline' ? 'none' : 'auto', outline: 'none' }}
-            >
-              完整模式
-            </button>
-          </div>
         </div>
 
         {/* --- 底部 footer --- */}

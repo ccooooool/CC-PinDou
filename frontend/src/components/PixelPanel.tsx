@@ -15,11 +15,7 @@ const SAMPLE_OPTIONS = [
   { key: 'mean', label: '平均(Mean)' },
 ];
 
-interface PixelPanelProps {
-  backendAvailable: boolean;
-}
-
-export function PixelPanel({ backendAvailable }: PixelPanelProps) {
+export function PixelPanel() {
   const theme = getModeTheme('pixel');
   const { setPixelSampleMethod } = useConfigStore();
 
@@ -48,7 +44,7 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
     handleClearImage,
     onDrop,
     handleGenerate,
-  } = usePixelProcessor(backendAvailable);
+  } = usePixelProcessor();
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 

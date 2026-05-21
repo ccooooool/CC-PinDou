@@ -7,7 +7,7 @@ import colorMappingJson from '../data/colorSystemMapping.json';
 
 const colorMappingData: ColorMapping = colorMappingJson as ColorMapping;
 
-export function usePixelProcessor(backendAvailable: boolean) {
+export function usePixelProcessor() {
   const {
     pixelSize: rawPixelSize,
     pixelOffsetX,
@@ -158,49 +158,33 @@ export function usePixelProcessor(backendAvailable: boolean) {
     setIsDetecting(true);
     setDetectError(null);
     try {
-      if (backendAvailable) {
-        const form = new FormData();
-        form.append('image', file);
-        const res = await fetch('/api/detect-pixel', {
-          method: 'POST',
-          body: form,
-        });
-        const data = await res.json();
-        if (!res.ok || data.error) {
-          throw new Error(data.error || '检测失败');
-        }
-        setPixelSize(data.pixel_size || 16);
-        setPixelOffsetX(data.offset_x || 0);
-        setPixelOffsetY(data.offset_y || 0);
-      } else {
-        const img = new Image();
-        const blobUrl = URL.createObjectURL(file);
-        img.src = blobUrl;
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve();
-          img.onerror = () => reject(new Error('图片加载失败'));
-        });
-        URL.revokeObjectURL(blobUrl);
-        const canvas = document.createElement('canvas');
-        const maxSize = 400;
-        const scale = Math.min(1, maxSize / Math.max(img.naturalWidth, img.naturalHeight));
-        canvas.width = Math.floor(img.naturalWidth * scale);
-        canvas.height = Math.floor(img.naturalHeight * scale);
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('Canvas not available');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const result = detectPixelSizeFrontend(imageData);
-        setPixelSize(result.pixelSize);
-        setPixelOffsetX(result.offsetX);
-        setPixelOffsetY(result.offsetY);
-      }
+      const img = new Image();
+      const blobUrl = URL.createObjectURL(file);
+      img.src = blobUrl;
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('图片加载失败'));
+      });
+      URL.revokeObjectURL(blobUrl);
+      const canvas = document.createElement('canvas');
+      const maxSize = 400;
+      const scale = Math.min(1, maxSize / Math.max(img.naturalWidth, img.naturalHeight));
+      canvas.width = Math.floor(img.naturalWidth * scale);
+      canvas.height = Math.floor(img.naturalHeight * scale);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas not available');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const result = detectPixelSizeFrontend(imageData);
+      setPixelSize(result.pixelSize);
+      setPixelOffsetX(result.offsetX);
+      setPixelOffsetY(result.offsetY);
     } catch (err: unknown) {
       setDetectError((err instanceof Error ? err.message : String(err)) || '自动检测失败，请手动调整');
     } finally {
       setIsDetecting(false);
     }
-  }, [setPixelSize, setPixelOffsetX, setPixelOffsetY, backendAvailable]);
+  }, [setPixelSize, setPixelOffsetX, setPixelOffsetY]);
 
   // 生成拼豆图案
   const handleGenerate = useCallback(async () => {

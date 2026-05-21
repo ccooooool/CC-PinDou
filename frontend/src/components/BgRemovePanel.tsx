@@ -4,11 +4,7 @@ import { getModeTheme } from '../utils/theme';
 import { FormSlider } from '@/components/ui';
 import { Select } from './ui/select';
 
-interface BgRemovePanelProps {
-  backendAvailable?: boolean;
-}
-
-export function BgRemovePanel({ backendAvailable = true }: BgRemovePanelProps) {
+export function BgRemovePanel() {
   const theme = getModeTheme('normal');
   const {
     bgModel,
@@ -17,24 +13,9 @@ export function BgRemovePanel({ backendAvailable = true }: BgRemovePanelProps) {
     setRemoveBgThreshold,
   } = useConfigStore();
 
-  const [models, setModels] = useState<{ name: string; label: string; desc?: string }[]>([]);
-
-  // 获取可用模型列表（仅在 backendAvailable 变化时执行）
-  useEffect(() => {
-    if (!backendAvailable) {
-      setModels([{ name: 'frontend', label: '前端算法' }]);
-      return;
-    }
-    fetch('/api/models')
-      .then((r) => r.json())
-      .then((data) => {
-        const newModels = data.models?.length ? data.models : [{ name: 'u2net', label: 'U2-Net 通用' }];
-        setModels(newModels);
-      })
-      .catch(() => {
-        setModels([{ name: 'u2net', label: 'U2-Net 通用' }]);
-      });
-  }, [backendAvailable]);
+  const [models] = useState<{ name: string; label: string; desc?: string }[]>([
+    { name: 'frontend', label: '前端算法' }
+  ]);
 
   // 当模型列表加载完成或 bgModel 变化时，同步为第一个可用选项
   useEffect(() => {

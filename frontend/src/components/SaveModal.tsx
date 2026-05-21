@@ -4,7 +4,7 @@ import { useConfigStore } from '../store/useConfigStore';
 import { useUIStore } from '../store/useUIStore';
 import { getModeTheme } from '../utils/theme';
 import { Modal, Input, Switch, Button } from '@/components/ui';
-import { Download, FileSpreadsheet, Save, Loader2, AlertCircle, Image, Table } from 'lucide-react';
+import { Download, FileSpreadsheet, Save, Loader2, Image, Table } from 'lucide-react';
 import { exportImageFrontend } from '../engine/frontendAlgorithms';
 import colorMappingJson from '../data/colorSystemMapping.json';
 import type { ColorMapping } from '../types/perler';
@@ -14,10 +14,9 @@ const colorMappingData: ColorMapping = colorMappingJson as ColorMapping;
 interface SaveModalProps {
   isOpen: boolean;
   onClose: () => void;
-  backendAvailable: boolean;
 }
 
-export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps) {
+export function SaveModal({ isOpen, onClose }: SaveModalProps) {
   const { gridData, colorList, exportProject } = useEditorStore();
   const { brand, canvasConfig } = useConfigStore();
   const mode = useUIStore((s) => s.mode);
@@ -34,8 +33,6 @@ export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps)
   const [circleMode, setCircleMode] = useState(canvasConfig.circleMode);
   const [showMarkLines, setShowMarkLines] = useState(canvasConfig.showMarkLines);
   const [markInterval, setMarkInterval] = useState(canvasConfig.markInterval);
-  const safeMarkInterval = Math.max(1, markInterval || 1);
-
   const hasGrid = !!gridData && gridData.length > 0;
 
   // 构建清单数据
@@ -67,40 +64,15 @@ export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps)
     setIsExporting(true);
     setExportError(null);
     try {
-      let blob: Blob;
-      if (backendAvailable) {
-        const payload = {
-          grid_data: gridData,
-          color_list: colorList,
-          brand,
-          show_code: showCode,
-          show_legend: showLegend,
-          circle_mode: circleMode,
-          show_mark_lines: showMarkLines,
-          mark_interval: safeMarkInterval,
-          format,
-        };
-        const response = await fetch('/export', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.error || '导出失败');
-        }
-        blob = await response.blob();
-      } else {
-        blob = await exportImageFrontend(gridData, colorList, brand, {
-          fileName,
-          format,
-          showCode,
-          showLegend,
-          circleMode,
-          showMarkLines,
-          markInterval,
-        });
-      }
+      const blob = await exportImageFrontend(gridData, colorList, brand, {
+        fileName,
+        format,
+        showCode,
+        showLegend,
+        circleMode,
+        showMarkLines,
+        markInterval,
+      });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -254,12 +226,7 @@ export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps)
                 </div>
               )}
             </div>
-            {!backendAvailable && (
-              <div className="flex items-center gap-2 text-xs text-[var(--text-caption)] px-3 py-2 bg-[var(--bg-surface-alt)] rounded-xl border border-[var(--border-subtle)] overflow-hidden">
-                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                后端不可用，使用前端降级导出（质量可能略有差异）
-              </div>
-            )}
+
             <Button variant="primary" color="green" className="w-full justify-center mt-auto" disabled={isExporting || !hasGrid} onClick={handleExportImage}>
               {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               导出图纸
