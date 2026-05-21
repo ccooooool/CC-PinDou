@@ -13,19 +13,15 @@ import {
   Save,
   Settings,
   Clock,
-  CloudOff,
-  Cloud,
   Check,
   X,
 } from 'lucide-react';
 
 interface ToolbarProps {
   backendAvailable: boolean;
-  variant?: 'simple' | 'full';
-  onSwitchMode?: () => void;
 }
 
-export function Toolbar({ backendAvailable, variant = 'full', onSwitchMode }: ToolbarProps) {
+export function Toolbar({ backendAvailable }: ToolbarProps) {
   const [saveOpen, setSaveOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -127,27 +123,7 @@ export function Toolbar({ backendAvailable, variant = 'full', onSwitchMode }: To
               </Tooltip>
             </>
           )}
-          {onSwitchMode && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="icon-sm"
-                  color={variant === 'simple' ? 'none' : backendAvailable ? 'green' : 'none'}
-                  className={variant === 'simple' || !backendAvailable ? 'bg-[var(--bg-surface)] border-[3px] border-[var(--nook-wood-light)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]' : ''}
-                  onClick={onSwitchMode}
-                >
-                  {variant === 'simple' ? <CloudOff className="w-4 h-4" /> : backendAvailable ? <Cloud className="w-4 h-4" /> : <CloudOff className="w-4 h-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {variant === 'simple'
-                  ? '离线模式 - 点击切换完整模式'
-                  : backendAvailable
-                    ? '在线 - 点击切换离线模式'
-                    : '离线 - 后端不可用'}
-              </TooltipContent>
-            </Tooltip>
-          )}
+
         </div>
       </div>
 

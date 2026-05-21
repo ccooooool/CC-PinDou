@@ -77,7 +77,7 @@ export const useConfigStore = create<ConfigState>()(
       colorSimplify: 0,
       enhanceLines: 0,
       removeBgThreshold: 30,
-      generateAlgorithm: 'frontend',
+      generateAlgorithm: 'backend',
 
       pixelSize: 16,
       pixelOffsetX: 0,

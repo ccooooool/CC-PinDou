@@ -257,18 +257,17 @@ export default function EntryPage() {
   }, []);
 
   const handleNavigate = useCallback(
-    (base: 'full' | 'simple', mode?: string) => {
-      if (mode) navigate(`/${base}/${mode}`);
-      else navigate(`/${base}`);
+    (mode?: string) => {
+      if (mode) navigate(`/${mode}`);
+      else navigate('/');
     },
     [navigate]
   );
 
   const handleModeClick = useCallback(
     (e: React.MouseEvent, mode: ModeItem) => {
-      const base = status === 'online' ? 'full' : 'simple';
       triggerViewTransition(
-        () => handleNavigate(base, mode.key),
+        () => handleNavigate(mode.key),
         {
           color: mode.themeVar,
           icon: mode.transitionIcon,
@@ -276,7 +275,7 @@ export default function EntryPage() {
         }
       );
     },
-    [status, handleNavigate]
+    [handleNavigate]
   );
 
   return (
@@ -449,9 +448,8 @@ export default function EntryPage() {
             }}
             onClick={(e) => {
               const drawMode = MODES[2];
-              const base = status === 'online' ? 'full' : 'simple';
               triggerViewTransition(
-                () => handleNavigate(base, drawMode.key),
+                () => handleNavigate(drawMode.key),
                 {
                   color: drawMode.themeVar,
                   icon: drawMode.transitionIcon,
@@ -464,24 +462,6 @@ export default function EntryPage() {
             <MousePointerClick className="w-5 h-5 relative z-10" />
             <span className="relative z-10">开始制作</span>
           </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              className="text-sm font-bold text-[var(--text-muted)] hover:text-[var(--ac-green)] transition-colors px-4 py-2 rounded-full hover:bg-[var(--ac-green)]/8"
-              onClick={() => handleNavigate('simple')}
-              style={{ outline: 'none' }}
-            >
-              离线模式
-            </button>
-            <span className="text-[var(--border-default)]">·</span>
-            <button
-              className="text-sm font-bold text-[var(--text-muted)] hover:text-[var(--ac-blue)] transition-colors px-4 py-2 rounded-full hover:bg-[var(--ac-blue)]/8"
-              onClick={() => handleNavigate('full')}
-              style={{ opacity: status === 'offline' ? 0.4 : 1, pointerEvents: status === 'offline' ? 'none' : 'auto', outline: 'none' }}
-            >
-              完整模式
-            </button>
-          </div>
         </div>
 
         {/* --- 底部 footer --- */}

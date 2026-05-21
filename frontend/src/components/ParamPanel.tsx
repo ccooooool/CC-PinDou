@@ -3,11 +3,7 @@ import { getModeTheme } from '../utils/theme';
 import { FormSlider } from '@/components/ui';
 import { Select } from './ui/select';
 
-interface ParamPanelProps {
-  isSimple?: boolean;
-}
-
-export function ParamPanel({ isSimple = false }: ParamPanelProps) {
+export function ParamPanel() {
   const theme = getModeTheme('normal');
   const {
     gridSize,
@@ -95,14 +91,10 @@ export function ParamPanel({ isSimple = false }: ParamPanelProps) {
             <div className="flex-1">
               <Select
                 value={generateAlgorithm}
-                options={
-                  isSimple
-                    ? [{ key: 'frontend', label: '前端算法' }]
-                    : [
-                        { key: 'frontend', label: '前端算法' },
-                        { key: 'backend', label: '后端算法' },
-                      ]
-                }
+                options={[
+                  { key: 'backend', label: '后端算法' },
+                  { key: 'frontend', label: '前端算法' },
+                ]}
                 onChange={(val) => setGenerateAlgorithm(val as 'frontend' | 'backend')}
                 themeColor={theme.main}
               />
