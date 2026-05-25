@@ -25,6 +25,7 @@
 | 前端 | Vite 5 + React 18 + TypeScript 5 + Tailwind CSS 3 + shadcn/ui |
 | 状态管理 | Zustand（Editor / UI / Config 三 Store）|
 | 颜色匹配 | OKLab 感知均匀空间 |
+| 图像处理 | Canvas API + Web Worker（前端降级算法）|
 | UI 设计 | NookUI（Animal Crossing 马卡龙风格）|
 | Toast | Sonner + NookUI 自定义样式 |
 | 测试 | Vitest（jsdom）|
@@ -36,7 +37,7 @@
 ```
 CC-PinDou/
 ├── frontend/
-│   ├── public/                 # 静态资源（logo.svg 等）
+│   ├── public/                 # 静态资源（logo.svg、WenYuanRoundedSC-VF.otf 等）
 │   ├── src/
 │   │   ├── components/         # React 组件
 │   │   │   ├── CanvasEditor.tsx, Toolbar.tsx, ParamPanel.tsx, PixelPanel.tsx
@@ -69,11 +70,21 @@ CC-PinDou/
 
 ---
 
-## 安装与启动
+## 快速开始
+
+### 克隆仓库
 
 ```bash
-# 环境要求：Node.js >= 18
-cd frontend
+git clone https://gitee.com/ccoooool/CC-PinDou.git
+# 或
+git clone https://github.com/ccooooool/CC-PinDou.git
+
+cd CC-PinDou/frontend
+```
+
+### 开发模式（Node.js >= 18）
+
+```bash
 npm install
 npm run dev          # 端口 6789
 ```
@@ -106,15 +117,19 @@ npm run test:watch    # 监听模式
 
 ---
 
-## 相关链接
+## 致谢与引用
 
-- **项目仓库**
-  - Gitee：https://gitee.com/ccoooool/CC-PinDou
-  - GitHub：https://github.com/ccooooool/CC-PinDou
-- **字体**：文源圆体 [WenYuanFonts](https://github.com/takushun-wu/WenYuanFonts)
-- **像素模式图标**：[NES.css](https://github.com/nostalgic-css/NES.css)
-  > Nintendo owns the copyright of these characters. Please comply with the Nintendo guidelines and laws of the applicable jurisdiction.
-- **UI 设计系统**：[NookUI](https://gitee.com/ccoooool/NookUI)
+本项目引用了以下开源资源与项目：
+
+| 资源 | 来源项目 | 链接 |
+|------|----------|------|
+| 字体（文源圆体） | WenYuanFonts | [GitHub](https://github.com/takushun-wu/WenYuanFonts) |
+| 像素模式图标 | NES.css | [GitHub](https://github.com/nostalgic-css/NES.css) |
+| UI 设计系统 | NookUI | [Gitee](https://gitee.com/ccoooool/NookUI) |
+| 灵感来源与参考 | perler-beads | [GitHub](https://github.com/Zippland/perler-beads) |
+
+> ⚠️ **版权声明**：像素模式图标中的角色形象版权归 Nintendo 所有。  
+> Nintendo owns the copyright of these characters. Please comply with the Nintendo guidelines and laws of the applicable jurisdiction.
 
 ---
 
