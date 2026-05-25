@@ -86,24 +86,34 @@ CC-PinDou/
 
 ---
 
-## 安装与启动
+## 快速开始
 
-### 后端
+### 克隆仓库
 
 ```bash
-# 环境要求：Python >= 3.13
+git clone https://gitee.com/ccoooool/CC-PinDou.git
+# 或
+git clone https://github.com/ccooooool/CC-PinDou.git
+
+cd CC-PinDou
+```
+
+### 后端（Python >= 3.13）
+
+```bash
 python -m venv venv
 venv\Scripts\activate          # Windows
+# source venv/bin/activate     # macOS / Linux
+
 pip install -r requirements.txt
 python run.py                  # 端口 5678
 ```
 
 > `rembg` 首次使用会自动下载 ONNX 模型到 `models/` 目录。
 
-### 前端
+### 前端（Node.js >= 18）
 
 ```bash
-# 环境要求：Node.js >= 18
 cd frontend
 npm install
 npm run dev                    # 端口 6789，自动代理 /api 到 localhost:5678
@@ -142,15 +152,19 @@ python -m pytest tests/ -v
 
 ---
 
-## 相关链接
+## 致谢与引用
 
-- **项目仓库**
-  - Gitee：https://gitee.com/ccoooool/CC-PinDou
-  - GitHub：https://github.com/ccooooool/CC-PinDou
-- **字体**：文源圆体 [WenYuanFonts](https://github.com/takushun-wu/WenYuanFonts)
-- **像素模式图标**：[NES.css](https://github.com/nostalgic-css/NES.css)
-  > Nintendo owns the copyright of these characters. Please comply with the Nintendo guidelines and laws of the applicable jurisdiction.
-- **UI 设计系统**：[NookUI](https://gitee.com/ccoooool/NookUI)
+本项目引用了以下开源资源与项目：
+
+| 资源 | 来源项目 | 链接 |
+|------|----------|------|
+| 字体（文源圆体） | WenYuanFonts | [GitHub](https://github.com/takushun-wu/WenYuanFonts) |
+| 像素模式图标 | NES.css | [GitHub](https://github.com/nostalgic-css/NES.css) |
+| UI 设计系统 | NookUI | [Gitee](https://gitee.com/ccoooool/NookUI) |
+| 灵感来源与参考 | perler-beads | [GitHub](https://github.com/Zippland/perler-beads) |
+
+> ⚠️ **版权声明**：像素模式图标中的角色形象版权归 Nintendo 所有。  
+> Nintendo owns the copyright of these characters. Please comply with the Nintendo guidelines and laws of the applicable jurisdiction.
 
 ---
 
