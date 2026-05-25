@@ -63,7 +63,6 @@ CC-PinDou/
 ├── data/
 │   └── colorSystemMapping.json # 5 品牌色号映射源数据
 │
-├── NookUI/                     # NookUI 组件库（独立子项目，.gitignore 忽略）
 ├── scripts/                    # 调试脚本
 └── web_backup/                 # 旧版前端参考
 ```
