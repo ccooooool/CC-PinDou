@@ -79,7 +79,6 @@ CC-PinDou/
 │
 ├── models/                     # ONNX 模型文件（rembg 使用，首次运行自动下载）
 ├── scripts/                    # 调试脚本
-├── NookUI/                     # NookUI 组件库（独立子项目，.gitignore 忽略）
 ├── run.py                      # 生产启动入口（waitress，端口 5678）
 ├── build.py                    # 前后端联合构建脚本
 └── requirements.txt            # Python 依赖
