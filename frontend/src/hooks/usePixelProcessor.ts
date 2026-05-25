@@ -7,11 +7,12 @@ import colorMappingJson from '../data/colorSystemMapping.json';
 
 const colorMappingData: ColorMapping = colorMappingJson as ColorMapping;
 
-export function usePixelProcessor(backendAvailable: boolean) {
+export function usePixelProcessor() {
   const {
     pixelSize: rawPixelSize,
     pixelOffsetX,
     pixelOffsetY,
+    pixelGridColor,
     pixelSampleMethod,
     pixelImageUrl,
     colorMode,
@@ -59,7 +60,16 @@ export function usePixelProcessor(backendAvailable: boolean) {
     const ox = (pixelOffsetX % pixelSize) * scale;
     const oy = (pixelOffsetY % pixelSize) * scale;
 
-    ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
+    // 参考线颜色
+    const clean = pixelGridColor.replace('#', '');
+    const r = parseInt(clean.slice(0, 2), 16);
+    const g = parseInt(clean.slice(2, 4), 16);
+    const b = parseInt(clean.slice(4, 6), 16);
+    if (!Number.isNaN(r) && !Number.isNaN(g) && !Number.isNaN(b)) {
+      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.6)`;
+    } else {
+      ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
+    }
     ctx.lineWidth = 1;
 
     for (let x = ox; x < cw; x += ps) {
@@ -74,7 +84,7 @@ export function usePixelProcessor(backendAvailable: boolean) {
       ctx.lineTo(cw, y);
       ctx.stroke();
     }
-  }, [previewImage, pixelSize, pixelOffsetX, pixelOffsetY]);
+  }, [previewImage, pixelSize, pixelOffsetX, pixelOffsetY, pixelGridColor]);
 
   useEffect(() => {
     drawPreview();
@@ -158,49 +168,33 @@ export function usePixelProcessor(backendAvailable: boolean) {
     setIsDetecting(true);
     setDetectError(null);
     try {
-      if (backendAvailable) {
-        const form = new FormData();
-        form.append('image', file);
-        const res = await fetch('/api/detect-pixel', {
-          method: 'POST',
-          body: form,
-        });
-        const data = await res.json();
-        if (!res.ok || data.error) {
-          throw new Error(data.error || '检测失败');
-        }
-        setPixelSize(data.pixel_size || 16);
-        setPixelOffsetX(data.offset_x || 0);
-        setPixelOffsetY(data.offset_y || 0);
-      } else {
-        const img = new Image();
-        const blobUrl = URL.createObjectURL(file);
-        img.src = blobUrl;
-        await new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve();
-          img.onerror = () => reject(new Error('图片加载失败'));
-        });
-        URL.revokeObjectURL(blobUrl);
-        const canvas = document.createElement('canvas');
-        const maxSize = 400;
-        const scale = Math.min(1, maxSize / Math.max(img.naturalWidth, img.naturalHeight));
-        canvas.width = Math.floor(img.naturalWidth * scale);
-        canvas.height = Math.floor(img.naturalHeight * scale);
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('Canvas not available');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const result = detectPixelSizeFrontend(imageData);
-        setPixelSize(result.pixelSize);
-        setPixelOffsetX(result.offsetX);
-        setPixelOffsetY(result.offsetY);
-      }
+      const img = new Image();
+      const blobUrl = URL.createObjectURL(file);
+      img.src = blobUrl;
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('图片加载失败'));
+      });
+      URL.revokeObjectURL(blobUrl);
+      const canvas = document.createElement('canvas');
+      const maxSize = 400;
+      const scale = Math.min(1, maxSize / Math.max(img.naturalWidth, img.naturalHeight));
+      canvas.width = Math.floor(img.naturalWidth * scale);
+      canvas.height = Math.floor(img.naturalHeight * scale);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas not available');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const result = detectPixelSizeFrontend(imageData);
+      setPixelSize(result.pixelSize);
+      setPixelOffsetX(result.offsetX);
+      setPixelOffsetY(result.offsetY);
     } catch (err: unknown) {
       setDetectError((err instanceof Error ? err.message : String(err)) || '自动检测失败，请手动调整');
     } finally {
       setIsDetecting(false);
     }
-  }, [setPixelSize, setPixelOffsetX, setPixelOffsetY, backendAvailable]);
+  }, [setPixelSize, setPixelOffsetX, setPixelOffsetY]);
 
   // 生成拼豆图案
   const handleGenerate = useCallback(async () => {
@@ -210,6 +204,15 @@ export function usePixelProcessor(backendAvailable: boolean) {
     setDetectError(null);
 
     try {
+      const ps = Math.max(1, pixelSize);
+      const ox = ((pixelOffsetX % ps) + ps) % ps;
+      const oy = ((pixelOffsetY % ps) + ps) % ps;
+      const cols = Math.max(1, Math.ceil((previewImage.naturalWidth - ox) / ps));
+      const rows = Math.max(1, Math.ceil((previewImage.naturalHeight - oy) / ps));
+      if (cols > 128 || rows > 128) {
+        throw new Error(`画板尺寸 ${cols}×${rows} 超出 128×128 上限，请裁剪图片或调大像素大小`);
+      }
+
       const { PerlerEngine } = await import('../engine/PerlerEngine');
       const engine = new PerlerEngine(colorMappingData, colorMode);
 
@@ -221,7 +224,7 @@ export function usePixelProcessor(backendAvailable: boolean) {
       ctx.drawImage(previewImage, 0, 0);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-      const { grid, colorMap, cols, rows } = engine.generatePixelGrid(
+      const { grid, colorMap } = engine.generatePixelGrid(
         imageData,
         pixelSize,
         pixelOffsetX,

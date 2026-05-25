@@ -33,6 +33,7 @@ interface ConfigState {
   pixelOffsetX: number;
   pixelOffsetY: number;
   pixelSampleMethod: 'center' | 'mode' | 'mean';
+  pixelGridColor: string;
   pixelImageUrl: string | null;
   pixelCols: number;
   pixelRows: number;
@@ -57,6 +58,7 @@ interface ConfigState {
   setPixelOffsetX: (v: number) => void;
   setPixelOffsetY: (v: number) => void;
   setPixelSampleMethod: (v: 'center' | 'mode' | 'mean') => void;
+  setPixelGridColor: (v: string) => void;
   setPixelImageUrl: (url: string | null) => void;
   setPixelCols: (v: number) => void;
   setPixelRows: (v: number) => void;
@@ -83,6 +85,7 @@ export const useConfigStore = create<ConfigState>()(
       pixelOffsetX: 0,
       pixelOffsetY: 0,
       pixelSampleMethod: 'mode',
+      pixelGridColor: '#ff0000',
       pixelImageUrl: null,
       pixelCols: 0,
       pixelRows: 0,
@@ -105,6 +108,7 @@ export const useConfigStore = create<ConfigState>()(
       setPixelOffsetX: (v) => set({ pixelOffsetX: v }),
       setPixelOffsetY: (v) => set({ pixelOffsetY: v }),
       setPixelSampleMethod: (v) => set({ pixelSampleMethod: v }),
+      setPixelGridColor: (v) => set({ pixelGridColor: v }),
       setPixelImageUrl: (url) => set({ pixelImageUrl: url }),
       setPixelCols: (v) => set({ pixelCols: v }),
       setPixelRows: (v) => set({ pixelRows: v }),
@@ -131,6 +135,7 @@ export const useConfigStore = create<ConfigState>()(
         pixelOffsetX: state.pixelOffsetX,
         pixelOffsetY: state.pixelOffsetY,
         pixelSampleMethod: state.pixelSampleMethod,
+        pixelGridColor: state.pixelGridColor,
         canvasConfig: state.canvasConfig,
       }),
     }

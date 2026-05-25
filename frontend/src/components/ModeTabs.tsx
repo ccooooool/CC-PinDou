@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { Image, ClipboardPenLine, Wand2 } from 'lucide-react';
+import { Image, ClipboardPenLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getModeTheme } from '../utils/theme';
 import { getPixelIcon, getPixelIconScale } from '../utils/pixelIcon';
@@ -28,7 +28,14 @@ export function ModeTabs({ onModeChange }: ModeTabsProps) {
       () => navigate('/'),
       {
         color: theme.main,
-        icon: <Wand2 className="w-12 h-12" strokeWidth={1.5} />,
+        icon: (
+          <img
+            src="/logo.svg"
+            alt=""
+            className="w-12 h-12"
+            style={{ filter: 'brightness(0) invert(1)' }}
+          />
+        ),
         originEl: e.currentTarget,
       }
     );
@@ -41,7 +48,11 @@ export function ModeTabs({ onModeChange }: ModeTabsProps) {
         className="flex items-center gap-2 absolute left-4 cursor-pointer transition-all duration-300 hover:opacity-80"
         onClick={handleGoHome}
       >
-        <Wand2 className="w-5 h-5" style={{ color: theme.main }} />
+        <img
+          src="/logo.svg"
+          alt=""
+          className="w-5 h-5"
+        />
         <span className="font-bold text-[var(--text-heading)] text-base tracking-tight">
           CC-PinDou
         </span>

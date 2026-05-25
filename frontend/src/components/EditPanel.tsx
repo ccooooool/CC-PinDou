@@ -22,16 +22,16 @@ export function EditPanel(_props: EditPanelProps) {
   const historyStack = useEditorStore((s) => s.historyStack);
   const redoStack = useEditorStore((s) => s.redoStack);
   return (
-    <div className="flex flex-col mx-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden">
+    <div className="flex flex-col mx-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--theme-draw-light-5)] overflow-hidden">
       {/* Header */}
       <div
-        className="flex items-center gap-2 px-4 py-2.5 border-b border-[var(--theme-draw-light-5)] bg-[var(--theme-draw-light-9)] cursor-pointer select-none"
+        className="flex items-center gap-2 px-4 py-2.5 border-b border-[var(--theme-draw-light-5)] bg-[var(--theme-draw)] cursor-pointer select-none"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="w-1 h-4 rounded-full bg-[var(--theme-draw)]" />
-        <h5 className="text-sm font-bold text-[var(--theme-draw-dark-2)]">操作记录</h5>
+        <div className="w-1 h-4 rounded-full bg-white" />
+        <span className="text-sm font-bold text-white">操作记录</span>
         <ChevronDown
-          className={cn('w-4 h-4 ml-auto transition-transform duration-300', expanded && 'rotate-180')}
+          className={cn('w-4 h-4 ml-auto text-white transition-transform duration-300', expanded && 'rotate-180')}
           style={{ transitionTimingFunction: 'var(--ease-bounce)' }}
         />
       </div>

@@ -5,6 +5,8 @@ import { FormSlider, Button } from '@/components/ui';
 import { Modal } from './ui/modal';
 import { Select } from './ui/select';
 import { ImageCropModal } from './ImageCropModal';
+import { PixelAlignModal } from './PixelAlignModal';
+import { GridLineColorPicker } from './GridLineColorPicker';
 import { Upload, Wand2, Loader2, Trash2 } from 'lucide-react';
 import { getModeTheme } from '../utils/theme';
 
@@ -15,13 +17,9 @@ const SAMPLE_OPTIONS = [
   { key: 'mean', label: '平均(Mean)' },
 ];
 
-interface PixelPanelProps {
-  backendAvailable: boolean;
-}
-
-export function PixelPanel({ backendAvailable }: PixelPanelProps) {
+export function PixelPanel() {
   const theme = getModeTheme('pixel');
-  const { setPixelSampleMethod } = useConfigStore();
+  const { setPixelSampleMethod, pixelGridColor, setPixelGridColor } = useConfigStore();
 
   const {
     inputRef,
@@ -48,9 +46,10 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
     handleClearImage,
     onDrop,
     handleGenerate,
-  } = usePixelProcessor(backendAvailable);
+  } = usePixelProcessor();
 
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [alignModalOpen, setAlignModalOpen] = useState(false);
 
   // 监听画布中央上传的文件
   useEffect(() => {
@@ -131,13 +130,36 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             )}
           </div>
-          <canvas
-            ref={previewCanvasRef}
-            className="block max-w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)]"
-          />
+          <div
+            className="rounded-xl overflow-hidden border border-[var(--border-subtle)] flex items-center justify-center cursor-pointer"
+            style={{ background: 'repeating-linear-gradient(45deg, #ddd, #ddd 4px, #fff 4px, #fff 8px)' }}
+            onClick={() => setAlignModalOpen(true)}
+            title="点击放大精细调整"
+          >
+            <canvas
+              ref={previewCanvasRef}
+              className="block max-w-full max-h-[120px]"
+            />
+          </div>
           {pixelSize > 0 && previewImage && (
-            <div className="text-xs text-[var(--text-muted)] mt-1.5">
-              预计尺寸: {Math.floor(previewImage.naturalWidth / pixelSize)} × {Math.floor(previewImage.naturalHeight / pixelSize)}
+            <div className="text-xs mt-1.5">
+              {(() => {
+                const ox = (pixelOffsetX % pixelSize + pixelSize) % pixelSize;
+                const oy = (pixelOffsetY % pixelSize + pixelSize) % pixelSize;
+                const cols = Math.max(1, Math.ceil((previewImage.naturalWidth - ox) / pixelSize));
+                const rows = Math.max(1, Math.ceil((previewImage.naturalHeight - oy) / pixelSize));
+                const exceeded = cols > 128 || rows > 128;
+                return (
+                  <>
+                    <span className={exceeded ? 'text-red-500 font-bold' : 'text-[var(--text-muted)]'}>
+                      预计尺寸: {cols} × {rows}
+                    </span>
+                    {exceeded && (
+                      <span className="text-red-500 ml-1">(超出 128×128 上限)</span>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>
@@ -181,6 +203,13 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
               min={0}
               max={Math.max(pixelSize - 1, 0)}
               inputWidth="w-[50px]"
+              themeColor={theme.main}
+            />
+
+            {/* 参考线颜色 */}
+            <GridLineColorPicker
+              value={pixelGridColor}
+              onChange={setPixelGridColor}
               themeColor={theme.main}
             />
 
@@ -244,7 +273,7 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
             <Button variant="ghost" onClick={() => setShowClearConfirm(false)}>
               取消
             </Button>
-            <Button variant="primary" color="coral" onClick={handleClearImage}>
+            <Button variant="primary" color="coral" onClick={() => { handleClearImage(); setShowClearConfirm(false); }}>
               确认清除
             </Button>
           </>
@@ -263,6 +292,14 @@ export function PixelPanel({ backendAvailable }: PixelPanelProps) {
         onCrop={handleCrop}
         onSkip={handleSkip}
         themeColor={theme.main}
+      />
+
+      <PixelAlignModal
+        isOpen={alignModalOpen}
+        onClose={() => setAlignModalOpen(false)}
+        previewImage={previewImage}
+        onGenerate={handleGenerate}
+        isGenerating={isGenerating}
       />
     </div>
   );
