@@ -97,11 +97,12 @@ export function useDrawingTools() {
     (cx: number, cy: number, forceColor?: string, forceCodes?: Record<string, string>): PaintRecord[] => {
       if (!gridData) return [];
       const records: PaintRecord[] = [];
-      const half = Math.floor((isDrawMode ? brushSize : 1) / 2);
-      for (let dy = -half; dy <= half; dy++) {
-        for (let dx = -half; dx <= half; dx++) {
-          const bx = cx + dx;
-          const by = cy + dy;
+      const size = isDrawMode ? brushSize : 1;
+      const half = Math.floor(size / 2);
+      for (let dy = 0; dy < size; dy++) {
+        for (let dx = 0; dx < size; dx++) {
+          const bx = cx - half + dx;
+          const by = cy - half + dy;
           if (by < 0 || by >= gridData.length || bx < 0 || bx >= gridData[0].length) continue;
           const symPositions = getSymmetricPositions(bx, by);
           for (const pos of symPositions) {
