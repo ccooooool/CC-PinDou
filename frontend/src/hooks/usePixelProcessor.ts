@@ -4,6 +4,7 @@ import { useEditorStore } from '../store/useEditorStore';
 import { detectPixelSizeFrontend } from '../engine/frontendAlgorithms';
 import type { ColorMapping } from '../types/perler';
 import colorMappingJson from '../data/colorSystemMapping.json';
+import { toast } from '@/components/ui/toast';
 
 const colorMappingData: ColorMapping = colorMappingJson as ColorMapping;
 
@@ -97,6 +98,10 @@ export function usePixelProcessor() {
     img.onload = () => {
       setPreviewImage(img);
       autoDetect(file);
+      toast.success(`图片 "${file.name}" 上传成功`);
+    };
+    img.onerror = () => {
+      toast.error('图片加载失败，请尝试其他图片');
     };
     img.src = dataUrl;
   }, [setPixelImageUrl]);
@@ -152,6 +157,7 @@ export function usePixelProcessor() {
     setPixelCols(0);
     setPixelRows(0);
     if (inputRef.current) inputRef.current.value = '';
+    toast.info('已清除图片和图纸');
   }, [setPixelImageUrl, setGridData, setPixelSize, setPixelOffsetX, setPixelOffsetY, setPixelCols, setPixelRows]);
 
   const onDrop = useCallback(
@@ -190,7 +196,9 @@ export function usePixelProcessor() {
       setPixelOffsetX(result.offsetX);
       setPixelOffsetY(result.offsetY);
     } catch (err: unknown) {
-      setDetectError((err instanceof Error ? err.message : String(err)) || '自动检测失败，请手动调整');
+      const msg = (err instanceof Error ? err.message : String(err)) || '自动检测失败，请手动调整';
+      setDetectError(msg);
+      toast.error(msg);
     } finally {
       setIsDetecting(false);
     }
@@ -237,8 +245,11 @@ export function usePixelProcessor() {
 
       const colorList = Array.from(colorMap.values()).sort((a, b) => b.count - a.count);
       setGridData(grid, colorList);
+      toast.success('像素图案生成成功');
     } catch (err: unknown) {
-      setDetectError('生成失败: ' + (err instanceof Error ? err.message : String(err)));
+      const msg = '生成失败: ' + (err instanceof Error ? err.message : String(err));
+      setDetectError(msg);
+      toast.error(msg);
     } finally {
       setIsGenerating(false);
     }

@@ -6,6 +6,7 @@ import { getModeTheme } from '../utils/theme';
 import { Modal, Input, Switch, Button } from '@/components/ui';
 import { Download, AlertCircle, Loader2 } from 'lucide-react';
 import { exportImageFrontend } from '../engine/frontendAlgorithms';
+import { toast } from '@/components/ui/toast';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -87,8 +88,11 @@ export function ExportModal({ isOpen, onClose, backendAvailable }: ExportModalPr
       window.URL.revokeObjectURL(url);
 
       onClose();
+      toast.success(`图纸 "${fileName}.${format}" 导出成功`);
     } catch (err: unknown) {
-      setExportError((err instanceof Error ? err.message : String(err)) || '导出失败');
+      const msg = (err instanceof Error ? err.message : String(err)) || '导出失败';
+      setExportError(msg);
+      toast.error(msg);
     } finally {
       setIsExporting(false);
     }

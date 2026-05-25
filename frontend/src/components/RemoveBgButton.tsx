@@ -3,6 +3,7 @@ import { Button } from '@/components/ui';
 import { Loader2, ImageOff, Eraser, Download } from 'lucide-react';
 import { removeBgFrontend } from '../engine/frontendAlgorithms';
 import { useConfigStore } from '../store/useConfigStore';
+import { toast } from '@/components/ui/toast';
 
 interface RemoveBgButtonProps {
   imageFile: File | null;
@@ -55,8 +56,11 @@ export function RemoveBgButton({ imageFile, onBgRemoved }: RemoveBgButtonProps) 
       });
       const url = URL.createObjectURL(blob);
       setRemovedPreview(url);
+      toast.success('背景移除完成');
     } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : String(err)) || '背景移除失败');
+      const msg = (err instanceof Error ? err.message : String(err)) || '背景移除失败';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsRemoving(false);
       if (tempBlobUrl) {
@@ -70,6 +74,7 @@ export function RemoveBgButton({ imageFile, onBgRemoved }: RemoveBgButtonProps) 
       transferredRef.current.add(removedPreview);
       onBgRemoved(removedPreview);
       setRemovedPreview(null);
+      toast.success('已应用背景移除结果');
     }
   }, [removedPreview, onBgRemoved]);
 
@@ -88,6 +93,7 @@ export function RemoveBgButton({ imageFile, onBgRemoved }: RemoveBgButtonProps) 
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    toast.success('已开始下载');
   }, [removedPreview]);
 
   if (!imageFile) return null;
