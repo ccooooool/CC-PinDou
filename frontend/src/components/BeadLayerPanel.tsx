@@ -55,15 +55,15 @@ export function BeadLayerPanel() {
   }, [renamePopover.open]);
 
   return (
-    <div className='flex flex-col mx-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden'>
+    <div className='flex flex-col mx-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--theme-draw-light-5)] overflow-hidden'>
       <div
-        className='flex items-center gap-2 px-4 py-2.5 border-b border-[var(--theme-draw-light-5)] bg-[var(--theme-draw-light-9)] cursor-pointer select-none'
+        className='flex items-center gap-2 px-4 py-2.5 border-b border-[var(--theme-draw-light-5)] bg-[var(--theme-draw)] cursor-pointer select-none'
         onClick={() => setExpanded(!expanded)}
       >
-        <div className='w-1 h-4 rounded-full bg-[var(--theme-draw)]' />
-        <span className='text-sm font-bold text-[var(--theme-draw-dark-2)]'>拼豆图层</span>
+        <div className='w-1 h-4 rounded-full bg-white' />
+        <span className='text-sm font-bold text-white'>拼豆图层</span>
         <ChevronDown
-          className={cn('w-4 h-4 ml-auto transition-transform duration-300', expanded && 'rotate-180')}
+          className={cn('w-4 h-4 ml-auto text-white transition-transform duration-300', expanded && 'rotate-180')}
           style={{ transitionTimingFunction: 'var(--ease-bounce)' }}
         />
       </div>
@@ -77,7 +77,7 @@ export function BeadLayerPanel() {
         <div className='overflow-hidden'>
           <div className='flex-1 overflow-auto flex flex-col gap-3'>
             {/* 图层列表 */}
-            <div className='max-h-60 overflow-y-auto'>
+            <div className='max-h-60 overflow-y-auto pt-1'>
               {[...beadLayers].sort((a, b) => b.zIndex - a.zIndex).map((layer) => {
                 const isActive = layer.id === activeLayerId;
                 return (

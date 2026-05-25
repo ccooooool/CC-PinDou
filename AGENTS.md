@@ -12,7 +12,7 @@ CC-PinDou 是一个将任意图片转换为拼豆（Perler Beads / 融合珠）�
 - **像素图模式**：针对像素风素材优化，支持自动检测像素块大小和对齐偏移
 - **自由绘制模式**：空白画板，提供画笔/直线/矩形/圆形/填充/橡皮擦/魔棒替换等工具，支持多图层
 
-项目采用前后端分离架构。前端承担大部分轻量计算（颜色匹配、网格生成），后端负责重型任务（AI 背景移除、高清导出、像素自动检测）。
+项目采用前后端分离架构。前端承担大部分轻量计算（颜色匹配、网格生成），后端负责重型任务（AI 背景移除、高清导出、像素自动检测、实验性聚类算法）。
 
 ---
 
@@ -22,11 +22,12 @@ CC-PinDou 是一个将任意图片转换为拼豆（Perler Beads / 融合珠）�
 |------|------|
 | 后端 | Python 3.12 + Flask + flask-cors + waitress |
 | 图像处理 | Pillow、NumPy、scipy、rembg、onnxruntime |
+| 实验性算法 | scikit-learn（K-Means、Mean-Shift）、scikit-image（SLIC）|
 | 数据库 | SQLite（色号映射，`data/colors.db`） |
 | 前端 | Vite 5 + React 18 + TypeScript 5 + Tailwind CSS 3 + shadcn/ui |
 | 状态管理 | Zustand（已按领域拆分为 `useEditorStore` / `useUIStore` / `useConfigStore`） |
 | UI 设计系统 | NookUI（Animal Crossing 马卡龙风格）+ NES.css（像素光标与复古元素） |
-| 路由 | React Router v7（嵌套路由 `/simple/:mode`、`/full/:mode`） |
+| 路由 | React Router v7（`/` → EntryPage, `/:mode` → App） |
 | 动画 | Framer Motion + CSS View Transitions（NookPhone 风格转场） |
 | Toast | Sonner 2.0.7 + NookUI 自定义样式 |
 | Tooltip | Radix UI `@radix-ui/react-tooltip` |
@@ -49,7 +50,9 @@ CC-PinDou/
 │   ├── utils.py                # 工具函数（文件校验、日志、图像验证、参数解析、安全清理）
 │   ├── image_processing.py     # 图像预处理（背景移除、线条增强、颜色简化）
 │   ├── pixel_processing.py     # 像素图处理（自动检测、网格生成、颜色量化）
-│   ├── normal_processing.py    # 普通图 → 拼豆图案（后端备用路径）
+│   ├── normal_processing.py    # 普通图 → 拼豆图案（dominant 算法后端路径）
+│   ├── algorithms/             # 实验性替代量化算法（K-Means / SLIC / Mean-Shift）
+│   │   └── __init__.py
 │   ├── export_generator.py     # 高清图纸导出（PNG/JPG，含图例和坐标轴）
 │   ├── models_manager.py       # rembg ONNX 模型加载与管理
 │   ├── tests/                  # pytest 测试套件
@@ -57,12 +60,15 @@ CC-PinDou/
 │   │   ├── test_colors.py
 │   │   ├── test_image_processing.py
 │   │   ├── test_pixel_processing.py
+│   │   ├── test_normal_processing.py
+│   │   ├── test_algorithms.py
+│   │   ├── test_export.py
 │   │   └── test_utils.py
 │   └── uploads/                # 临时上传目录（惰性创建，程序自动清理）
 │
 ├── frontend/                   # 前端（Vite + React + TypeScript）
 │   ├── package.json            # npm 依赖与脚本（版本 2.0.0，type: module）
-│   ├── vite.config.ts          # Vite 配置（dev 端口 6789，代理 /api 和 /export 到 localhost:5678）
+│   ├── vite.config.ts          # Vite 构建配置（dev 端口 6789、代理 /api 和 /export 到 localhost:5678）
 │   ├── vitest.config.ts        # Vitest 配置（jsdom 环境，globals: true，setupFiles: src/test/setup.ts）
 │   ├── tailwind.config.js      # Tailwind 配置（NookUI 设计令牌扩展、动画 keyframes、字体）
 │   ├── postcss.config.js
@@ -71,12 +77,10 @@ CC-PinDou/
 │   └── src/
 │       ├── main.tsx            # React 入口（挂载到 #root，添加 .nookui 类，导入 NES.css）
 │       ├── App.tsx             # 主应用组件（三模式路由/状态协调）
-│       ├── Router.tsx          # react-router-dom 路由（/ → EntryPage, /simple/:mode, /full/:mode）
+│       ├── Router.tsx          # react-router-dom 路由（/ → EntryPage, /:mode → App）
 │       ├── pages/              # 页面组件
-│       │   ├── EntryPage.tsx
-│       │   ├── SimplePage.tsx
-│       │   ├── FullPage.tsx
-│       │   └── design-system/  # 设计系统展示页
+│       │   ├── EntryPage.tsx   # 入口欢迎页（NookPhone 风格导航）
+│       │   └── design-system/  # 设计系统展示页（当前为空目录）
 │       ├── components/         # React 组件
 │       │   ├── CanvasEditor.tsx       # 主画板编辑器（Canvas 渲染 + 交互）
 │       │   ├── Toolbar.tsx            # 顶部工具栏
@@ -121,7 +125,7 @@ CC-PinDou/
 │       │       ├── tooltip.tsx
 │       │       └── uploader.tsx
 │       ├── hooks/              # 自定义 Hooks
-│       │   ├── useCanvasRenderer.ts      # Canvas 渲染逻辑（方块/圆形/bead 三模式，离屏缓存优化）
+│       │   ├── useCanvasRenderer.ts      # Canvas 渲染逻辑（方块/圆形两模式，离屏缓存优化）
 │       │   ├── useCanvasInteractions.ts  # 画布交互（点击/拖拽/空格平移）
 │       │   ├── useDrawingTools.ts        # 绘制工具（Bresenham 直线、FloodFill 填充）
 │       │   ├── usePanZoom.ts             # 滚轮缩放 + 空格拖拽平移
@@ -149,6 +153,7 @@ CC-PinDou/
 │       │   ├── colorList.test.ts      # Vitest 单元测试
 │       │   ├── autoSave.ts            # IndexedDB 自动保存底层
 │       │   ├── pixelIcon.ts           # 像素图标工具
+│       │   ├── pixelPreview.ts        # 像素预览导出（PNG DataURL）
 │       │   ├── theme.ts               # 主题相关工具
 │       │   └── viewTransition.ts      # 视图过渡动画
 │       ├── api/                # API 客户端
@@ -193,7 +198,8 @@ CC-PinDou/
 │   ├── cleanup_dop_css.py
 │   └── replace_dop_to_nook.py
 │
-└── web_backup/                 # 旧版前端（jQuery + 原生 JS），仅保留参考
+└── docs/
+    └── backend_advanced_roadmap.md  # 后端高级功能路线图
 ```
 
 ---
@@ -310,9 +316,10 @@ python -m pytest tests/ -v
 - `test_colors.py` — 最近色匹配、full/221 模式、批量一致性
 - `test_image_processing.py` — 颜色简化、线条增强、RGBA 透明处理、大图缩放
 - `test_pixel_processing.py` — 网格生成、颜色量化、自动检测、背景移除
+- `test_normal_processing.py` — dominant 算法后端路径
+- `test_algorithms.py` — K-Means / SLIC / Mean-Shift 实验性算法接口
+- `test_export.py` — 高清导出图例、坐标轴、尺寸限制
 - `test_utils.py` — Hex/RGB 转换、参数解析、文件清理
-
-**未覆盖**：`app.py` 路由/集成测试、`export_generator.py`、`models_manager.py`、`normal_processing.py`。
 
 ---
 
@@ -430,6 +437,7 @@ font-family: 'Nunito', 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-
 | 线条增强 | 前端有降级实现 | ✅ 后端精度更高 |
 | 高清导出（PNG/JPG） | 前端有降级（Canvas toBlob） | ✅ `export_generator.py` |
 | 像素大小自动检测 | ❌ | ✅ `pixel_processing.py` |
+| 实验性聚类算法 | ❌ | ✅ `algorithms/`（K-Means / SLIC / Mean-Shift）|
 
 ### 后端 API 端点
 
@@ -438,7 +446,7 @@ font-family: 'Nunito', 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-
 | `/api/remove-bg` | POST | AI 背景移除。支持 `task_id` SSE 进度、`edge_threshold` alpha matting、`model` 模型选择 |
 | `/api/progress/<task_id>` | GET | SSE 进度流，200ms 轮询，最长 60 秒（300 轮），最大 16 并发 |
 | `/api/enhance-lines` | POST | 线条增强，MinFilter 形态学操作 |
-| `/api/generate` | POST | 普通图 → 拼豆网格（后端备用路径）|
+| `/api/generate` | POST | 普通图 → 拼豆网格（后端备用路径）。支持 `algorithm` 参数选择 dominant/kmeans/slic/meanshift |
 | `/api/detect-pixel` | POST | 像素图自动检测像素大小和偏移 |
 | `/api/models` | GET | 返回可用 rembg 模型列表（含元数据：label、desc、size_mb、tags） |
 | `/export` | POST | 高清导出 PNG/JPG，限制 200×200 网格 |
@@ -479,14 +487,8 @@ font-family: 'Nunito', 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-
 
 ```
 /                  → EntryPage（入口欢迎页）
-/simple            → SimplePage（简化布局外壳）
-/simple/normal     → App variant="simple" mode="normal"
-/simple/pixel      → App variant="simple" mode="pixel"
-/simple/draw       → App variant="simple" mode="draw"
-/full              → FullPage（完整布局外壳）
-/full/normal       → App variant="full" mode="normal"
-/full/pixel        → App variant="full" mode="pixel"
-/full/draw         → App variant="full" mode="draw"
+/:mode             → App（主应用，mode = normal | pixel | draw）
+*                  → Navigate to /
 ```
 
 ### 模式切换规则
@@ -523,7 +525,7 @@ font-family: 'Nunito', 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-
 
 ## 已知陷阱与注意事项
 
-1. **Canvas 渲染性能**：当前为单层全量重绘，修改一个 cell 会重绘整个画布。`melted`（3D 热熔）模式下每 cell 都创建 `createRadialGradient`，大图帧率很低。如需优化，考虑分层渲染或脏矩形策略。
+1. **Canvas 渲染性能**：当前为单层全量重绘，修改一个 cell 会重绘整个画布。大图下 `circleMode`（圆形珠子）使用离屏缓存但仍有一定开销，如需优化，考虑分层渲染或脏矩形策略。
 2. **inline style 泛滥**：大量组件使用内联 `style` 而非 Tailwind class，修改主题时需注意 CSS 变量和内联样式的优先级。
 3. **字体跨平台**：`export_generator.py` 优先搜索 `WenYuanRoundedSC-VF.otf`，次选 `arial.ttf`，在 Linux/macOS 下可能缺失，会自动 fallback 到默认字体，但中文显示效果不佳。
 4. **ImageData polyfill**：`src/test/setup.ts` 为 jsdom 环境提供了 `ImageData` polyfill，但在 Worker 中使用时需确认环境支持。
@@ -533,6 +535,7 @@ font-family: 'Nunito', 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-
 8. **ONNX 模型**：`models/*.onnx` 文件被 `.gitignore` 忽略，新克隆的仓库需要首次运行时自动下载或手动放置模型文件。
 9. **NookUI 子项目隔离**：`NookUI/` 被主项目 `.gitignore` 忽略，修改其代码不会影响主项目 Git 状态，需单独在其内部提交。
 10. **前端/后端双实现**：每个主要后端功能（颜色简化、线条增强、背景移除、像素检测、导出）在前端都有降级实现（`frontendAlgorithms.ts`），`generateAlgorithm` 配置可在前后端算法间切换。
+11. **实验性算法依赖**：`server/algorithms/` 中的 K-Means、Mean-Shift 依赖 scikit-learn，SLIC 依赖 scikit-image。未安装时调用会返回友好错误，不影响 dominant 默认算法。
 
 ---
 
@@ -546,5 +549,6 @@ font-family: 'Nunito', 'WenYuanRounded', 'PingFang SC', 'Microsoft YaHei', sans-
 | `NookUI/legacy/nookui.js` | NookUI Legacy 交互逻辑（Vanilla JS，独立可复用） |
 | `NookUI/legacy/nookui-docs.html` | NookUI Legacy 组件展示页，浏览器直接打开 |
 | `NookUI/legacy/project.md` | NookUI Legacy 独立项目说明 |
+| `docs/backend_advanced_roadmap.md` | 后端高级功能开发路线图 |
 | `DEVELOP_ENV.txt` | 开发环境路径记录（Conda + Node.js），被 `.gitignore` 忽略 |
 | `data/colorSystemMapping.json` | 5 品牌色号源数据（MARD / COCO / 漫漫 / 盼盼 / 咪小窝） |

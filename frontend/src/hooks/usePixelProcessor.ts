@@ -12,6 +12,7 @@ export function usePixelProcessor() {
     pixelSize: rawPixelSize,
     pixelOffsetX,
     pixelOffsetY,
+    pixelGridColor,
     pixelSampleMethod,
     pixelImageUrl,
     colorMode,
@@ -59,7 +60,16 @@ export function usePixelProcessor() {
     const ox = (pixelOffsetX % pixelSize) * scale;
     const oy = (pixelOffsetY % pixelSize) * scale;
 
-    ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
+    // 参考线颜色
+    const clean = pixelGridColor.replace('#', '');
+    const r = parseInt(clean.slice(0, 2), 16);
+    const g = parseInt(clean.slice(2, 4), 16);
+    const b = parseInt(clean.slice(4, 6), 16);
+    if (!Number.isNaN(r) && !Number.isNaN(g) && !Number.isNaN(b)) {
+      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.6)`;
+    } else {
+      ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
+    }
     ctx.lineWidth = 1;
 
     for (let x = ox; x < cw; x += ps) {
@@ -74,7 +84,7 @@ export function usePixelProcessor() {
       ctx.lineTo(cw, y);
       ctx.stroke();
     }
-  }, [previewImage, pixelSize, pixelOffsetX, pixelOffsetY]);
+  }, [previewImage, pixelSize, pixelOffsetX, pixelOffsetY, pixelGridColor]);
 
   useEffect(() => {
     drawPreview();
@@ -194,6 +204,15 @@ export function usePixelProcessor() {
     setDetectError(null);
 
     try {
+      const ps = Math.max(1, pixelSize);
+      const ox = ((pixelOffsetX % ps) + ps) % ps;
+      const oy = ((pixelOffsetY % ps) + ps) % ps;
+      const cols = Math.max(1, Math.ceil((previewImage.naturalWidth - ox) / ps));
+      const rows = Math.max(1, Math.ceil((previewImage.naturalHeight - oy) / ps));
+      if (cols > 128 || rows > 128) {
+        throw new Error(`画板尺寸 ${cols}×${rows} 超出 128×128 上限，请裁剪图片或调大像素大小`);
+      }
+
       const { PerlerEngine } = await import('../engine/PerlerEngine');
       const engine = new PerlerEngine(colorMappingData, colorMode);
 
@@ -205,7 +224,7 @@ export function usePixelProcessor() {
       ctx.drawImage(previewImage, 0, 0);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-      const { grid, colorMap, cols, rows } = engine.generatePixelGrid(
+      const { grid, colorMap } = engine.generatePixelGrid(
         imageData,
         pixelSize,
         pixelOffsetX,

@@ -24,10 +24,10 @@ import { useConfigStore } from './store/useConfigStore';
 import { useImageUpload } from './hooks/useImageUpload';
 import { usePatternGenerator } from './hooks/usePatternGenerator';
 import { TooltipProvider } from './components/ui/tooltip';
-import { Loader2, Wand2, Trash2, Image, ClipboardPenLine, X, Download } from 'lucide-react';
+import { Loader2, Wand2, Trash2, Image, ClipboardPenLine, X } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { getModeTheme } from './utils/theme';
-import { renderGridToPixelPng, downloadDataUrl } from './utils/pixelPreview';
+
 import { cn } from '@/lib/utils';
 import { Skeleton } from './components/ui/skeleton';
 import ModeBackground from './components/ModeBackground';
@@ -86,7 +86,7 @@ export default function App() {
   const [modeSwitchConfirm, setModeSwitchConfirm] = useState<{ open: boolean; targetMode: string }>({ open: false, targetMode: '' });
 
   const pixelIconClass = getPixelIcon();
-  const pixelPreviewUrl = renderGridToPixelPng(gridData || []);
+
 
   const getTransitionIcon = (targetMode: string) => {
     if (targetMode === 'normal') return <Image className="w-24 h-24" />;
@@ -341,39 +341,6 @@ export default function App() {
                 </>
               )}
 
-              {/* 像素图预览与下载（转换模式生成后显示） */}
-              {gridData && pixelPreviewUrl && (
-                <div className="px-4 py-3 border-t border-[var(--border-subtle)]">
-                  <div className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide flex items-center gap-1.5 mb-2">
-                    <span className="w-1 h-3 rounded-full" style={{ background: theme.main }} />
-                    像素图预览
-                  </div>
-                  <div
-                    className="rounded-xl overflow-hidden border border-[var(--border-subtle)] flex items-center justify-center mb-2"
-                    style={{ background: 'repeating-linear-gradient(45deg, #ddd, #ddd 4px, #fff 4px, #fff 8px)' }}
-                  >
-                    <img
-                      src={pixelPreviewUrl}
-                      alt="像素图预览"
-                      className="block max-w-full"
-                      style={{
-                        maxHeight: 140,
-                        imageRendering: 'pixelated',
-                        minWidth: Math.min(gridData[0]?.length || 1, 140),
-                        minHeight: Math.min(gridData.length || 1, 140),
-                      }}
-                    />
-                  </div>
-                  <Button
-                    variant="ghost"
-                    block
-                    onClick={() => downloadDataUrl(pixelPreviewUrl, `pixel-art-${gridData[0]?.length || 0}x${gridData.length || 0}.png`)}
-                  >
-                    <Download className="w-4 h-4" />
-                    下载像素图
-                  </Button>
-                </div>
-              )}
             </div>
           )}
         </aside>
@@ -418,19 +385,19 @@ export default function App() {
             </div>
             <CanvasEditor onImageSelect={handleImageSelect} />
             {/* 绘制模式下缩放条放在画板区域内 */}
-            {gridData && mode === 'draw' && (
+            {gridData && gridData.length > 0 && mode === 'draw' && (
               <FloatingZoom className="!absolute bottom-4 right-4 z-50" />
             )}
           </div>
 
           {/* 悬浮缩放（normal / pixel 模式） */}
-          {gridData && mode !== 'draw' && <FloatingZoom />}
+          {gridData && gridData.length > 0 && mode !== 'draw' && <FloatingZoom />}
 
           {/* 图例区（draw 模式下隐藏） */}
           {mode !== 'draw' && <LegendBar />}
 
           {/* 浮动提示：进入绘制模式 */}
-          {gridData && mode !== 'draw' && showEditTip && (
+          {gridData && gridData.length > 0 && mode !== 'draw' && showEditTip && (
             <div className="absolute top-16 right-4 z-20 w-[220px]">
               <div className="relative rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] overflow-hidden">
                 <button
@@ -465,14 +432,14 @@ export default function App() {
         </main>
 
         {/* 右侧栏 — 仅绘制模式且存在画板数据时显示 */}
-        {mode === 'draw' && gridData && (
+        {mode === 'draw' && gridData && gridData.length > 0 && (
           <aside
             className={cn(
               'flex flex-col w-[280px] min-w-[280px] overflow-y-auto overflow-x-hidden flex-shrink-0 z-20 border-l-[3px] gap-4 py-4 px-1',
               'bg-[var(--bg-surface)] border-l-[var(--theme-draw)]',
             )}
           >
-            {gridData && <EditPanel colorMapping={colorMappingData} />}
+            {gridData && gridData.length > 0 && <EditPanel colorMapping={colorMappingData} />}
             <BeadLayerPanel />
             <ImageLayerPanel />
           </aside>

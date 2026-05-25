@@ -22,11 +22,10 @@ interface ConfigState {
   // ========== 普通图片参数 ==========
   gridSize: number;
   removeBg: boolean;
-  bgModel: string;
   colorSimplify: number;
   enhanceLines: number;
   removeBgThreshold: number;
-  generateAlgorithm: 'frontend' | 'backend';
+  pixelGridColor: string;
 
   // ========== 像素图参数 ==========
   pixelSize: number;
@@ -47,11 +46,10 @@ interface ConfigState {
 
   setGridSize: (size: number) => void;
   setRemoveBg: (v: boolean) => void;
-  setBgModel: (m: string) => void;
   setColorSimplify: (v: number) => void;
   setEnhanceLines: (v: number) => void;
   setRemoveBgThreshold: (v: number) => void;
-  setGenerateAlgorithm: (v: 'frontend' | 'backend') => void;
+  setPixelGridColor: (v: string) => void;
 
   setPixelSize: (v: number) => void;
   setPixelOffsetX: (v: number) => void;
@@ -73,13 +71,10 @@ export const useConfigStore = create<ConfigState>()(
 
       gridSize: 52,
       removeBg: true,
-      bgModel: 'frontend',
-      // frontend-only 模式固定为前端算法
       colorSimplify: 0,
       enhanceLines: 0,
       removeBgThreshold: 30,
-      generateAlgorithm: 'frontend',
-      // frontend-only 模式固定为前端算法
+      pixelGridColor: '#ff0000',
 
       pixelSize: 16,
       pixelOffsetX: 0,
@@ -97,11 +92,10 @@ export const useConfigStore = create<ConfigState>()(
 
       setGridSize: (size) => set({ gridSize: size }),
       setRemoveBg: (v) => set({ removeBg: v }),
-      setBgModel: (m) => set({ bgModel: m }),
       setColorSimplify: (v) => set({ colorSimplify: v }),
       setEnhanceLines: (v) => set({ enhanceLines: v }),
       setRemoveBgThreshold: (v) => set({ removeBgThreshold: v }),
-      setGenerateAlgorithm: (v) => set({ generateAlgorithm: v }),
+      setPixelGridColor: (v) => set({ pixelGridColor: v }),
 
       setPixelSize: (v) => set({ pixelSize: v }),
       setPixelOffsetX: (v) => set({ pixelOffsetX: v }),
@@ -124,11 +118,10 @@ export const useConfigStore = create<ConfigState>()(
         paletteBrand: state.paletteBrand,
         gridSize: state.gridSize,
         removeBg: state.removeBg,
-        bgModel: state.bgModel,
         colorSimplify: state.colorSimplify,
         enhanceLines: state.enhanceLines,
         removeBgThreshold: state.removeBgThreshold,
-        generateAlgorithm: state.generateAlgorithm,
+        pixelGridColor: state.pixelGridColor,
         pixelSize: state.pixelSize,
         pixelOffsetX: state.pixelOffsetX,
         pixelOffsetY: state.pixelOffsetY,

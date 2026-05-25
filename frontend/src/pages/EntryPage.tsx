@@ -2,10 +2,8 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { triggerViewTransition } from '../utils/viewTransition';
 import {
-  Wand2,
   Image,
   ClipboardPenLine,
-  Sparkles,
   MousePointerClick,
 } from 'lucide-react';
 import { getPixelIcon, getPixelIconScale } from '../utils/pixelIcon';
@@ -201,11 +199,45 @@ function DecoOrb({
 /*  主页面                                                              */
 /* ================================================================== */
 
+const LEAF_EMOJIS = ['🍃', '🍂', '🍁'];
+const LEAF_TRIGGER_COUNT = 7;
+
+interface FallingLeaf {
+  id: number;
+  emoji: string;
+  left: string;
+  size: number;
+  delay: number;
+  duration: number;
+  rotateStart: number;
+  rotateEnd: number;
+  swayAmp: number;
+}
+
+function generateLeaves(count: number): FallingLeaf[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: i,
+    emoji: LEAF_EMOJIS[Math.floor(Math.random() * LEAF_EMOJIS.length)],
+    left: `${Math.random() * 100}%`,
+    size: 20 + Math.random() * 24,
+    delay: Math.random() * 2,
+    duration: 3 + Math.random() * 4,
+    rotateStart: Math.random() * 360,
+    rotateEnd: Math.random() * 720 - 360,
+    swayAmp: 20 + Math.random() * 60,
+  }));
+}
+
 export default function EntryPage() {
   const navigate = useNavigate();
   const [mounted, setMounted] = useState(false);
   const [hoveredMode, setHoveredMode] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  /* Logo 彩蛋 */
+  const [logoClickCount, setLogoClickCount] = useState(0);
+  const [logoShake, setLogoShake] = useState(false);
+  const [leaves, setLeaves] = useState<FallingLeaf[]>([]);
 
   /* 入场动画 */
   useEffect(() => {
@@ -273,23 +305,34 @@ export default function EntryPage() {
           }`}
         >
           {/* 主 Logo */}
-          <div
-            className="relative w-[120px] h-[120px] sm:w-[140px] sm:h-[140px] mb-6 rounded-[40px] flex items-center justify-center"
+          <img
+            src="/logo.svg"
+            alt="CC-PinDou Logo"
+            className={`w-[120px] h-[120px] sm:w-[140px] sm:h-[140px] mb-6 cursor-pointer select-none ${
+              logoShake ? 'logo-shake' : ''
+            }`}
             style={{
-              background: 'var(--ac-green)',
-              boxShadow: '0 12px 40px rgba(43,180,171,0.22)',
-              animation: 'logo-breathe 4s ease-in-out infinite',
+              animation: logoShake
+                ? 'none'
+                : 'logo-breathe 4s ease-in-out infinite',
+              filter: 'drop-shadow(0 12px 40px rgba(43,180,171,0.22))',
             }}
-          >
-            <Wand2 className="w-14 h-14 sm:w-16 sm:h-16 text-white" strokeWidth={1.6} />
-            {/* 小星星装饰 */}
-            <div
-              className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-[var(--ac-yellow)] flex items-center justify-center"
-              style={{ animation: 'star-bob 3s ease-in-out infinite' }}
-            >
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-          </div>
+            onClick={() => {
+              setLogoShake(true);
+              setTimeout(() => setLogoShake(false), 500);
+
+              const nextCount = logoClickCount + 1;
+              setLogoClickCount(nextCount);
+
+              if (nextCount === LEAF_TRIGGER_COUNT) {
+                setLeaves(generateLeaves(40));
+                setTimeout(() => {
+                  setLeaves([]);
+                  setLogoClickCount(0);
+                }, 9000);
+              }
+            }}
+          />
 
           {/* 标题 */}
           <h1 className="text-[36px] sm:text-[44px] font-extrabold text-[var(--nook-brown)] tracking-tight leading-none mb-3">
@@ -422,6 +465,34 @@ export default function EntryPage() {
         </div>
       </div>
 
+      {/* ==================== 落叶彩蛋层 ==================== */}
+      {leaves.length > 0 && (
+        <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+          {leaves.map((leaf) => (
+            <div
+              key={leaf.id}
+              className="absolute top-0"
+              style={{
+                left: leaf.left,
+                fontSize: leaf.size,
+                animation: `leaf-fall ${leaf.duration}s ease-in ${leaf.delay}s forwards`,
+                opacity: 0,
+              }}
+            >
+              <span
+                style={{
+                  display: 'inline-block',
+                  animation: `leaf-sway ${leaf.duration * 0.8}s ease-in-out ${leaf.delay}s infinite alternate`,
+                  transform: `rotate(${leaf.rotateStart}deg)`,
+                }}
+              >
+                {leaf.emoji}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ==================== 注入关键帧动画 ==================== */}
       <style>{`
         @keyframes blob-drift {
@@ -448,6 +519,29 @@ export default function EntryPage() {
         @keyframes star-bob {
           0%, 100% { transform: translateY(0) rotate(0deg); }
           50% { transform: translateY(-6px) rotate(8deg); }
+        }
+        @keyframes logo-shake {
+          0% { transform: rotate(0deg); }
+          15% { transform: rotate(-12deg); }
+          30% { transform: rotate(10deg); }
+          45% { transform: rotate(-8deg); }
+          60% { transform: rotate(6deg); }
+          75% { transform: rotate(-3deg); }
+          90% { transform: rotate(1deg); }
+          100% { transform: rotate(0deg); }
+        }
+        .logo-shake {
+          animation: logo-shake 0.5s ease-in-out !important;
+        }
+        @keyframes leaf-fall {
+          0% { transform: translateY(-10vh); opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { transform: translateY(110vh); opacity: 0; }
+        }
+        @keyframes leaf-sway {
+          0% { transform: translateX(-20px) rotate(-15deg); }
+          100% { transform: translateX(20px) rotate(15deg); }
         }
       `}</style>
     </div>

@@ -76,7 +76,7 @@ export function Toolbar() {
       >
         {/* 左侧：自动保存状态 */}
         <div className="flex items-center gap-2 min-w-0">
-          {!gridData && lastSavedAt && (
+          {(!gridData || gridData.length === 0) && lastSavedAt && (
             <>
               <Save className="w-3.5 h-3.5 shrink-0 text-[var(--color-success)]" />
               <span className="text-xs font-bold text-[var(--color-success)] truncate">
@@ -87,7 +87,7 @@ export function Toolbar() {
               </Button>
             </>
           )}
-          {gridData && lastSavedAt && (
+          {gridData && gridData.length > 0 && lastSavedAt && (
             <>
               <Clock className="w-3 h-3 shrink-0 text-[var(--text-muted)]" />
               <span className="text-[11px] text-[var(--text-muted)]">
@@ -99,27 +99,24 @@ export function Toolbar() {
 
         {/* 右侧：保存 / 设置 / 模式切换 */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {gridData && (
-            <>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="icon-sm" color="green" onClick={() => setSaveOpen(true)}>
-                    <Save className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>保存（图纸 / CSV / Excel / 工程）</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="icon-sm" color="none" className="bg-[var(--bg-surface)] border-[3px] border-[var(--nook-wood-light)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]" onClick={openSettings}>
-                    <Settings className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>设置（品牌 / 色号 / 标识线 / 预览）</TooltipContent>
-              </Tooltip>
-            </>
+          {gridData && gridData.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="icon-sm" color="green" onClick={() => setSaveOpen(true)}>
+                  <Save className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>保存（图纸 / CSV / Excel / 工程）</TooltipContent>
+            </Tooltip>
           )}
-
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="icon-sm" color="none" className="bg-[var(--bg-surface)] border-[3px] border-[var(--nook-wood-light)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-alt)]" onClick={openSettings}>
+                <Settings className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>设置（品牌 / 色号 / 标识线 / 预览）</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 

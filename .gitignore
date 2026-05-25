@@ -54,4 +54,5 @@ Thumbs.db
 /scripts/cleanup_dop_css.py
 /scripts/replace_dop_to_nook.py
 /docs/
+/docs/
 /pipeline_debug/

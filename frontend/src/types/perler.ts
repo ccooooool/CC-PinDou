@@ -168,7 +168,6 @@ export interface GenerateParams {
   colorSimplify: number;
   removeBgThreshold: number;
   enhanceLinesStrength: number;
-  bgModel: string | null;
   colorMode: 'full' | '221';
 }
 
