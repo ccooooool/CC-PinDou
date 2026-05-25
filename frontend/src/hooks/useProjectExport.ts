@@ -115,6 +115,7 @@ export function useProjectExport() {
         if (data.drawTool) useUIStore.setState({ drawTool: data.drawTool });
         if (data.symmetryMode) useUIStore.setState({ symmetryMode: data.symmetryMode });
         if (data.brushSize) useUIStore.setState({ brushSize: data.brushSize });
+        toast.success('工程文件导入成功');
       } catch {
         toast.error('文件解析失败');
       }

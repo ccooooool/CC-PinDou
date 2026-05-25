@@ -3,6 +3,7 @@ import { useEditorStore } from '../store/useEditorStore';
 import { useUIStore } from '../store/useUIStore';
 import { useConfigStore } from '../store/useConfigStore';
 import { saveAutoBackup, loadAutoBackup } from '../utils/autoSave';
+import { toast } from '@/components/ui/toast';
 
 export function useAutoSave() {
   const autoSaveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -50,11 +51,18 @@ export function useAutoSave() {
 
   const handleRestore = useCallback(async () => {
     const backup = await loadAutoBackup();
-    if (!backup) return;
+    if (!backup) {
+      toast.error('没有找到可恢复的备份');
+      return;
+    }
     const ok = importProject(backup);
-    if (!ok) return;
+    if (!ok) {
+      toast.error('备份恢复失败');
+      return;
+    }
     if (backup.brand) useConfigStore.setState({ brand: backup.brand as typeof brand });
     if (backup.mode) useUIStore.setState({ mode: backup.mode as typeof mode });
+    toast.success('已恢复上次自动保存的内容');
   }, [importProject, brand, mode]);
 
   const formatTime = useCallback((ts: number) => {

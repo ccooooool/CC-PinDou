@@ -4,6 +4,7 @@ import type { GridCell, ColorInfo, ColorMapping } from '../types/perler';
 import { simplifyColorsFrontend, enhanceLinesFrontend } from '../engine/frontendAlgorithms';
 import { generatePattern } from '../api/client';
 import colorMappingJson from '../data/colorSystemMapping.json';
+import { toast } from '@/components/ui/toast';
 
 const colorMappingData: ColorMapping = colorMappingJson as ColorMapping;
 
@@ -171,9 +172,12 @@ export function usePatternGenerator({
         }
 
         onSuccess(mergedGrid, colorList);
+        toast.success('拼豆图案生成成功');
       }
     } catch (err: unknown) {
-      setError('生成失败: ' + (err instanceof Error ? err.message : String(err)));
+      const msg = '生成失败: ' + (err instanceof Error ? err.message : String(err));
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsGenerating(false);
     }

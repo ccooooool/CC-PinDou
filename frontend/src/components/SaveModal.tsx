@@ -8,6 +8,7 @@ import { Download, FileSpreadsheet, Save, Loader2, AlertCircle, Image, Table } f
 import { exportImageFrontend } from '../engine/frontendAlgorithms';
 import colorMappingJson from '../data/colorSystemMapping.json';
 import type { ColorMapping } from '../types/perler';
+import { toast } from '@/components/ui/toast';
 
 const colorMappingData: ColorMapping = colorMappingJson as ColorMapping;
 
@@ -110,8 +111,11 @@ export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps)
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       onClose();
+      toast.success(`图纸 "${fileName}.${format}" 导出成功`);
     } catch (err: unknown) {
-      setExportError((err instanceof Error ? err.message : String(err)) || '导出失败');
+      const msg = (err instanceof Error ? err.message : String(err)) || '导出失败';
+      setExportError(msg);
+      toast.error(msg);
     } finally {
       setIsExporting(false);
     }
@@ -133,6 +137,7 @@ export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps)
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     onClose();
+    toast.success('CSV 清单导出成功');
   };
 
   // 导出 Excel
@@ -146,6 +151,7 @@ export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps)
     XLSX.utils.book_append_sheet(workbook, worksheet, '拼豆清单');
     XLSX.writeFile(workbook, '@拼豆清单.xlsx');
     onClose();
+    toast.success('Excel 清单导出成功');
   };
 
   // 保存工程
@@ -174,6 +180,7 @@ export function SaveModal({ isOpen, onClose, backendAvailable }: SaveModalProps)
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
     onClose();
+    toast.success('工程文件保存成功');
   };
 
   const tabs = [

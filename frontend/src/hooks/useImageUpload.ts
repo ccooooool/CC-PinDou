@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { toast } from '@/components/ui/toast';
 
 function isBlobUrl(url: string | null): url is string {
   return typeof url === 'string' && url.startsWith('blob:');
@@ -61,11 +62,16 @@ export function useImageUpload() {
   const handleImageSelect = useCallback(async (file: File, dataUrl: string) => {
     revokeBlobUrl(previewImage);
     revokeBlobUrl(processedImage);
-    // 限制预览图尺寸，减少大图的 Base64 内存占用
-    const resized = await resizeImageDataUrl(dataUrl, 1200);
-    setPreviewImage(resized);
-    setSelectedFile(file);
-    setProcessedImage(null);
+    try {
+      // 限制预览图尺寸，减少大图的 Base64 内存占用
+      const resized = await resizeImageDataUrl(dataUrl, 1200);
+      setPreviewImage(resized);
+      setSelectedFile(file);
+      setProcessedImage(null);
+      toast.success(`图片 "${file.name}" 上传成功`);
+    } catch {
+      toast.error('图片处理失败，请尝试其他图片');
+    }
   }, [previewImage, processedImage, revokeBlobUrl]);
 
   const handleBgRemoved = useCallback((blobUrl: string) => {
@@ -82,6 +88,7 @@ export function useImageUpload() {
     setPreviewImage(null);
     setSelectedFile(null);
     setProcessedImage(null);
+    toast.info('已清除图片');
   }, [previewImage, processedImage, revokeBlobUrl]);
 
   return {
