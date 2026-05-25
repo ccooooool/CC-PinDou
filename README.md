@@ -142,6 +142,31 @@ python -m pytest tests/ -v
 
 ---
 
+## 相关链接
+
+- **项目仓库**
+  - Gitee：https://gitee.com/ccoooool/CC-PinDou
+  - GitHub：https://github.com/ccooooool/CC-PinDou
+- **字体**：文源圆体 [WenYuanFonts](https://github.com/takushun-wu/WenYuanFonts)
+- **像素模式图标**：[NES.css](https://github.com/nostalgic-css/NES.css)
+  > Nintendo owns the copyright of these characters. Please comply with the Nintendo guidelines and laws of the applicable jurisdiction.
+- **UI 设计系统**：[NookUI](https://gitee.com/ccoooool/NookUI)
+
+---
+
+## 支持项目
+
+如果觉得本项目对你有帮助，欢迎打赏支持！
+
+> 打赏前请务必仔细检查付款账户（支付宝：粥叉叉 / 微信：淡定从容）。上述账户为唯一正式受捐账户。若发现账户信息与二维码不符，请立刻举报。打赏款项一经转账恕不退还，请慎重考虑。（未成年人请取得法定监护人许可后方可捐助）
+
+<p align="center">
+  <img src="打赏收款码/微信收款码.png" width="200" alt="微信收款码" />
+  <img src="打赏收款码/支付宝收款码.jpg" width="200" alt="支付宝收款码" />
+</p>
+
+---
+
 ## License
 
 MIT License
