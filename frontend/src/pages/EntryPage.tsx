@@ -5,6 +5,7 @@ import {
   Image,
   ClipboardPenLine,
   MousePointerClick,
+  Github,
 } from 'lucide-react';
 import { getPixelIcon, getPixelIconScale } from '../utils/pixelIcon';
 
@@ -270,7 +271,7 @@ export default function EntryPage() {
   return (
     <div
       ref={containerRef}
-      className="nookui min-h-screen relative overflow-hidden flex flex-col items-center justify-center select-none"
+      className="nookui min-h-screen relative overflow-x-hidden flex flex-col items-center justify-center select-none"
       style={{ background: 'var(--nook-cream)' }}
     >
       {/* ==================== 极简背景层 ==================== */}
@@ -457,11 +458,38 @@ export default function EntryPage() {
 
         {/* --- 底部 footer --- */}
         <div
-          className={`mt-12 text-sm text-[var(--text-muted)] font-semibold transition-all duration-700 delay-800 ${
-            mounted ? 'opacity-40' : 'opacity-0'
+          className={`mt-12 flex flex-col items-center gap-3 transition-all duration-700 delay-800 ${
+            mounted ? 'opacity-100' : 'opacity-0'
           }`}
         >
-          CC-PinDou
+          <div className="text-sm text-[var(--text-muted)] font-semibold opacity-40">
+            CC-PinDou
+          </div>
+
+          <div className="flex items-center gap-5">
+            <a
+              href="https://github.com/ccooooool/CC-PinDou"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--nook-brown)] transition-colors duration-300 opacity-60 hover:opacity-100"
+            >
+              <Github className="w-3.5 h-3.5" />
+              <span className="font-semibold">GitHub</span>
+            </a>
+            <a
+              href="https://gitee.com/ccoooool/CC-PinDou"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--nook-brown)] transition-colors duration-300 opacity-60 hover:opacity-100"
+            >
+              <img
+                src="/logo_gitee_g_red.svg"
+                alt="Gitee"
+                className="w-3.5 h-3.5 shrink-0"
+              />
+              <span className="font-semibold">Gitee</span>
+            </a>
+          </div>
         </div>
       </div>
 
