@@ -196,6 +196,22 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (draft.historyStack.length >= MAX_HISTORY_SIZE) draft.historyStack.shift();
       draft.historyStack.push(action);
       draft.redoStack = [];
+
+      // 外部 hooks（useCanvasInteractions）在直接修改 gridData 后通过 pushHistory
+      // 提交操作记录，此时需同步更新 colorList，否则导出图例会滞后于实际编辑内容。
+      if (
+        (action.type === 'paint' || action.type === 'batch_paint') &&
+        draft.gridData
+      ) {
+        const newColorList = recalculateColorList(draft.gridData);
+        draft.colorList = newColorList;
+        const layer = draft.layers.find(
+          (l) => l.id === action.layerId && l.type === 'bead',
+        ) as BeadLayer | undefined;
+        if (layer) {
+          layer.colorList = newColorList;
+        }
+      }
     }));
   },
 
